@@ -10,14 +10,14 @@ export const APP_CONFIG = {
   // Default floor for this screen (this screen is dedicated to one floor)
   floor: "3F",
 
-  // Layout configuration (4K display assumed)
-  listHeightVh: (800 / 2160) * 100, // ≒ 37vh
+  // Layout configuration (Full HD 1920x1080)
+  listHeightVh: (400 / 1080) * 100, // ≒ 37vh (Adjusted for FHD if needed)
   maxColumns: 3,
   minColumns: 2,
-  approxRowsPerCol: 20,
+  approxRowsPerCol: 15, // Reduced for lower resolution density
   showGenreMemo: true,
   numberColWidthVmin: 6,
-  fontSizeVmin: 1.05,
+  fontSizeVmin: 1.4, // Increased for better readability on FHD
 };
 
 // Effective API base URL
@@ -165,6 +165,5 @@ export const FLOOR_ROWS_PER_COL: Record<string, number> = {
 export const POLLING_INTERVALS = {
   // 開発環境では検証しやすくするために10秒、本番は3分
   SHOP_LIST_MS: import.meta.env.DEV ? 10 * 1000 : 3 * 60 * 1000,
-  VIDEO_MS: 500,      // 0.5 second
 };
 

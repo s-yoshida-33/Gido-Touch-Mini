@@ -1,8 +1,6 @@
 // src/screens/ShopListScreen.tsx
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import VerticalVideoSlot from "../components/VerticalVideoSlot";
-import IndependentVideoPlayer from "../components/IndependentVideoPlayer";
 import button1F from "../assets/button-1F.svg";
 import button2F from "../assets/button-2F.svg";
 import button3F from "../assets/button-3F.svg";
@@ -138,7 +136,7 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
 
   if (!photo || (!imageUrl && !isLoading)) {
     return (
-      <span style={{ color: "#000000", fontSize: "24px", fontWeight: 700 }}>
+      <span style={{ color: "#000000", fontSize: "12px", fontWeight: 700 }}>
         Image
       </span>
     );
@@ -165,7 +163,7 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
         if (target.parentElement) {
           target.parentElement.style.backgroundColor = "#FFFFFF";
           target.parentElement.style.color = "#000000";
-          target.parentElement.style.fontSize = "24px";
+          target.parentElement.style.fontSize = "12px";
           target.parentElement.style.fontWeight = "700";
           target.parentElement.textContent = "Image";
         }
@@ -199,7 +197,7 @@ const ShopNameDisplay: React.FC<{ name: string }> = ({ name }) => {
     <div
       ref={containerRef}
       style={{
-        fontSize: "24px",
+        fontSize: "12px",
         fontWeight: 700,
         lineHeight: "1.4",
         width: "100%",
@@ -562,14 +560,14 @@ const ShopListScreen: React.FC = () => {
   const rowsPerColumn = 6;
   const totalColumns = filteredShops.length > 0 ? Math.ceil(filteredShops.length / rowsPerColumn) : 0;
 
-  // Card size calculation
-  // Content area: width: 2580px (2640 - 30*2), height: 2040px (2100 - 30*2)
-  // Card grid container height: 2032px (2040 - 4*2) with padding 12px top/bottom to accommodate animation and drop shadow
-  // Actual content area: 2008px (2032 - 12 - 12)
-  const cardHeight = (2008 - 20 * (rowsPerColumn - 1)) / rowsPerColumn; // Row gap: 20px
-  const cardWidth = 376; // Card width
-  const columnGap = 20; // Column gap
-  const imageHeight = 251; // Image height
+  // Card size calculation (Full HD 1920x1080 based)
+  // Content area: width: 1290px (1320 - 15*2), height: 1020px (1050 - 15*2)
+  // Card grid container height: 1016px (1020 - 2*2 approx) with padding 6px top/bottom
+  // Actual content area: 1004px (1016 - 6 - 6)
+  const cardHeight = (1004 - 10 * (rowsPerColumn - 1)) / rowsPerColumn; // Row gap: 10px
+  const cardWidth = 188; // Card width (half of 376)
+  const columnGap = 10; // Column gap (half of 20)
+  const imageHeight = 125; // Image height (half of 251 approx)
 
   // Group shops by column
   const columns: Shop[][] = [];
@@ -1040,7 +1038,7 @@ const ShopListScreen: React.FC = () => {
                           width: `${cardWidth}px`,
                           height: `${cardHeight}px`,
                           backgroundColor: "#FFFFFF",
-                          borderRadius: "0 30px 30px 30px", // Top-right, bottom-left, bottom-right: 30px
+                          borderRadius: "0 15px 15px 15px", // Scaled down
                           display: "flex",
                           flexDirection: "column",
                           overflow: "hidden",
@@ -1056,14 +1054,14 @@ const ShopListScreen: React.FC = () => {
                               position: "absolute",
                               top: 0,
                               left: 0,
-                              width: "50px",
-                              height: "50px",
+                              width: "25px",
+                              height: "25px",
                               backgroundColor: "#E63B93",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                               zIndex: 10,
-                              fontSize: "24px",
+                              fontSize: "12px",
                               fontWeight: 700,
                               color: "#FFFFFF",
                             }}
@@ -1081,7 +1079,7 @@ const ShopListScreen: React.FC = () => {
                             alignItems: "center",
                             justifyContent: "center",
                             overflow: "hidden",
-                            borderRadius: "0 30px 0 0",
+                            borderRadius: "0 15px 0 0",
                             boxSizing: "border-box",
                           }}
                         >
@@ -1093,24 +1091,24 @@ const ShopListScreen: React.FC = () => {
                             flex: 1,
                             display: "flex",
                             flexDirection: "column",
-                            padding: "12px",
+                            padding: "6px",
                             backgroundColor: "#000000",
                             color: "#FFFFFF",
                             justifyContent: "center",
                           }}
                         >
-                          {/* First line: Floor, number, genre memo (16px) */}
+                          {/* First line: Floor, number, genre memo (8px) */}
                           <div
                             style={{
-                              fontSize: "16px",
+                              fontSize: "8px",
                               fontWeight: 400,
-                              marginBottom: "8px",
+                              marginBottom: "4px",
                               lineHeight: "1.4",
                             }}
                           >
                             {firstLine}
                           </div>
-                          {/* Second line: Shop name (24px) */}
+                          {/* Second line: Shop name (12px) */}
                           <ShopNameDisplay name={shopName} />
                         </div>
                       </motion.div>
@@ -1154,8 +1152,8 @@ const ShopListScreen: React.FC = () => {
       {/* Action space (right side) */}
       <div
         style={{
-          width: "1140px",
-          height: "2160px",
+          width: "570px",
+          height: "1080px",
           backgroundColor: "#000000",
           flexShrink: 0,
           boxSizing: "border-box",
@@ -1167,19 +1165,20 @@ const ShopListScreen: React.FC = () => {
         {/* Independent video area (top) */}
         <div
           style={{
-            width: "1080px",
-            height: "608px",
-            marginTop: "30px",
-            marginLeft: "30px",
-            marginRight: "30px",
+            width: "540px",
+            height: "304px",
+            marginTop: "15px",
+            marginLeft: "15px",
+            marginRight: "15px",
             marginBottom: "0px",
             boxSizing: "border-box",
             overflow: "hidden",
-            borderRadius: "30px",
+            borderRadius: "15px",
             alignSelf: "flex-start",
+            backgroundColor: "#000000", // Placeholder background
           }}
         >
-          <IndependentVideoPlayer />
+          {/* Video player removed */}
         </div>
 
         {/* Spacer between top video and middle buttons */}
@@ -1191,8 +1190,8 @@ const ShopListScreen: React.FC = () => {
             display: "flex",
             flexDirection: "row",
             alignItems: "stretch",
-            marginLeft: "30px",
-            marginRight: "30px",
+            marginLeft: "15px",
+            marginRight: "15px",
             flexShrink: 0,
           }}
         >
@@ -1202,7 +1201,7 @@ const ShopListScreen: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               alignItems: "flex-start",
-              gap: "50px",
+              gap: "25px",
               height: "100%",
             }}
           >
@@ -1211,7 +1210,7 @@ const ShopListScreen: React.FC = () => {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "30px",
+                gap: "15px",
               }}
             >
               <div
@@ -1296,7 +1295,7 @@ const ShopListScreen: React.FC = () => {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "30px",
+                gap: "15px",
               }}
             >
               <div
@@ -1381,7 +1380,7 @@ const ShopListScreen: React.FC = () => {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "30px",
+                gap: "15px",
               }}
             >
               <div
@@ -1468,9 +1467,9 @@ const ShopListScreen: React.FC = () => {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "20px",
+              gap: "10px",
               alignItems: "flex-start",
-              marginLeft: "30px",
+              marginLeft: "15px",
               height: "100%",
             }}
           >
@@ -1481,6 +1480,8 @@ const ShopListScreen: React.FC = () => {
               onDragStart={(e) => e.preventDefault()}
               style={{
                 display: "block",
+                width: "50%",
+                height: "auto",
               }}
             />
             <div style={{ flex: 1 }} />
@@ -1491,6 +1492,7 @@ const ShopListScreen: React.FC = () => {
                 position: "relative",
                 cursor: "pointer",
                 display: "block",
+                width: "50%",
               }}
             >
               {/* Japanese selected image */}
@@ -1550,16 +1552,17 @@ const ShopListScreen: React.FC = () => {
         {/* CMS area (bottom) */}
         <div
           style={{
-            width: "1080px",
-            height: "607.5px", // 16:9 aspect ratio (1080 × 9/16 = 607.5)
-            marginLeft: "30px",
-            marginRight: "30px",
+            width: "540px",
+            height: "304px", // 16:9 aspect ratio (540 × 9/16 = 303.75)
+            marginLeft: "15px",
+            marginRight: "15px",
             marginTop: "0px",
-            marginBottom: "30px",
+            marginBottom: "15px",
             boxSizing: "border-box",
             overflow: "hidden",
-            borderRadius: "30px",
+            borderRadius: "15px",
             alignSelf: "flex-start",
+            backgroundColor: "#000000", // Placeholder background
           }}
         >
           <div
@@ -1568,7 +1571,7 @@ const ShopListScreen: React.FC = () => {
               height: "100%",
             }}
           >
-            <VerticalVideoSlot />
+            {/* Video slot removed */}
           </div>
         </div>
       </div>

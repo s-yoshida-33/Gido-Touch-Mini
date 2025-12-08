@@ -1,6 +1,7 @@
 // src/App.tsx
 import React, { useEffect, useState } from "react";
 import ShopListScreen from "./screens/ShopListScreen";
+
 import VersionInfoScreen from "./screens/VersionInfoScreen";
 import UnifiedSettingsScreen from "./screens/UnifiedSettingsScreen";
 import {
@@ -313,8 +314,8 @@ const App: React.FC = () => {
 
   return (
     <>
-      <ShopListScreen />
-      <UnifiedSettingsScreen
+    <ShopListScreen />
+    <UnifiedSettingsScreen
         floor={floor}
         onSaveFloor={handleSaveFloor}
         floorLayout={floorLayout}

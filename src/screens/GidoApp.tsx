@@ -12,7 +12,6 @@ import openTimeImage from "../assets/open-time.svg";
 
 import { APP_CONFIG, POLLING_INTERVALS } from "../config";
 import { fetchShops } from "../repositories/shopRepository";
-import VerticalVideoSlot from "../components/VerticalVideoSlot";
 
 import type { LocationIconSettings, LocationIconSettingsPerFloor } from "../types/locationIcon";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
@@ -179,8 +178,8 @@ const GidoApp: React.FC<GidoAppProps> = ({
   const customFloorMap = floorId ? imageSettings?.floorMaps?.[floorId] : undefined;
   const floorMap = customFloorMap || FLOOR_MAPS[floor] || food1FMap;
 
-  const videoWidthVh = TOP_HEIGHT_VH * (9 / 16);
-  const listWidthVh = 100 - videoWidthVh;
+  // Video/List width calculations are no longer needed for fixed layouts
+  // We use flexbox to fill available space.
 
   useEffect(() => {
     let cancelled = false;
@@ -293,7 +292,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
       style={{
         width: "100vw",
         height: "100vh",
-        overflow: "visible",
+        overflow: "hidden", // Prevent scrolling
         fontFamily: "'Rounded Mplus 1c', sans-serif",
         fontWeight: 700,
       }}
@@ -316,29 +315,6 @@ const GidoApp: React.FC<GidoAppProps> = ({
           shops={previewShops}
           selectedShopId={selectedShopId}
         />
-
-        <div
-          style={{
-            width: `${videoWidthVh}vh`,
-            background: "#000",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            flexShrink: 0,
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              maxHeight: "100%",
-              aspectRatio: "9 / 16",
-              overflow: "hidden",
-              background: "#000",
-            }}
-          >
-            <VerticalVideoSlot />
-          </div>
-        </div>
       </div>
 
       <div
@@ -346,13 +322,14 @@ const GidoApp: React.FC<GidoAppProps> = ({
           height: `${LIST_HEIGHT_VH}vh`,
           display: "flex",
           flexDirection: "row",
+          overflow: "hidden", // Ensure inner content doesn't overflow
         }}
       >
         <div
           style={{
-            flex: 2,
-            width: `${listWidthVh}vh`,
-            height: `${LIST_HEIGHT_VH}vh`,
+            flex: 1, // Fill available space
+            minWidth: 0, // Allow flex item to shrink below content size
+            height: "100%",
           }}
         >
           {error ? (
@@ -373,13 +350,20 @@ const GidoApp: React.FC<GidoAppProps> = ({
 
         <div
           style={{
-            width: `${videoWidthVh}vh`,
-            height: `${LIST_HEIGHT_VH}vh`,
+            // Keep the aspect ratio of the original video slot for the bottom-right image area
+            // or just use auto width based on height.
+            // Using a fixed aspect ratio similar to 9:16 relative to screen height might be too wide?
+            // Let's use a fixed percentage width or auto based on image.
+            // For now, let's give it a fixed proportion roughly equal to the previous design
+            // but ensuring it fits nicely.
+            width: "20vw", 
+            height: "100%",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             background: "#fff",
-            margin: "0 auto",
+            flexShrink: 0, // Don't shrink below this width
+            borderLeft: "1px solid #eee", // Optional separator
           }}
         >
           <img
@@ -389,7 +373,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
               maxWidth: "100%",
               maxHeight: "100%",
               objectFit: "contain",
-              padding: "1.4em",
+              padding: "1em",
             }}
             onLoad={() => {
               logInfo("openTime", "Open-time image loaded", {

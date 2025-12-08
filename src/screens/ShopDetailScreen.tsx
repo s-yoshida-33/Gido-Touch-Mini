@@ -24,8 +24,8 @@ import type { Shop } from "../types/shop";
 import { ShopPin } from "../components/ShopPin";
 
 // Constants for consistent scaling (must match GidoApp)
-const REFERENCE_MAP_WIDTH = 1920;
-const DEFAULT_PIN_SIZE = 80;
+const REFERENCE_MAP_WIDTH = 1920; // Keep reference width same as map source resolution
+const DEFAULT_PIN_SIZE = 40; // Scaled down from 80
 
 function buildImagePath(photo: string | undefined, shopId: string | undefined): string {
   if (!photo) return "";
@@ -147,10 +147,10 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
     loadImage();
   }, [photo, shopId]);
 
-  if (!photo || (!imageUrl && !isLoading)) return <span style={{ color: "#FFFFFF", fontSize: "24px", fontWeight: 700 }}>Image</span>;
+  if (!photo || (!imageUrl && !isLoading)) return <span style={{ color: "#FFFFFF", fontSize: "12px", fontWeight: 700 }}>Image</span>;
 
   return (
-    <img src={imageUrl} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "100%", height: "100%", objectFit: "contain", userSelect: "none", pointerEvents: "auto", display: isLoading ? "none" : "block" }} onError={(e) => { const target = e.target as HTMLImageElement; target.style.display = "none"; if (target.parentElement) { target.parentElement.style.backgroundColor = "#333333"; target.parentElement.style.color = "#FFFFFF"; target.parentElement.style.fontSize = "24px"; target.parentElement.style.fontWeight = "700"; target.parentElement.textContent = "Image"; } }} />
+    <img src={imageUrl} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "100%", height: "100%", objectFit: "contain", userSelect: "none", pointerEvents: "auto", display: isLoading ? "none" : "block" }} onError={(e) => { const target = e.target as HTMLImageElement; target.style.display = "none"; if (target.parentElement) { target.parentElement.style.backgroundColor = "#333333"; target.parentElement.style.color = "#FFFFFF"; target.parentElement.style.fontSize = "12px"; target.parentElement.style.fontWeight = "700"; target.parentElement.textContent = "Image"; } }} />
   );
 };
 
@@ -361,11 +361,11 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
 
   return (
     <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0, 0, 0, 0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ width: "2500px", height: "1680px", backgroundColor: "#FFFFFF", borderRadius: "50px", position: "relative", display: "flex", flexDirection: "row", overflow: "hidden" }}>
-        <div style={{ flex: 1, width: "1800px", height: "100%", backgroundColor: "#D9D9D9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div ref={displayAreaRef} style={{ width: "1700px", height: "1580px", backgroundColor: "#FFFFFF", overflow: "hidden", position: "relative" }}>
-            <div style={{ position: "absolute", top: "30px", left: "30px", zIndex: 10, pointerEvents: "none" }}>
-              <img src={floorLabel} alt={`${normalizedFloor} label`} draggable={false} onDragStart={(e) => e.preventDefault()} style={{ display: "block" }} />
+      <div style={{ width: "1250px", height: "840px", backgroundColor: "#FFFFFF", borderRadius: "25px", position: "relative", display: "flex", flexDirection: "row", overflow: "hidden" }}>
+        <div style={{ flex: 1, width: "900px", height: "100%", backgroundColor: "#D9D9D9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div ref={displayAreaRef} style={{ width: "850px", height: "790px", backgroundColor: "#FFFFFF", overflow: "hidden", position: "relative" }}>
+            <div style={{ position: "absolute", top: "15px", left: "15px", zIndex: 10, pointerEvents: "none" }}>
+              <img src={floorLabel} alt={`${normalizedFloor} label`} draggable={false} onDragStart={(e) => e.preventDefault()} style={{ display: "block", width: "50%", height: "auto" }} />
             </div>
             <TransformWrapper
               initialScale={1}
@@ -391,10 +391,10 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
                 />
               </TransformComponent>
             </TransformWrapper>
-            <div style={{ position: "absolute", bottom: "30px", left: "30px", zIndex: 10, display: "flex", flexDirection: "column", gap: "0px", borderRadius: "50px", overflow: "hidden", boxShadow: "0 0px 12px rgba(0, 0, 0, 0.3)" }}>
+            <div style={{ position: "absolute", bottom: "15px", left: "15px", zIndex: 10, display: "flex", flexDirection: "column", gap: "0px", borderRadius: "25px", overflow: "hidden", boxShadow: "0 0px 6px rgba(0, 0, 0, 0.3)" }}>
               {/* Zoom In Button */}
               <div
-                style={{ position: "relative", cursor: "pointer" }}
+                style={{ position: "relative", cursor: "pointer", width: "40px", height: "40px" }}
                 onMouseEnter={() => setZoomInHovered(true)}
                 onMouseLeave={() => { setZoomInHovered(false); setZoomInClicked(false); }}
                 onMouseDown={() => setZoomInClicked(true)}
@@ -408,12 +408,12 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
                   if (transformRef.current) transformRef.current.zoomIn();
                 }}
               >
-                <img src={zoomIn} alt="Zoom in" draggable={false} style={{ display: "block" }} />
-                <img src={zoomInHighlight} alt="Highlight" draggable={false} style={{ position: "absolute", top: 0, left: 0, display: "block", opacity: zoomInHovered || zoomInClicked ? 1 : 0, transition: "opacity 0.3s ease-in-out", pointerEvents: "none" }} />
+                <img src={zoomIn} alt="Zoom in" draggable={false} style={{ display: "block", width: "100%", height: "100%" }} />
+                <img src={zoomInHighlight} alt="Highlight" draggable={false} style={{ position: "absolute", top: 0, left: 0, display: "block", width: "100%", height: "100%", opacity: zoomInHovered || zoomInClicked ? 1 : 0, transition: "opacity 0.3s ease-in-out", pointerEvents: "none" }} />
               </div>
               {/* Zoom Out Button */}
               <div
-                style={{ position: "relative", cursor: "pointer" }}
+                style={{ position: "relative", cursor: "pointer", width: "40px", height: "40px" }}
                 onMouseEnter={() => setZoomOutHovered(true)}
                 onMouseLeave={() => { setZoomOutHovered(false); setZoomOutClicked(false); }}
                 onMouseDown={() => setZoomOutClicked(true)}
@@ -427,13 +427,13 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
                   if (transformRef.current) transformRef.current.zoomOut();
                 }}
               >
-                <img src={zoomOut} alt="Zoom out" draggable={false} style={{ display: "block" }} />
-                <img src={zoomOutHighlight} alt="Highlight" draggable={false} style={{ position: "absolute", top: 0, left: 0, display: "block", opacity: zoomOutHovered || zoomOutClicked ? 1 : 0, transition: "opacity 0.3s ease-in-out", pointerEvents: "none" }} />
+                <img src={zoomOut} alt="Zoom out" draggable={false} style={{ display: "block", width: "100%", height: "100%" }} />
+                <img src={zoomOutHighlight} alt="Highlight" draggable={false} style={{ position: "absolute", top: 0, left: 0, display: "block", width: "100%", height: "100%", opacity: zoomOutHovered || zoomOutClicked ? 1 : 0, transition: "opacity 0.3s ease-in-out", pointerEvents: "none" }} />
               </div>
             </div>
-            <div style={{ position: "absolute", bottom: "30px", right: "30px", zIndex: 10 }}>
+            <div style={{ position: "absolute", bottom: "15px", right: "15px", zIndex: 10 }}>
               <div
-                style={{ position: "relative", cursor: "pointer", boxShadow: "0 0px 12px rgba(0, 0, 0, 0.3)", borderRadius: "50px", overflow: "hidden" }}
+                style={{ position: "relative", cursor: "pointer", boxShadow: "0 0px 6px rgba(0, 0, 0, 0.3)", borderRadius: "25px", overflow: "hidden", width: "40px", height: "40px" }}
                 onMouseEnter={() => setResetHovered(true)}
                 onMouseLeave={() => { setResetHovered(false); setResetClicked(false); }}
                 onMouseDown={() => setResetClicked(true)}
@@ -447,24 +447,24 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
                   if (transformRef.current) transformRef.current.resetTransform();
                 }}
               >
-                <img src={reset} alt="Reset" draggable={false} style={{ display: "block" }} />
-                <img src={resetHighlight} alt="Highlight" draggable={false} style={{ position: "absolute", top: 0, left: 0, display: "block", opacity: resetHovered || resetClicked ? 1 : 0, transition: "opacity 0.3s ease-in-out", pointerEvents: "none" }} />
+                <img src={reset} alt="Reset" draggable={false} style={{ display: "block", width: "100%", height: "100%" }} />
+                <img src={resetHighlight} alt="Highlight" draggable={false} style={{ position: "absolute", top: 0, left: 0, display: "block", width: "100%", height: "100%", opacity: resetHovered || resetClicked ? 1 : 0, transition: "opacity 0.3s ease-in-out", pointerEvents: "none" }} />
               </div>
             </div>
           </div>
         </div>
-        <div style={{ width: "700px", height: "100%", flexShrink: 0, display: "flex", flexDirection: "column" }}>
-          <div style={{ width: "100%", height: "394px", backgroundColor: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ width: "350px", height: "100%", flexShrink: 0, display: "flex", flexDirection: "column" }}>
+          <div style={{ width: "100%", height: "197px", backgroundColor: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
             <ShopImage photo={shop.photo2 || shop.photo1} shopId={shop.shopId} />
           </div>
           
-          <div style={{ marginTop: "50px", marginLeft: "30px", marginRight: "30px", marginBottom: "30px", display: "flex", alignItems: "center", gap: "20px", flexShrink: 0 }}>
+          <div style={{ marginTop: "25px", marginLeft: "15px", marginRight: "15px", marginBottom: "15px", display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
             {(shop.shopLogo || shop.shopId) && (
-              <div style={{ width: "200px", height: "200px", borderRadius: "20px", border: "2px solid #D9D9D9", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", backgroundColor: "#FFFFFF", boxSizing: "border-box", padding: "10px", flexShrink: 0 }}>
+              <div style={{ width: "100px", height: "100px", borderRadius: "10px", border: "1px solid #D9D9D9", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", backgroundColor: "#FFFFFF", boxSizing: "border-box", padding: "5px", flexShrink: 0 }}>
                 <ShopLogoImage photo={shop.shopLogo || (shop.shopId ? `files/shop/${shop.shopId}/shop_logo.png` : undefined)} shopId={shop.shopId} />
               </div>
             )}
-            <ShopNameDisplay name={displayShopName} width="410px" fontSize="32px" />
+            <ShopNameDisplay name={displayShopName} width="205px" fontSize="16px" />
           </div>
 
           <div style={{ 
@@ -473,24 +473,24 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
             flexBasis: "auto",
             overflowY: "auto", 
             minHeight: 0,
-            width: "640px", 
-            marginLeft: "30px", 
-            marginRight: "10px", // Scrollbar space
-            paddingRight: "20px", // Content spacing from scrollbar
-            marginBottom: "30px",
+            width: "320px", 
+            marginLeft: "15px", 
+            marginRight: "5px", // Scrollbar space
+            paddingRight: "10px", // Content spacing from scrollbar
+            marginBottom: "15px",
           }}>
             <style>
               {`
                 div::-webkit-scrollbar {
-                  width: 8px;
+                  width: 4px;
                 }
                 div::-webkit-scrollbar-track {
                   background: #f1f1f1;
-                  border-radius: 4px;
+                  border-radius: 2px;
                 }
                 div::-webkit-scrollbar-thumb {
                   background: #c1c1c1;
-                  border-radius: 4px;
+                  border-radius: 2px;
                 }
                 div::-webkit-scrollbar-thumb:hover {
                   background: #a8a8a8;
@@ -514,7 +514,7 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
             {shop.description && (
               <div 
                 className="shop-description"
-                style={{ fontSize: "24px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000", lineHeight: "1.6", wordWrap: "break-word", pointerEvents: "none" }}
+                style={{ fontSize: "12px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000", lineHeight: "1.6", wordWrap: "break-word", pointerEvents: "none" }}
                 dangerouslySetInnerHTML={{ __html: shop.description }}
               />
             )}
@@ -524,25 +524,25 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
 
           {/* Fixed Footer Info */}
           <div style={{ flexShrink: 0, width: "100%" }}>
-            <div style={{ width: "640px", height: "1px", backgroundColor: "#D9D9D9", marginLeft: "30px", marginRight: "30px", marginBottom: "30px" }} />
+            <div style={{ width: "320px", height: "1px", backgroundColor: "#D9D9D9", marginLeft: "15px", marginRight: "15px", marginBottom: "15px" }} />
             
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "30px", marginRight: "30px", marginBottom: "30px", fontSize: "24px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
-              <img src={iconLocation} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "24px", height: "24px", flexShrink: 0 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "15px", marginRight: "15px", marginBottom: "15px", fontSize: "12px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
+              <img src={iconLocation} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "12px", height: "12px", flexShrink: 0 }} />
               {shop.floors && shop.floors.length > 0 && <span>{normalizeFloor(shop.floors[0])}</span>}
               {shop.number && <span>[{shop.number}]</span>}
               {displayGenreMemo && (<><span>/</span><span>{displayGenreMemo}</span></>)}
             </div>
             
             {shop.openTime && (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "30px", marginRight: "30px", marginBottom: "30px", fontSize: "24px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
-                  <img src={iconTime} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "24px", height: "24px", flexShrink: 0 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "15px", marginRight: "15px", marginBottom: "15px", fontSize: "12px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
+                  <img src={iconTime} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "12px", height: "12px", flexShrink: 0 }} />
                   <div style={{ display: "flex", flexDirection: "column", lineHeight: "1.4" }} dangerouslySetInnerHTML={{ __html: shop.openTime }} />
               </div>
             )}
             
             {shop.tel && (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "30px", marginRight: "30px", marginBottom: "30px", fontSize: "24px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
-                <img src={iconTel} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "24px", height: "24px", flexShrink: 0 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "15px", marginRight: "15px", marginBottom: "15px", fontSize: "12px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
+                <img src={iconTel} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "12px", height: "12px", flexShrink: 0 }} />
                 <span>{shop.tel}</span>
               </div>
             )}
@@ -551,7 +551,7 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
       </div>
       <div
         onClick={(e) => { e.stopPropagation(); onClose(); }}
-        style={{ position: "absolute", top: "calc(50% - 840px)", right: "calc(50% - 1250px)", transform: "translateY(-100%)", marginTop: "-30px", width: "140px", height: "140px", border: "none", background: "transparent", cursor: "pointer", padding: 0, zIndex: 1001 }}
+        style={{ position: "absolute", top: "calc(50% - 420px)", right: "calc(50% - 625px)", transform: "translateY(-100%)", marginTop: "-15px", width: "70px", height: "70px", border: "none", background: "transparent", cursor: "pointer", padding: 0, zIndex: 1001 }}
         onTouchStart={(e) => {
           const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
           if (highlight) highlight.style.opacity = "1";

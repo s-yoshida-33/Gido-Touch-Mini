@@ -99,9 +99,9 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
     }
 
     const buttonRect = buttonRef.current.getBoundingClientRect();
-    const modalWidth = 537; // SVG width
-    const modalHeight = 287; // SVG height
-    const gap = 3; // Gap between button and modal
+    const modalWidth = 269; // SVG width scaled (537 / 2)
+    const modalHeight = 144; // SVG height scaled (287 / 2)
+    const gap = 2; // Gap between button and modal
 
     // Position above the button, centered horizontally
     const top = buttonRect.top - modalHeight - gap;
@@ -176,8 +176,8 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
           position: "fixed",
           top: `${position.top}px`,
           left: `${position.left}px`,
-          width: "537px",
-          height: "287px",
+          width: "269px",
+          height: "144px",
           zIndex: 1000,
           pointerEvents: "auto",
         }}
@@ -198,7 +198,7 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
           draggable={false}
         />
 
-        {/* Japanese option (top) - positioned at y=46 based on original design */}
+        {/* Japanese option (top) - positioned at y=23 based on scaled design */}
         <div
           onMouseEnter={() => setHoveredLanguage("ja")}
           onMouseLeave={handleMouseLeave}
@@ -208,10 +208,10 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
           onTouchEnd={() => handleMouseUp("ja")}
           style={{
             position: "absolute",
-            top: "46px",
-            left: "36px",
-            width: "465px",
-            height: "66px",
+            top: "23px",
+            left: "18px",
+            width: "233px",
+            height: "33px",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
@@ -231,7 +231,7 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
           />
         </div>
 
-        {/* English option (bottom) - positioned at y=142 based on original design */}
+        {/* English option (bottom) - positioned at y=71 based on scaled design */}
         <div
           onMouseEnter={() => setHoveredLanguage("en")}
           onMouseLeave={handleMouseLeave}
@@ -241,10 +241,10 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
           onTouchEnd={() => handleMouseUp("en")}
           style={{
             position: "absolute",
-            top: "142px",
-            left: "36px",
-            width: "465px",
-            height: "66px",
+            top: "71px",
+            left: "18px",
+            width: "233px",
+            height: "33px",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",

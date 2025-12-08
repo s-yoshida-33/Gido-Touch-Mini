@@ -1,15 +1,8 @@
 // src/types/global.d.ts
 export {};
 
-import type {
-  CurrentAsset,
-  WspCurrentTimelineResponse,
-  WspTimelineResponse,
-} from "./wsp";
-
 import type { LocationIconSettings } from "./locationIcon";
 import type { ImageSettings } from "./imageSettings";
-import type { VideoSettings } from "./videoSettings";
 import type { ShopPositionSettings } from "./shopPosition";
 
 type ColumnPadding = {
@@ -61,11 +54,7 @@ interface ElectronAPI {
   getImageSettings: () => Promise<ImageSettings>;
   saveImageSettings: (settings: ImageSettings) => Promise<ImageSettings>;
   onImageSettingsUpdated: (cb: (settings: ImageSettings) => void) => () => void;
-  getVideoSettings: () => Promise<VideoSettings>;
-  saveVideoSettings: (settings: VideoSettings) => Promise<VideoSettings>;
-  onVideoSettingsUpdated: (cb: (settings: VideoSettings) => void) => () => void;
   getShopImage: (filePath: string) => Promise<string | null>;
-  getLocalMediaFiles: () => Promise<string[]>;
   getShopPositions: () => Promise<ShopPositionSettings>;
   saveShopPositions: (settings: ShopPositionSettings) => Promise<ShopPositionSettings>;
   onShopPositionsUpdated: (cb: (settings: ShopPositionSettings) => void) => () => void;
@@ -95,13 +84,6 @@ export interface AppInfoAPI {
   } | null>;
 }
 
-interface WspApi {
-  getCurrentAsset: () => Promise<CurrentAsset | null>;
-  getCurrentTimeline: () => Promise<WspCurrentTimelineResponse | null>;
-  getTimeline: (hour?: number) => Promise<WspTimelineResponse | null>;
-  getRightTopVideoAsset: () => Promise<CurrentAsset | null>;
-}
-
 interface LoggerApi {
   log: (
     level: string,
@@ -121,7 +103,6 @@ declare global {
     electronAPI?: ElectronAPI;
     updater?: UpdaterAPI;
     appInfo?: AppInfoAPI;
-    wspApi?: WspApi;
     logger?: LoggerApi;
   }
 }

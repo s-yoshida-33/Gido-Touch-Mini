@@ -128,25 +128,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   quitApp() {
     ipcRenderer.send('menu:quit');
   },
-  getVideoSettings() {
-    return ipcRenderer.invoke('get-video-settings');
-  },
-  saveVideoSettings(settings) {
-    return ipcRenderer.invoke('save-video-settings', settings);
-  },
-  onVideoSettingsUpdated(callback) {
-    const listener = (_event, updated) => callback(updated);
-    ipcRenderer.on('video-settings-updated', listener);
-
-    return () => {
-      ipcRenderer.removeListener('video-settings-updated', listener);
-    };
-  },
   getShopImage(filePath) {
     return ipcRenderer.invoke('get-shop-image', filePath);
-  },
-  getLocalMediaFiles() {
-    return ipcRenderer.invoke('get-local-media-files');
   },
   getShopPositions() {
     return ipcRenderer.invoke('get-shop-positions');
@@ -161,21 +144,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => {
       ipcRenderer.removeListener('shop-positions-updated', listener);
     };
-  },
-});
-
-contextBridge.exposeInMainWorld('wspApi', {
-  getCurrentAsset() {
-    return ipcRenderer.invoke('wsp:get-current-asset');
-  },
-  getCurrentTimeline() {
-    return ipcRenderer.invoke('wsp:get-current-timeline');
-  },
-  getTimeline(hour) {
-    return ipcRenderer.invoke('wsp:get-timeline', { hour });
-  },
-  getRightTopVideoAsset() {
-    return ipcRenderer.invoke('wsp:get-right-top-video-asset');
   },
 });
 
