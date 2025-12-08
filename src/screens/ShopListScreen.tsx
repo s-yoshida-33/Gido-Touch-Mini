@@ -264,12 +264,8 @@ function normalizeFloor(value: string): string {
 
 /**
  * Shop list screen
- * Screen size: 3840×2160
- * Background: Black
- * Shop list area: 2640×2160 (left side)
- * Shop list area background: #FDE7C6
- * Action space: 1140×2160 (right side)
- * Action space background: Black
+ * Screen size: 1920x1080
+ * Background: White
  */
 const ShopListScreen: React.FC = () => {
   // Scroll container ref
@@ -741,856 +737,82 @@ const ShopListScreen: React.FC = () => {
   return (
     <div
       style={{
-        width: "3840px",
-        height: "2160px",
-        backgroundColor: "#3C2C23",
+        width: "1920px",
+        height: "1080px",
+        backgroundColor: "#FFFFFF",
+        overflow: "hidden",
         display: "flex",
         flexDirection: "row",
-        fontFamily: "'Rounded Mplus 1c', sans-serif",
-        overflow: "hidden",
-        boxSizing: "border-box",
       }}
     >
-      {/* Shop list area (left side) */}
-      <div
-        style={{
-          width: "2640px",
-          height: "2100px",
-          backgroundColor: "#FDE7C6",
-          borderRadius: "50px",
-          paddingTop: "30px",
-          paddingBottom: "30px",
-          paddingLeft: "0px",
-          paddingRight: "0px",
-          margin: "30px",
-          flexShrink: 0,
-          boxSizing: "border-box",
-          overflow: "hidden",
-          position: "relative",
-        }}
-      >
-        {/* Scrollable container */}
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            position: "relative",
-          }}
-        >
-          {/* Prev button (left side) */}
-          {canScroll && scrollPercentage > 50 && (
-            <div
-              onClick={scrollToStart}
-              style={{
-                position: "absolute",
-                left: "0",
-                top: "50%",
-                transform: "translateY(-50%)",
-                zIndex: 10,
-                width: "150px",
-                height: "224px",
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                padding: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              onTouchStart={(e) => {
-                const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                if (highlight) highlight.style.opacity = "1";
-              }}
-              onTouchEnd={(e) => {
-                const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                if (highlight) highlight.style.opacity = "0";
-              }}
-              onTouchCancel={(e) => {
-                const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                if (highlight) highlight.style.opacity = "0";
-              }}
-            >
-              <img
-                src={prev}
-                alt="最初に移動"
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  display: "block",
-                  objectFit: "contain",
-                }}
-              />
-              <img
-                src={buttonPrevHighlight}
-                alt="Highlight"
-                className="highlight"
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  display: "block",
-                  objectFit: "contain",
-                  opacity: 0,
-                  transition: "opacity 0.3s ease-in-out",
-                  pointerEvents: "none",
-                }}
-              />
-            </div>
-          )}
-          {/* Next button (right side) */}
-          {canScroll && scrollPercentage <= 50 && (
-            <div
-              onClick={scrollToEnd}
-              style={{
-                position: "absolute",
-                right: "0",
-                top: "50%",
-                transform: "translateY(-50%)",
-                zIndex: 10,
-                width: "150px",
-                height: "224px",
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                padding: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              onTouchStart={(e) => {
-                const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                if (highlight) highlight.style.opacity = "1";
-              }}
-              onTouchEnd={(e) => {
-                const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                if (highlight) highlight.style.opacity = "0";
-              }}
-              onTouchCancel={(e) => {
-                const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                if (highlight) highlight.style.opacity = "0";
-              }}
-            >
-              <img
-                src={next}
-                alt="最後に移動"
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  display: "block",
-                  objectFit: "contain",
-                }}
-              />
-              <img
-                src={buttonNextHighlight}
-                alt="Highlight"
-                className="highlight"
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  display: "block",
-                  objectFit: "contain",
-                  opacity: 0,
-                  transition: "opacity 0.3s ease-in-out",
-                  pointerEvents: "none",
-                }}
-              />
-            </div>
-          )}
-          <div
-            ref={scrollContainerRef}
-            style={{
-              width: "100%",
-              height: "100%",
-              overflowX: "auto",
-              overflowY: "hidden",
-              scrollbarWidth: "none", // Firefox
-              msOverflowStyle: "none", // IE/Edge
-              cursor: "grab",
-            }}
-            className="shop-list-scroll-container"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
-          >
-          {/* Card grid container */}
-          <AnimatePresence 
-            mode="wait"
-            onExitComplete={() => {
-              // Recalculate scroll state after animation completes
-              setTimeout(() => {
-                handleScroll();
-              }, 50);
-            }}
-          >
-            <motion.div
-              key={selectedFloor || "all"}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              onAnimationComplete={() => {
-                // Recalculate scroll state after animation completes
-                setTimeout(() => {
-                  handleScroll();
-                }, 50);
-              }}
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                height: "2032px",
-                width: `${30 + totalColumns * cardWidth + (totalColumns - 1) * columnGap + 30}px`,
-                gap: `${columnGap}px`,
-                paddingTop: "20px",
-                paddingBottom: "12px",
-                boxSizing: "border-box",
-              }}
-            >
-              {error ? (
-                <div 
-                  style={{ 
-                    padding: "30px", 
-                    color: "red", 
-                    fontSize: "24px",
-                  }}
-                >
-                  Error: {error}
-                </div>
-              ) : filteredShops.length === 0 ? (
-                <div 
-                  style={{ 
-                    padding: "30px", 
-                    color: "#FFFFFF", 
-                    fontSize: "24px",
-                  }}
-                >
-                  店舗データがありません
-                </div>
-              ) : (
-                columns.map((columnShops, columnIndex) => (
-                <div
-                  key={columnIndex}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "20px",
-                    width: `${cardWidth}px`,
-                    marginLeft: columnIndex === 0 ? "30px" : "0px",
-                    marginRight: columnIndex === totalColumns - 1 ? "30px" : "0px",
-                  }}
-                >
-                  {columnShops.map((shop) => {
-                    // Get first floor for display
-                    const floor = shop.floors && shop.floors.length > 0 ? shop.floors[0] : "";
-                    
-                    // Logic for genre memo display
-                    let genreMemo = "";
-                    if (selectedLanguage === "en" && shop.genreMemoEn) {
-                      genreMemo = shop.genreMemoEn;
-                    } else if (shop.genreMemo) {
-                        genreMemo = shop.genreMemo
-                          .split(/[|]+/)
-                          .map(s => s.trim())
-                          .filter(s => s.length > 0)
-                          .slice(0, 2)
-                          .join(" / ");
-                    }
-
-                    // Format first line: "フロア [区画番号] ジャンルメモ"
-                    const firstLine = `${floor} [${shop.number}] ${genreMemo}`;
-
-                    // Logic for shop name display
-                    const shopName = (selectedLanguage === "en" && shop.nameEn) ? shop.nameEn : shop.name;
-
-                    return (
-                      <motion.div
-                        key={shop.shopId || shop.number}
-                        onClick={() => setSelectedShop(shop)}
-                        whileHover={{
-                          scale: 1.05,
-                          y: -4,
-                          boxShadow: "0 6px 12px rgba(0, 0, 0, 0.3)",
-                        }}
-                        whileTap={{
-                          scale: 1.02,
-                          y: -2,
-                          boxShadow: "0 4px 8px rgba(0, 0, 0, 0.25)",
-                        }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 300,
-                          damping: 20,
-                        }}
-                        style={{
-                          width: `${cardWidth}px`,
-                          height: `${cardHeight}px`,
-                          backgroundColor: "#FFFFFF",
-                          borderRadius: "0 15px 15px 15px", // Scaled down
-                          display: "flex",
-                          flexDirection: "column",
-                          overflow: "hidden",
-                          flexShrink: 0,
-                          position: "relative",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {/* Floor display (top-left) */}
-                        {floor && (
-                          <div
-                            style={{
-                              position: "absolute",
-                              top: 0,
-                              left: 0,
-                              width: "25px",
-                              height: "25px",
-                              backgroundColor: "#E63B93",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              zIndex: 10,
-                              fontSize: "12px",
-                              fontWeight: 700,
-                              color: "#FFFFFF",
-                            }}
-                          >
-                            {floor}
-                          </div>
-                        )}
-                        {/* Image area */}
-                        <div
-                          style={{
-                            width: "100%",
-                            height: `${imageHeight}px`,
-                            backgroundColor: "#FFFFFF",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            overflow: "hidden",
-                            borderRadius: "0 15px 0 0",
-                            boxSizing: "border-box",
-                          }}
-                        >
-                          <ShopImage photo={shop.photo2 || shop.photo1} shopId={shop.shopId} />
-                        </div>
-                        {/* Content area */}
-                        <div
-                          style={{
-                            flex: 1,
-                            display: "flex",
-                            flexDirection: "column",
-                            padding: "6px",
-                            backgroundColor: "#000000",
-                            color: "#FFFFFF",
-                            justifyContent: "center",
-                          }}
-                        >
-                          {/* First line: Floor, number, genre memo (8px) */}
-                          <div
-                            style={{
-                              fontSize: "8px",
-                              fontWeight: 400,
-                              marginBottom: "4px",
-                              lineHeight: "1.4",
-                            }}
-                          >
-                            {firstLine}
-                          </div>
-                          {/* Second line: Shop name (12px) */}
-                          <ShopNameDisplay name={shopName} />
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              ))
-            )}
-            </motion.div>
-          </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Shop detail modal */}
-        <AnimatePresence>
-          {selectedShop && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15, ease: "easeInOut" }}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                zIndex: 1000,
-              }}
-            >
-              <ShopDetailScreen 
-                shop={selectedShop} 
-                onClose={() => setSelectedShop(null)} 
-                language={selectedLanguage}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* Main Content Area (Left) - Flexible width */}
+      <div style={{ flex: 1, height: "100%", position: "relative" }}>
+        {/* Main content will go here */}
       </div>
 
-      {/* Action space (right side) */}
+      {/* Right Container - Fixed width 460px with left shadow */}
       <div
         style={{
-          width: "570px",
-          height: "1080px",
-          backgroundColor: "#000000",
-          flexShrink: 0,
-          boxSizing: "border-box",
-          marginLeft: "auto",
+          width: "460px",
+          height: "100%",
+          backgroundColor: "#FFFFFF",
+          boxShadow: "-4px 0 16px rgba(0, 0, 0, 0.25)", // Left side drop shadow
+          position: "relative",
+          zIndex: 10,
           display: "flex",
           flexDirection: "column",
         }}
       >
-        {/* Independent video area (top) */}
+        {/* Top Container (W100% H70px) */}
         <div
           style={{
-            width: "540px",
-            height: "304px",
-            marginTop: "15px",
-            marginLeft: "15px",
-            marginRight: "15px",
-            marginBottom: "0px",
-            boxSizing: "border-box",
-            overflow: "hidden",
-            borderRadius: "15px",
-            alignSelf: "flex-start",
-            backgroundColor: "#000000", // Placeholder background
+            width: "100%",
+            height: "70px",
+            flexShrink: 0,
+            borderBottom: "2px solid #D9D9D9",
           }}
         >
-          {/* Video player removed */}
+          {/* Top content */}
         </div>
 
-        {/* Spacer between top video and middle buttons */}
-        <div style={{ flex: 1, minHeight: 0 }} />
-
-        {/* Floor selection button area and business hours / language selection area */}
+        {/* Second Container (W100% H100px) */}
         <div
           style={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "stretch",
-            marginLeft: "15px",
-            marginRight: "15px",
+            width: "100%",
+            height: "100px",
             flexShrink: 0,
+            borderBottom: "2px solid #D9D9D9",
           }}
         >
-          {/* Floor selection button area (left side) */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              gap: "25px",
-              height: "100%",
-            }}
-          >
-            {/* 3F button and FOOD FOREST */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "15px",
-              }}
-            >
-              <div
-                style={{
-                  position: "relative",
-                  display: "inline-block",
-                  cursor: "pointer",
-                }}
-                onClick={() => {
-                  // Close modal if open
-                  if (selectedShop) {
-                    setSelectedShop(null);
-                  }
-                  // If same floor is selected, deselect (show all shops)
-                  // Otherwise, select the clicked floor
-                  if (selectedFloor === "3F") {
-                    setSelectedFloor(null);
-                  } else {
-                    setSelectedFloor("3F");
-                  }
-                }}
-                onMouseEnter={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  if (highlight) highlight.style.opacity = "1";
-                }}
-                onMouseLeave={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  // Keep highlight visible if this floor is selected
-                  if (selectedFloor !== "3F" && highlight) {
-                    highlight.style.opacity = "0";
-                  }
-                }}
-                onTouchStart={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  if (highlight) highlight.style.opacity = "1";
-                }}
-                onTouchEnd={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  // Keep highlight visible if this floor is selected
-                  if (selectedFloor !== "3F" && highlight) {
-                    highlight.style.opacity = "0";
-                  }
-                }}
-                onTouchCancel={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  // Keep highlight visible if this floor is selected
-                  if (selectedFloor !== "3F" && highlight) {
-                    highlight.style.opacity = "0";
-                  }
-                }}
-              >
-                <img
-                  src={button3F}
-                  alt="3F"
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                  style={{
-                    display: "block",
-                  }}
-                />
-                <img
-                  src={button3FHighlight}
-                  alt="3F Highlight"
-                  className="highlight"
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    display: "block",
-                    opacity: selectedFloor === "3F" ? 1 : 0,
-                    transition: "opacity 0.3s ease-in-out",
-                    pointerEvents: "none",
-                  }}
-                />
-              </div>
-              {/* TODO: Add FOOD FOREST button */}
-            </div>
-            {/* 2F button and RESTAURANT */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "15px",
-              }}
-            >
-              <div
-                style={{
-                  position: "relative",
-                  display: "inline-block",
-                  cursor: "pointer",
-                }}
-                onClick={() => {
-                  // Close modal if open
-                  if (selectedShop) {
-                    setSelectedShop(null);
-                  }
-                  // If same floor is selected, deselect (show all shops)
-                  // Otherwise, select the clicked floor
-                  if (selectedFloor === "2F") {
-                    setSelectedFloor(null);
-                  } else {
-                    setSelectedFloor("2F");
-                  }
-                }}
-                onMouseEnter={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  if (highlight) highlight.style.opacity = "1";
-                }}
-                onMouseLeave={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  // Keep highlight visible if this floor is selected
-                  if (selectedFloor !== "2F" && highlight) {
-                    highlight.style.opacity = "0";
-                  }
-                }}
-                onTouchStart={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  if (highlight) highlight.style.opacity = "1";
-                }}
-                onTouchEnd={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  // Keep highlight visible if this floor is selected
-                  if (selectedFloor !== "2F" && highlight) {
-                    highlight.style.opacity = "0";
-                  }
-                }}
-                onTouchCancel={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  // Keep highlight visible if this floor is selected
-                  if (selectedFloor !== "2F" && highlight) {
-                    highlight.style.opacity = "0";
-                  }
-                }}
-              >
-                <img
-                  src={button2F}
-                  alt="2F"
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                  style={{
-                    display: "block",
-                  }}
-                />
-                <img
-                  src={button2FHighlight}
-                  alt="2F Highlight"
-                  className="highlight"
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    display: "block",
-                    opacity: selectedFloor === "2F" ? 1 : 0,
-                    transition: "opacity 0.3s ease-in-out",
-                    pointerEvents: "none",
-                  }}
-                />
-              </div>
-              {/* TODO: Add RESTAURANT button */}
-            </div>
-            {/* 1F button and SUZAKA 蔵 */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "15px",
-              }}
-            >
-              <div
-                style={{
-                  position: "relative",
-                  display: "inline-block",
-                  cursor: "pointer",
-                }}
-                onClick={() => {
-                  // Close modal if open
-                  if (selectedShop) {
-                    setSelectedShop(null);
-                  }
-                  // If same floor is selected, deselect (show all shops)
-                  // Otherwise, select the clicked floor
-                  if (selectedFloor === "1F") {
-                    setSelectedFloor(null);
-                  } else {
-                    setSelectedFloor("1F");
-                  }
-                }}
-                onMouseEnter={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  if (highlight) highlight.style.opacity = "1";
-                }}
-                onMouseLeave={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  // Keep highlight visible if this floor is selected
-                  if (selectedFloor !== "1F" && highlight) {
-                    highlight.style.opacity = "0";
-                  }
-                }}
-                onTouchStart={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  if (highlight) highlight.style.opacity = "1";
-                }}
-                onTouchEnd={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  // Keep highlight visible if this floor is selected
-                  if (selectedFloor !== "1F" && highlight) {
-                    highlight.style.opacity = "0";
-                  }
-                }}
-                onTouchCancel={(e) => {
-                  const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-                  // Keep highlight visible if this floor is selected
-                  if (selectedFloor !== "1F" && highlight) {
-                    highlight.style.opacity = "0";
-                  }
-                }}
-              >
-                <img
-                  src={button1F}
-                  alt="1F"
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                  style={{
-                    display: "block",
-                  }}
-                />
-                <img
-                  src={button1FHighlight}
-                  alt="1F Highlight"
-                  className="highlight"
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    display: "block",
-                    opacity: selectedFloor === "1F" ? 1 : 0,
-                    transition: "opacity 0.3s ease-in-out",
-                    pointerEvents: "none",
-                  }}
-                />
-              </div>
-              {/* TODO: Add SUZAKA 蔵 button */}
-            </div>
-          </div>
+          {/* Second container content */}
+        </div>
 
-          {/* Business hours / language selection area (right side of 1F button) */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              alignItems: "flex-start",
-              marginLeft: "15px",
-              height: "100%",
-            }}
-          >
-            <img
-              src={openTime}
-              alt="Open Time"
-              draggable={false}
-              onDragStart={(e) => e.preventDefault()}
-              style={{
-                display: "block",
-                width: "50%",
-                height: "auto",
-              }}
-            />
-            <div style={{ flex: 1 }} />
-            <div
-              ref={languageButtonRef}
-              onClick={() => setIsLanguageModalOpen(true)}
-              style={{
-                position: "relative",
-                cursor: "pointer",
-                display: "block",
-                width: "50%",
-              }}
-            >
-              {/* Japanese selected image */}
-              <img
-                src={selectLanguageSelectedJp}
-                alt="Select Language"
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  opacity: selectedLanguage === "ja" ? 1 : 0,
-                  transition: "opacity 0.3s ease-in-out",
-                  pointerEvents: "none",
-                }}
-              />
-              {/* English selected image */}
-              <img
-                src={selectLanguageSelectedEn}
-                alt="Select Language"
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  opacity: selectedLanguage === "en" ? 1 : 0,
-                  transition: "opacity 0.3s ease-in-out",
-                  pointerEvents: "none",
-                }}
-              />
-              {/* Placeholder to maintain size */}
-              <img
-                src={selectLanguageSelectedEn}
-                alt=""
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                style={{
-                  display: "block",
-                  visibility: "hidden",
-                  width: "100%",
-                  height: "auto",
-                }}
-              />
-            </div>
-          </div>
-          </div>
-
-        {/* Spacer between middle buttons and bottom CMS */}
-        <div style={{ flex: 1, minHeight: 0 }} />
-
-        {/* CMS area (bottom) */}
+        {/* Shop List Container (W100% H743px) */}
         <div
           style={{
-            width: "540px",
-            height: "304px", // 16:9 aspect ratio (540 × 9/16 = 303.75)
-            marginLeft: "15px",
-            marginRight: "15px",
-            marginTop: "0px",
-            marginBottom: "15px",
-            boxSizing: "border-box",
-            overflow: "hidden",
-            borderRadius: "15px",
-            alignSelf: "flex-start",
-            backgroundColor: "#000000", // Placeholder background
+            width: "100%",
+            height: "743px",
+            flexShrink: 0,
+            // No border
           }}
         >
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-            }}
-          >
-            {/* Video slot removed */}
-          </div>
+          {/* Shop List content */}
+        </div>
+
+        {/* Bottom Container (W100% H167px) */}
+        <div
+          style={{
+            width: "100%",
+            height: "167px",
+            flexShrink: 0,
+            borderTop: "2px solid #D9D9D9",
+          }}
+        >
+          {/* Bottom content */}
         </div>
       </div>
-
-      {/* Language Select Modal */}
-      <LanguageSelectModal
-        isOpen={isLanguageModalOpen}
-        onClose={() => setIsLanguageModalOpen(false)}
-        buttonRef={languageButtonRef}
-        onLanguageChange={(lang) => setSelectedLanguage(lang)}
-      />
     </div>
   );
 };
 
 export default ShopListScreen;
-
-
-
-
-
-
