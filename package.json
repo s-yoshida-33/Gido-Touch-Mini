@@ -1,5 +1,5 @@
 {
-  "name": "gido-touch",
+  "name": "gido-touch-mini",
   "private": true,
   "version": "0.1.0-beta.18",
   "type": "module",
@@ -19,7 +19,7 @@
   "main": "electron/main.cjs",
   "build": {
     "appId": "com.tti.gido",
-    "productName": "Gido Touch",
+    "productName": "Gido Touch Mini",
     "copyright": "© 2025 Toei Techno International Inc.",
     "directories": {
       "output": "release",
@@ -47,7 +47,7 @@
         }
       ],
       "icon": "build/icon.ico",
-      "artifactName": "GidoTouchSetup-${arch}-${version}.exe",
+      "artifactName": "GidoTouchMiniSetup-${arch}-${version}.exe",
       "extraFiles": [
         {
           "from": "build/icon.ico",
@@ -60,7 +60,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": false,
       "createStartMenuShortcut": false,
-      "shortcutName": "Gido Touch",
+      "shortcutName": "Gido Touch Mini",
       "deleteAppDataOnUninstall": false,
       "include": "build/installer.nsh",
       "warningsAsErrors": false,
@@ -72,7 +72,7 @@
         "ja_JP"
       ],
       "menuCategory": true,
-      "uninstallDisplayName": "Gido Touch アンインストール",
+      "uninstallDisplayName": "Gido Touch Mini アンインストール",
       "unicode": true,
       "differentialPackage": false
     },

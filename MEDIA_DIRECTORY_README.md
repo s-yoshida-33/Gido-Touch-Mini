@@ -9,12 +9,12 @@
 開発環境では、以下のディレクトリにメディアファイルを配置してください：
 
 ```
-%APPDATA%\Gido Touch\media\
+%APPDATA%\Gido Touch Mini\media\
 ```
 
 Windowsの場合、通常は以下のパスになります：
 ```
-C:\Users\<ユーザー名>\AppData\Roaming\Gido Touch\media\
+C:\Users\<ユーザー名>\AppData\Roaming\Gido Touch Mini\media\
 ```
 
 ### 本番環境（ビルド後）

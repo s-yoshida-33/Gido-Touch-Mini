@@ -113,7 +113,7 @@ function notifySlack(level, message, context = {}) {
     `*Level*: ${level.toUpperCase()}`,
     `*Scope*: ${scope}`,
     `*Message*: ${message}`,
-    `*App*: Gido Touch`,
+    `*App*: Gido Touch Mini`,
     `*Version*: ${appVersion}`,
     `*Host*: ${hostname}`,
   ];
@@ -164,7 +164,7 @@ function formatMessage(level, message, context = {}) {
 
   const base = {
     level,
-    app: 'Gido Touch',
+    app: 'Gido Touch Mini',
     version: appVersion,
     host: hostname,
     ...context,

@@ -1,6 +1,6 @@
-# Gido Touch
+# Gido Touch Mini
 
-**Gido Touch** は、Electron、React、TypeScript で構築されたインタラクティブなフロアガイド表示システムです。
+**Gido Touch Mini** は、Electron、React、TypeScript で構築されたインタラクティブなフロアガイド表示システムです。
 大型タッチパネルディスプレイでの運用を想定しており、直感的なフロアマップ操作、店舗検索、デジタルサイネージ機能を提供します。
 
 ## 概要
@@ -142,7 +142,7 @@ Gido-Touch/
 ## 設定ファイル
 
 ユーザー設定は OS のアプリケーションデータフォルダに `settings.json` として保存されます。
-(例: `C:\Users\[User]\AppData\Roaming\Gido Touch\settings.json`)
+(例: `C:\Users\[User]\AppData\Roaming\Gido Touch Mini\settings.json`)
 
 主な設定項目:
 *   `floor`: 現在表示中のフロア (デフォルト起動フロア)

@@ -254,14 +254,14 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
         >
           <img
             src={iconSvg}
-            alt="Gido Touch"
+            alt="Gido Touch Mini"
             style={{
               width: 24,
               height: 24,
             }}
           />
           <span style={{ color: "#ffffff", fontSize: 16, fontWeight: 600 }}>
-            Gido Touch
+            Gido Touch Mini
           </span>
         </div>
 
