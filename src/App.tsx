@@ -1,5 +1,6 @@
 // src/App.tsx
 import React, { useEffect, useState } from "react";
+import "./styles/global-image.css"; // Global image styles
 import ShopListScreen from "./screens/ShopListScreen";
 
 import VersionInfoScreen from "./screens/VersionInfoScreen";

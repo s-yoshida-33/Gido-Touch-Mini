@@ -14,6 +14,25 @@ import selectLanguageSelectedJp from "../assets/select-language-selected-jp.svg"
 import openTime from "../assets/open-time.svg";
 import prev from "../assets/button-prev.svg";
 import next from "../assets/button-next.svg";
+import iconSearch from "../assets/icon_search.svg";
+import iconAll from "../assets/icon_all.svg";
+import iconAllHighlight from "../assets/icon_all_highlight.svg";
+import iconFashion from "../assets/icon_fashion.svg";
+import iconFashionHighlight from "../assets/icon_fashion_highlight.svg";
+import iconFashionGoods from "../assets/icon_fashion_goods.svg";
+import iconFashionGoodsHighlight from "../assets/icon_fashion_goods_highlight.svg";
+import iconSport from "../assets/icon_sport.svg";
+import iconSportHighlight from "../assets/icon_sport_highlight.svg";
+import iconKids from "../assets/icon_kids.svg";
+// import iconKidsHighlight from "../assets/icon_kids_highlight.svg"; // Missing file
+import iconLifestyle from "../assets/icon_lifestyle.svg";
+import iconLifestyleHighlight from "../assets/icon_lifestyle_highlight.svg";
+import iconGourmet from "../assets/icon_gourmet.svg";
+import iconGourmetHighlight from "../assets/icon_gourmet_highlight.svg";
+import iconEntertainment from "../assets/icon_entertainment.svg";
+import iconEntertainmentHighlight from "../assets/icon_entertainment_highlight.svg";
+import iconService from "../assets/icon_survice.svg";
+import iconServiceHighlight from "../assets/icon_survice_highlight.svg";
 import { fetchShops } from "../repositories/shopRepository";
 import type { Shop } from "../types/shop";
 import ShopDetailScreen from "./ShopDetailScreen";
@@ -262,6 +281,26 @@ function normalizeFloor(value: string): string {
   return m ? `${m[1]}F` : value;
 }
 
+// Genre data definition
+type Genre = {
+  id: string;
+  name: string;
+  icon: string;
+  highlightIcon: string;
+};
+
+const GENRE_LIST: Genre[] = [
+  { id: "all", name: "All", icon: iconAll, highlightIcon: iconAllHighlight },
+  { id: "fashion", name: "Fashion", icon: iconFashion, highlightIcon: iconFashionHighlight },
+  { id: "fashion_goods", name: "Fashion Goods", icon: iconFashionGoods, highlightIcon: iconFashionGoodsHighlight },
+  { id: "sport", name: "Sport", icon: iconSport, highlightIcon: iconSportHighlight },
+  { id: "kids", name: "Kids", icon: iconKids, highlightIcon: iconKids }, // Missing highlight icon, fallback to normal
+  { id: "lifestyle", name: "Lifestyle", icon: iconLifestyle, highlightIcon: iconLifestyleHighlight },
+  { id: "gourmet", name: "Gourmet", icon: iconGourmet, highlightIcon: iconGourmetHighlight },
+  { id: "entertainment", name: "Entertainment", icon: iconEntertainment, highlightIcon: iconEntertainmentHighlight },
+  { id: "service", name: "Service", icon: iconService, highlightIcon: iconServiceHighlight },
+];
+
 /**
  * Shop list screen
  * Screen size: 1920x1080
@@ -276,8 +315,60 @@ const ShopListScreen: React.FC = () => {
   const dragStartXRef = useRef(0);
   const scrollStartXRef = useRef(0);
 
+  // Genre scroll container ref
+  const genreScrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Genre drag scroll state
+  const isGenreDraggingRef = useRef(false);
+  const genreDragStartXRef = useRef(0);
+  const genreScrollStartXRef = useRef(0);
+
+  // Genre Mouse drag scroll
+  const handleGenreMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const container = genreScrollContainerRef.current;
+    if (!container) return;
+
+    isGenreDraggingRef.current = true;
+    genreDragStartXRef.current = e.clientX;
+    genreScrollStartXRef.current = container.scrollLeft;
+    container.style.cursor = "grabbing";
+    container.style.userSelect = "none";
+  };
+
+  const handleGenreMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isGenreDraggingRef.current) return;
+
+    const container = genreScrollContainerRef.current;
+    if (!container) return;
+
+    e.preventDefault();
+    const deltaX = genreDragStartXRef.current - e.clientX;
+    container.scrollLeft = genreScrollStartXRef.current + deltaX;
+  };
+
+  const handleGenreMouseUp = () => {
+    const container = genreScrollContainerRef.current;
+    if (!container) return;
+
+    isGenreDraggingRef.current = false;
+    container.style.cursor = "grab";
+    container.style.userSelect = "";
+  };
+
+  const handleGenreMouseLeave = () => {
+    const container = genreScrollContainerRef.current;
+    if (!container) return;
+
+    isGenreDraggingRef.current = false;
+    container.style.cursor = "grab";
+    container.style.userSelect = "";
+  };
+
   // Shop data state
   const [shops, setShops] = useState<Shop[]>([]);
+  
+  // Selected genre state
+  const [selectedGenre, setSelectedGenre] = useState<string>("all");
   const shopsRef = useRef<Shop[]>([]); // Keep track of shops for error handling
 
   useEffect(() => {
@@ -727,6 +818,9 @@ const ShopListScreen: React.FC = () => {
       .shop-list-scroll-container::-webkit-scrollbar {
         display: none;
       }
+      .genre-scroll-container::-webkit-scrollbar {
+        display: none;
+      }
     `;
     document.head.appendChild(style);
     return () => {
@@ -770,9 +864,50 @@ const ShopListScreen: React.FC = () => {
             height: "70px",
             flexShrink: 0,
             borderBottom: "2px solid #D9D9D9",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          {/* Top content */}
+          {/* Search Box */}
+          <div
+            style={{
+              width: "440px",
+              height: "50px",
+              borderRadius: "50px",
+              border: "2px solid #D9D9D9",
+              padding: "0 20px",
+              boxSizing: "border-box",
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: "#fff",
+            }}
+          >
+            <input
+              type="text"
+              placeholder="店舗名でさがす"
+              style={{
+                flex: 1,
+                border: "none",
+                outline: "none",
+                fontSize: "16px",
+                color: "#333",
+                background: "transparent",
+                padding: 0,
+                margin: 0,
+              }}
+              className="shoplist-search-input"
+            />
+            <img
+              src={iconSearch}
+              alt="Search"
+              style={{
+                width: "24px",
+                height: "24px",
+                marginLeft: "8px",
+              }}
+            />
+          </div>
         </div>
 
         {/* Second Container (W100% H100px) */}
@@ -782,9 +917,85 @@ const ShopListScreen: React.FC = () => {
             height: "100px",
             flexShrink: 0,
             borderBottom: "2px solid #D9D9D9",
+            padding: "0", // 左右パディングを削除（内部コンテナで確保するため）
+            boxSizing: "border-box",
+            display: "flex",
+            alignItems: "center",
           }}
         >
-          {/* Second container content */}
+          {/* Genre Icons */}
+          <div 
+            ref={genreScrollContainerRef}
+            className="genre-scroll-container"
+            onMouseDown={handleGenreMouseDown}
+            onMouseMove={handleGenreMouseMove}
+            onMouseUp={handleGenreMouseUp}
+            onMouseLeave={handleGenreMouseLeave}
+            style={{ 
+              display: "flex", 
+              gap: "10px", 
+              height: "100%", 
+              overflowX: "auto", 
+              alignItems: "center",
+              cursor: "grab",
+              userSelect: "none",
+              paddingTop: "10px",
+              paddingBottom: "10px",
+              paddingLeft: "10px", // 左側のシャドウ用パディング
+              paddingRight: "10px", // 右側のシャドウ用パディング
+            }}
+          >
+            {GENRE_LIST.map((genre) => {
+              const isSelected = selectedGenre === genre.id;
+              
+              return (
+                <div 
+                  key={genre.id}
+                  onClick={() => setSelectedGenre(genre.id)}
+                  style={{ 
+                    position: "relative", 
+                    height: "100%", 
+                    flexShrink: 0,
+                    cursor: "pointer",
+                    // Use flex basis auto to let img define width
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  {/* Normal Icon (Always rendered for layout, opacity controls visibility) */}
+                  <img 
+                    src={genre.icon} 
+                    alt={genre.name} 
+                    style={{ 
+                      height: "100%", 
+                      width: "auto",
+                      opacity: isSelected ? 0 : 1,
+                      transition: "opacity 0.3s ease-in-out",
+                      display: "block",
+                    }} 
+                  />
+                  
+                  {/* Highlight Icon (Overlay) */}
+                  <img 
+                    src={genre.highlightIcon} 
+                    alt={`${genre.name} Highlight`} 
+                    style={{ 
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      height: "100%", 
+                      width: "100%", // Match parent/normal icon width
+                      opacity: isSelected ? 1 : 0,
+                      transition: "opacity 0.3s ease-in-out",
+                      filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))",
+                      pointerEvents: "none", // Click goes to parent div
+                      display: "block",
+                    }} 
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Shop List Container (W100% H743px) */}

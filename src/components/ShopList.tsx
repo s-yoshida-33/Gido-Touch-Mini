@@ -268,7 +268,7 @@ const ShopList: React.FC<ShopListProps> = ({
           gap: "20px",
           alignItems: "flex-start",
           height: "100%",
-          backgroundColor: "fff",
+          backgroundColor: "#ffffff",
         }}
       >
         {nonEmptyColumns.map((colLines, colIdx) => {

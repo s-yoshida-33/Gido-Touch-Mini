@@ -1,0 +1,13 @@
+/* Global Image Styles */
+img {
+  pointer-events: none; /* Disable mouse interactions */
+  user-select: none; /* Disable selection */
+  -webkit-user-drag: none; /* Disable drag in WebKit browsers */
+  -webkit-touch-callout: none; /* Disable iOS touch callout */
+}
+
+/* Allow pointer events for specific interactive elements if needed, 
+   but generally for pure display images, the above is sufficient. 
+   If some images need to be clickable, they should be wrapped in a button or div.
+*/
+

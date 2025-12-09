@@ -120,4 +120,19 @@
       rgba(248, 164, 171, 0.5) 100%
     );
 }
-  
+
+/* 検索ボックスのプレースホルダー */
+.shoplist-search-input::placeholder {
+    color: #D9D9D9;
+    opacity: 1; /* Firefox用 */
+}
+
+/* IE向け */
+.shoplist-search-input:-ms-input-placeholder {
+    color: #D9D9D9;
+}
+
+/* Edge向け */
+.shoplist-search-input::-ms-input-placeholder {
+    color: #D9D9D9;
+}
