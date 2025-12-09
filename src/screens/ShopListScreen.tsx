@@ -24,7 +24,7 @@ import iconFashionGoodsHighlight from "../assets/icon_fashion_goods_highlight.sv
 import iconSport from "../assets/icon_sport.svg";
 import iconSportHighlight from "../assets/icon_sport_highlight.svg";
 import iconKids from "../assets/icon_kids.svg";
-// import iconKidsHighlight from "../assets/icon_kids_highlight.svg"; // Missing file
+import iconKidsHighlight from "../assets/icon_kids_highlight.svg";
 import iconLifestyle from "../assets/icon_lifestyle.svg";
 import iconLifestyleHighlight from "../assets/icon_lifestyle_highlight.svg";
 import iconGourmet from "../assets/icon_gourmet.svg";
@@ -33,6 +33,12 @@ import iconEntertainment from "../assets/icon_entertainment.svg";
 import iconEntertainmentHighlight from "../assets/icon_entertainment_highlight.svg";
 import iconService from "../assets/icon_survice.svg";
 import iconServiceHighlight from "../assets/icon_survice_highlight.svg";
+import buttonEventNews from "../assets/button_event_news.svg";
+import buttonEventNewsHighlight from "../assets/button_event_news_highlight.svg";
+import buttonShopNews from "../assets/button_shop_news.svg";
+import buttonShopNewsHighlight from "../assets/button_shop_news_highlight.svg";
+import buttonOpenTime from "../assets/button-open-time.svg";
+import buttonOpenTimeHighlight from "../assets/button-open-time-highlight.svg";
 import { fetchShops } from "../repositories/shopRepository";
 import type { Shop } from "../types/shop";
 import ShopDetailScreen from "./ShopDetailScreen";
@@ -294,7 +300,7 @@ const GENRE_LIST: Genre[] = [
   { id: "fashion", name: "Fashion", icon: iconFashion, highlightIcon: iconFashionHighlight },
   { id: "fashion_goods", name: "Fashion Goods", icon: iconFashionGoods, highlightIcon: iconFashionGoodsHighlight },
   { id: "sport", name: "Sport", icon: iconSport, highlightIcon: iconSportHighlight },
-  { id: "kids", name: "Kids", icon: iconKids, highlightIcon: iconKids }, // Missing highlight icon, fallback to normal
+  { id: "kids", name: "Kids", icon: iconKids, highlightIcon: iconKidsHighlight },
   { id: "lifestyle", name: "Lifestyle", icon: iconLifestyle, highlightIcon: iconLifestyleHighlight },
   { id: "gourmet", name: "Gourmet", icon: iconGourmet, highlightIcon: iconGourmetHighlight },
   { id: "entertainment", name: "Entertainment", icon: iconEntertainment, highlightIcon: iconEntertainmentHighlight },
@@ -369,6 +375,13 @@ const ShopListScreen: React.FC = () => {
   
   // Selected genre state
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
+  
+  // Active news button state (null if none selected) -> Changed to track pressed state only
+  const [pressedNewsButton, setPressedNewsButton] = useState<"event" | "shop" | "openTime" | null>(null);
+  
+  // Show open time modal state
+  const [showOpenTime, setShowOpenTime] = useState(false);
+  
   const shopsRef = useRef<Shop[]>([]); // Keep track of shops for error handling
 
   useEffect(() => {
@@ -451,14 +464,10 @@ const ShopListScreen: React.FC = () => {
           throw new Error("API returned 0 shops");
         }
 
-        // Filter shops: only "飲食店・食品" or "グルメ" genre
-        const filtered = data.filter((shop) => shop.genre === "飲食店・食品" || shop.genre === "グルメ");
-
-        // Exclude "イオン堺北花田店"
-        const excluded = filtered.filter((shop) => !shop.name.includes("イオン堺北花田店"));
-
         // Clean shop names (remove furigana in brackets)
-        const cleaned = excluded.map((s) => ({
+        // Removed hardcoded filters: only "飲食店・食品" or "グルメ" and "イオン堺北花田店" exclusion
+        // Now showing all shops by default
+        const cleaned = data.map((s) => ({
           ...s,
           name: s.name.replace(/【.*?】/g, "").trim(),
         }));
@@ -621,26 +630,52 @@ const ShopListScreen: React.FC = () => {
     };
   }, []); // Always active, no dependencies
 
-  // Filter shops by selected floor
+  // Filter shops by selected floor AND selected genre
   const filteredShops = React.useMemo(() => {
-    if (!selectedFloor) {
-      return shops;
-    }
-    
-    const normalizedSelectedFloor = normalizeFloor(selectedFloor);
-    
-    return shops.filter((shop) => {
-      if (!shop.floors || shop.floors.length === 0) {
-        return false;
-      }
-      
-      // Check if any of the shop's floors match the selected floor
-      return shop.floors.some((floor) => {
-        const normalizedShopFloor = normalizeFloor(String(floor));
-        return normalizedShopFloor === normalizedSelectedFloor;
+    let result = shops;
+
+    // 1. Filter by Floor
+    if (selectedFloor) {
+      const normalizedSelectedFloor = normalizeFloor(selectedFloor);
+      result = result.filter((shop) => {
+        if (!shop.floors || shop.floors.length === 0) return false;
+        return shop.floors.some((floor) => {
+          const normalizedShopFloor = normalizeFloor(String(floor));
+          return normalizedShopFloor === normalizedSelectedFloor;
+        });
       });
-    });
-  }, [shops, selectedFloor]);
+    }
+
+    // 2. Filter by Genre
+    if (selectedGenre && selectedGenre !== "all") {
+      // Create a mapping from genre IDs (from buttons) to actual shop genre strings
+      // Adjust these mappings based on your actual data content
+      const genreMapping: Record<string, string[]> = {
+        fashion: ["ファッション", "レディス", "メンズ", "キッズ", "インナー"],
+        fashion_goods: ["ファッション雑貨", "バッグ", "靴", "アクセサリー", "帽子", "時計", "眼鏡"],
+        sport: ["スポーツ", "アウトドア"],
+        kids: ["キッズ", "ベビー", "おもちゃ"],
+        lifestyle: ["ライフスタイル", "インテリア", "生活雑貨", "文具", "楽器", "書籍", "ペット", "コスメ", "ドラッグストア"],
+        gourmet: ["グルメ", "飲食店・食品", "カフェ", "レストラン", "フードコート"],
+        entertainment: ["エンターテインメント", "アミューズメント", "シネマ"],
+        service: ["サービス", "リラクゼーション", "クリーニング", "携帯電話", "銀行", "ATM", "クリニック", "スクール", "その他"],
+      };
+
+      const targetGenres = genreMapping[selectedGenre];
+      if (targetGenres) {
+        result = result.filter((shop) => {
+          // Check if shop.genre (string) matches any of the target genres
+          // Or if shop.genreMemo contains relevant keywords if genre field is not sufficient
+          if (!shop.genre) return false;
+          
+          // Simple exact match or partial match logic
+          return targetGenres.some(g => shop.genre.includes(g));
+        });
+      }
+    }
+
+    return result;
+  }, [shops, selectedFloor, selectedGenre]);
 
   // Layout: 6 rows per column
   // Card count is dynamically calculated based on the number of shops from API
@@ -837,8 +872,69 @@ const ShopListScreen: React.FC = () => {
         overflow: "hidden",
         display: "flex",
         flexDirection: "row",
+        position: "relative", // Add relative positioning for absolute children
       }}
     >
+      {/* Open Time Modal */}
+      <AnimatePresence>
+        {showOpenTime && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              position: "absolute",
+              bottom: "180px", // Just above the bottom container
+              left: "auto", // Explicitly unset left
+              right: 0, // Align to right side relative to the 1920px container
+              width: "460px", // Fixed width of the right container
+              display: "flex",
+              justifyContent: "center", // Center horizontally within the 460px
+              alignItems: "flex-end",
+              pointerEvents: "none", // Allow clicks to pass through to the overlay below
+              zIndex: 101, // Higher than overlay
+            }}
+          >
+            <div
+              style={{
+                width: "100%", // Ensure full width
+                display: "flex", // Enable flex context for centering image
+                justifyContent: "center", // Center image horizontally
+                pointerEvents: "auto", // Re-enable clicks for the image itself
+                filter: "drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.2))",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={openTime}
+                alt="Open Time Info"
+                style={{
+                  maxWidth: "90%", // Add some padding
+                  maxHeight: "60vh",
+                  objectFit: "contain",
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Overlay to close modal (invisible) */}
+      {showOpenTime && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            zIndex: 100,
+          }}
+          onClick={() => setShowOpenTime(false)}
+        />
+      )}
+
       {/* Main Content Area (Left) - Flexible width */}
       <div style={{ flex: 1, height: "100%", position: "relative" }}>
         {/* Main content will go here */}
@@ -1000,14 +1096,50 @@ const ShopListScreen: React.FC = () => {
 
         {/* Shop List Container (W100% H743px) */}
         <div
+          className="shop-list-scroll-container"
           style={{
             width: "100%",
             height: "743px",
             flexShrink: 0,
-            // No border
+            overflowY: "auto",
+            paddingTop: "15px", // Top padding for visual balance
+            paddingBottom: "15px", // Bottom padding
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center", // Center items horizontally (440px inside 460px)
+            gap: "15px", // Spacing between items
           }}
         >
-          {/* Shop List content */}
+          {/* Shop List Items */}
+          <AnimatePresence mode="popLayout">
+            {filteredShops.map((shop, index) => (
+              <motion.div
+                key={shop.id || shop.shopId || `${shop.name}-${index}`}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3 }}
+                style={{
+                  width: "440px",
+                  height: "80px",
+                  borderRadius: "10px",
+                  backgroundColor: "#FFFFFF",
+                  boxShadow: "2px 2px 4px 1px rgba(0, 0, 0, 0.4)",
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "0 20px",
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* Temporary Content */}
+                <span style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Rounded Mplus 1c', sans-serif", color: "#333" }}>
+                  {shop.name}
+                </span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
 
         {/* Bottom Container (W100% H167px) */}
@@ -1017,11 +1149,163 @@ const ShopListScreen: React.FC = () => {
             height: "167px",
             flexShrink: 0,
             borderTop: "2px solid #D9D9D9",
+            padding: "20px 30px",
+            boxSizing: "border-box",
+            display: "flex",
+            flexDirection: "column", // Changed to column to stack buttons and language selector
+            alignItems: "flex-start",
+            justifyContent: "space-between", // Space out vertically
           }}
         >
-          {/* Bottom content */}
+          {/* Top Row: News Buttons */}
+          <div style={{ display: "flex", flexDirection: "row", gap: "12px" }}>
+            {/* Event News Button */}
+            <div 
+              style={{ position: "relative", cursor: "pointer" }}
+              onMouseDown={() => setPressedNewsButton("event")}
+              onMouseUp={() => setPressedNewsButton(null)}
+              onMouseLeave={() => setPressedNewsButton(null)}
+              onTouchStart={() => setPressedNewsButton("event")}
+              onTouchEnd={() => setPressedNewsButton(null)}
+            >
+              <img 
+                src={buttonEventNews} 
+                alt="Event News" 
+                style={{ 
+                  display: "block",
+                  opacity: pressedNewsButton === "event" ? 0 : 1,
+                  transition: "opacity 0.1s ease-in-out",
+                }} 
+              />
+              <img 
+                src={buttonEventNewsHighlight} 
+                alt="Event News Highlight" 
+                style={{ 
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  display: "block",
+                  opacity: pressedNewsButton === "event" ? 1 : 0,
+                  transition: "opacity 0.1s ease-in-out",
+                  pointerEvents: "none",
+                }} 
+              />
+            </div>
+
+            {/* Shop News Button */}
+            <div 
+              style={{ position: "relative", cursor: "pointer" }}
+              onMouseDown={() => setPressedNewsButton("shop")}
+              onMouseUp={() => setPressedNewsButton(null)}
+              onMouseLeave={() => setPressedNewsButton(null)}
+              onTouchStart={() => setPressedNewsButton("shop")}
+              onTouchEnd={() => setPressedNewsButton(null)}
+            >
+              <img 
+                src={buttonShopNews} 
+                alt="Shop News" 
+                style={{ 
+                  display: "block",
+                  opacity: pressedNewsButton === "shop" ? 0 : 1,
+                  transition: "opacity 0.1s ease-in-out",
+                }} 
+              />
+              <img 
+                src={buttonShopNewsHighlight} 
+                alt="Shop News Highlight" 
+                style={{ 
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  display: "block",
+                  opacity: pressedNewsButton === "shop" ? 1 : 0,
+                  transition: "opacity 0.1s ease-in-out",
+                  pointerEvents: "none",
+                }} 
+              />
+            </div>
+
+          {/* Open Time Button */}
+          <div 
+            style={{ position: "relative", cursor: "pointer" }}
+            onMouseDown={() => setPressedNewsButton("openTime")}
+            onMouseUp={() => {
+              setPressedNewsButton(null);
+              setShowOpenTime(true);
+            }}
+            onMouseLeave={() => setPressedNewsButton(null)}
+            onTouchStart={() => setPressedNewsButton("openTime")}
+            onTouchEnd={() => {
+              setPressedNewsButton(null);
+              setShowOpenTime(true);
+            }}
+          >
+            <img 
+              src={buttonOpenTime} 
+              alt="Open Time" 
+              style={{ 
+                display: "block",
+                opacity: pressedNewsButton === "openTime" ? 0 : 1,
+                transition: "opacity 0.1s ease-in-out",
+              }} 
+            />
+            <img 
+              src={buttonOpenTimeHighlight} 
+              alt="Open Time Highlight" 
+              style={{ 
+                position: "absolute",
+                top: 0,
+                left: 0,
+                display: "block",
+                opacity: pressedNewsButton === "openTime" ? 1 : 0,
+                transition: "opacity 0.1s ease-in-out",
+                pointerEvents: "none",
+              }} 
+            />
+          </div>
+          </div>
+
+          {/* Bottom Row: Language Selector */}
+          <div 
+            ref={languageButtonRef}
+            style={{ position: "relative", cursor: "pointer" }}
+            onClick={() => setIsLanguageModalOpen(true)}
+          >
+            {/* JP Image */}
+            <img 
+              src={selectLanguageSelectedJp}
+              alt="Language JP"
+              style={{
+                display: "block",
+                opacity: selectedLanguage === "ja" ? 1 : 0,
+                transition: "opacity 0.3s ease-in-out",
+              }}
+            />
+            {/* EN Image (Overlay) */}
+            <img 
+              src={selectLanguageSelectedEn}
+              alt="Language EN"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                display: "block",
+                opacity: selectedLanguage === "en" ? 1 : 0,
+                transition: "opacity 0.3s ease-in-out",
+                pointerEvents: "none",
+              }}
+            />
+          </div>
         </div>
       </div>
+
+      {/* Language Select Modal */}
+      <LanguageSelectModal
+        isOpen={isLanguageModalOpen}
+        onClose={() => setIsLanguageModalOpen(false)}
+        buttonRef={languageButtonRef}
+        onLanguageChange={(lang) => setSelectedLanguage(lang)}
+      />
     </div>
   );
 };
