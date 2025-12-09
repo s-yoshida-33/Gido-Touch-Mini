@@ -648,31 +648,47 @@ const ShopListScreen: React.FC = () => {
 
     // 2. Filter by Genre
     if (selectedGenre && selectedGenre !== "all") {
-      // Create a mapping from genre IDs (from buttons) to actual shop genre strings
-      // Adjust these mappings based on your actual data content
-      const genreMapping: Record<string, string[]> = {
-        fashion: ["ファッション", "レディス", "メンズ", "キッズ", "インナー"],
-        fashion_goods: ["ファッション雑貨", "バッグ", "靴", "アクセサリー", "帽子", "時計", "眼鏡"],
-        sport: ["スポーツ", "アウトドア"],
-        kids: ["キッズ", "ベビー", "おもちゃ"],
-        lifestyle: ["ライフスタイル", "インテリア", "生活雑貨", "文具", "楽器", "書籍", "ペット", "コスメ", "ドラッグストア"],
-        gourmet: ["グルメ", "飲食店・食品", "カフェ", "レストラン", "フードコート"],
-        entertainment: ["エンターテインメント", "アミューズメント", "シネマ"],
-        service: ["サービス", "リラクゼーション", "クリーニング", "携帯電話", "銀行", "ATM", "クリニック", "スクール", "その他"],
+      // Mapping based on genrelist.xml provided by user:
+      // fashion -> "ファッション"
+      // fashion_goods -> "ファッション雑貨"
+      // sport -> "スポーツ・アウトドア"
+      // kids -> "キッズ"
+      // lifestyle -> "ライフスタイル"
+      // gourmet -> "グルメ"
+      // entertainment -> "エンターテインメント"
+      // service -> "サービス"
+      const genreMapping: Record<string, string> = {
+        fashion: "ファッション",
+        fashion_goods: "ファッション雑貨",
+        sport: "スポーツ・アウトドア",
+        kids: "キッズ",
+        lifestyle: "ライフスタイル",
+        gourmet: "グルメ",
+        entertainment: "エンターテインメント",
+        service: "サービス",
       };
 
-      const targetGenres = genreMapping[selectedGenre];
-      if (targetGenres) {
+      const targetGenreName = genreMapping[selectedGenre];
+      
+      if (targetGenreName) {
         result = result.filter((shop) => {
-          // Check if shop.genre (string) matches any of the target genres
-          // Or if shop.genreMemo contains relevant keywords if genre field is not sufficient
           if (!shop.genre) return false;
-          
-          // Simple exact match or partial match logic
-          return targetGenres.some(g => shop.genre.includes(g));
+          // Exact match with genre name from XML/API
+          return shop.genre === targetGenreName;
         });
       }
     }
+
+    // 3. Filter out shops with empty number
+    result = result.filter((shop) => shop.number && shop.number.trim() !== "");
+
+    // 4. Sort by Number (Always sort by number ascending)
+    // Filtered or not, the result should be sorted by shop number
+    result = [...result].sort((a, b) => {
+      // Use numeric sort for numbers like "101", "102", "110"
+      // If numbers contain non-numeric chars, use localeCompare with numeric option
+      return (a.number || "").localeCompare(b.number || "", "ja", { numeric: true });
+    });
 
     return result;
   }, [shops, selectedFloor, selectedGenre]);
@@ -1111,34 +1127,44 @@ const ShopListScreen: React.FC = () => {
           }}
         >
           {/* Shop List Items */}
-          <AnimatePresence mode="popLayout">
-            {filteredShops.map((shop, index) => (
-              <motion.div
-                key={shop.id || shop.shopId || `${shop.name}-${index}`}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3 }}
-                style={{
-                  width: "440px",
-                  height: "80px",
-                  borderRadius: "10px",
-                  backgroundColor: "#FFFFFF",
-                  boxShadow: "2px 2px 4px 1px rgba(0, 0, 0, 0.4)",
-                  flexShrink: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "0 20px",
-                  boxSizing: "border-box",
-                }}
-              >
-                {/* Temporary Content */}
-                <span style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Rounded Mplus 1c', sans-serif", color: "#333" }}>
-                  {shop.name}
-                </span>
-              </motion.div>
-            ))}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedGenre} // Use selectedGenre as key to trigger full list re-render
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "15px",
+              }}
+            >
+              {filteredShops.map((shop, index) => (
+                <div
+                  key={shop.shopId || `${shop.name}-${index}`}
+                  style={{
+                    width: "440px",
+                    height: "80px",
+                    borderRadius: "10px",
+                    backgroundColor: "#FFFFFF",
+                    boxShadow: "2px 2px 4px 1px rgba(0, 0, 0, 0.4)",
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "0 20px",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  {/* Temporary Content */}
+                  <span style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Rounded Mplus 1c', sans-serif", color: "#333" }}>
+                    {shop.name}
+                  </span>
+                </div>
+              ))}
+            </motion.div>
           </AnimatePresence>
         </div>
 

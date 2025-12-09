@@ -17,9 +17,15 @@ function parseFloorsFromBridge(
 ): FloorId[] {
   let floors: string[] = [];
 
+  // Handle case where floors is array of objects from new API format
   if (Array.isArray(rawFloors)) {
-    // Already an array: ["1F", "2F", "3F"]
-    floors = rawFloors.map((f) => String(f));
+    // Check if it's an array of objects
+    if (rawFloors.length > 0 && typeof rawFloors[0] === 'object' && rawFloors[0] !== null) {
+       floors = rawFloors.map((f: any) => f.floor_name || f.name || "").filter(Boolean);
+    } else {
+      // Already an array of strings/numbers: ["1F", "2F", "3F"]
+      floors = rawFloors.map((f) => String(f));
+    }
   } else if (typeof rawFloors === "string") {
     // Comma-separated string: "1F,2F,3F"
     floors = rawFloors
@@ -101,20 +107,6 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
       const shopLogoValue = item.shop_logo_local_path || item.shop_logo;
       const photo1Value = item.photo1_local_path || item.photo1;
       const photo2Value = item.photo2_local_path || item.photo2;
-
-      if (shopLogoValue) {
-        logInfo("shopList", "Shop has shop_logo", {
-          shopId: item.shop_id,
-          shopName: item.shop_name,
-          shopLogo: shopLogoValue,
-        });
-      } else {
-        logInfo("shopList", "Shop missing shop_logo", {
-          shopId: item.shop_id,
-          shopName: item.shop_name,
-          availableKeys: Object.keys(item),
-        });
-      }
 
       return {
         shopId: String(item.shop_id),
