@@ -115,6 +115,49 @@ function buildImagePath(photo: string | undefined, shopId: string | undefined): 
 }
 
 /**
+ * Shop logo image component that loads images via Electron IPC or falls back to file:// URL
+ */
+const ShopLogoImage: React.FC<{ photo: string | undefined; shopId: string | undefined }> = ({ photo, shopId }) => {
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    if (!photo) { setIsLoading(false); setHasError(true); return; }
+    const loadImage = async () => {
+      const imagePath = buildImagePath(photo, shopId);
+      if (!imagePath) { setIsLoading(false); setHasError(true); return; }
+      const electronAPI = window.electronAPI;
+      if (electronAPI && electronAPI.getShopImage) {
+        try {
+          const normalizedPath = imagePath.replace(/\\/g, "/");
+          const dataUrl = await electronAPI.getShopImage(normalizedPath);
+          if (dataUrl) { setImageUrl(dataUrl); setIsLoading(false); setHasError(false); return; }
+        } catch (error) { console.error(error); setHasError(true); }
+      }
+      const fileUrl = toFileUrl(imagePath);
+      setImageUrl(fileUrl);
+      setIsLoading(false);
+    };
+    loadImage();
+  }, [photo, shopId]);
+
+  if (hasError || (!imageUrl && !isLoading) || imageUrl === "") return null;
+  if (isLoading || !imageUrl) return null;
+
+  return (
+    <img 
+      src={imageUrl} 
+      alt="" 
+      draggable={false} 
+      onDragStart={(e) => e.preventDefault()} 
+      style={{ width: "100%", height: "100%", objectFit: "contain", userSelect: "none", pointerEvents: "auto", display: "block" }} 
+      onError={(e) => { setHasError(true); (e.target as HTMLImageElement).style.display = "none"; }} 
+    />
+  );
+};
+
+/**
  * Shop image component that loads images via Electron IPC or falls back to file:// URL
  */
 const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefined }> = ({ photo, shopId }) => {
@@ -901,7 +944,7 @@ const ShopListScreen: React.FC = () => {
             transition={{ duration: 0.3 }}
             style={{
               position: "absolute",
-              bottom: "180px", // Just above the bottom container
+              bottom: "145px", // Just above the bottom container
               left: "auto", // Explicitly unset left
               right: 0, // Align to right side relative to the 1920px container
               width: "460px", // Fixed width of the right container
@@ -947,7 +990,10 @@ const ShopListScreen: React.FC = () => {
             height: "100%",
             zIndex: 100,
           }}
-          onClick={() => setShowOpenTime(false)}
+          onClick={() => {
+            setShowOpenTime(false);
+            setPressedNewsButton(null); // Unpress button when closing via overlay
+          }}
         />
       )}
 
@@ -1154,12 +1200,31 @@ const ShopListScreen: React.FC = () => {
                     flexShrink: 0,
                     display: "flex",
                     alignItems: "center",
-                    padding: "0 20px",
+                    padding: "0", // Removed padding to allow logo to touch edge
                     boxSizing: "border-box",
+                    overflow: "hidden", // Ensure content stays within rounded corners
                   }}
                 >
+                  {/* Logo Container */}
+                  <div
+                    style={{
+                      width: "80px",
+                      height: "80px",
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#FFFFFF", // Or transparent if preferred
+                      // Border radius handled by parent overflow: hidden
+                      padding: "5px",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <ShopLogoImage photo={shop.shopLogo || (shop.shopId ? `files/shop/${shop.shopId}/shop_logo.png` : undefined)} shopId={shop.shopId} />
+                  </div>
+
                   {/* Temporary Content */}
-                  <span style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Rounded Mplus 1c', sans-serif", color: "#333" }}>
+                  <span style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Rounded Mplus 1c', sans-serif", color: "#333", marginLeft: "20px" }}>
                     {shop.name}
                   </span>
                 </div>
@@ -1254,16 +1319,15 @@ const ShopListScreen: React.FC = () => {
           {/* Open Time Button */}
           <div 
             style={{ position: "relative", cursor: "pointer" }}
-            onMouseDown={() => setPressedNewsButton("openTime")}
-            onMouseUp={() => {
-              setPressedNewsButton(null);
-              setShowOpenTime(true);
-            }}
-            onMouseLeave={() => setPressedNewsButton(null)}
-            onTouchStart={() => setPressedNewsButton("openTime")}
-            onTouchEnd={() => {
-              setPressedNewsButton(null);
-              setShowOpenTime(true);
+            onClick={() => {
+              // Toggle: If currently open, close and unpress. If closed, open and press.
+              if (showOpenTime) {
+                setShowOpenTime(false);
+                setPressedNewsButton(null); // Return to normal state
+              } else {
+                setShowOpenTime(true);
+                setPressedNewsButton("openTime"); // Keep highlighted while modal is open
+              }
             }}
           >
             <img 
@@ -1295,7 +1359,7 @@ const ShopListScreen: React.FC = () => {
           <div 
             ref={languageButtonRef}
             style={{ position: "relative", cursor: "pointer" }}
-            onClick={() => setIsLanguageModalOpen(true)}
+            onClick={() => setIsLanguageModalOpen((prev) => !prev)}
           >
             {/* JP Image */}
             <img 

@@ -1,5 +1,6 @@
 // src/components/LanguageSelectModal.tsx
 import React, { useRef, useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import selectLanguageBg from "../assets/select-language-bg.svg";
 import selectLanguageJp from "../assets/select-language-jp.svg";
 import selectLanguageJpHighlight from "../assets/select-language-jp-highlight.svg";
@@ -56,7 +57,9 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
     }
   }, [isOpen]);
 
-  // Handle click outside to close
+  // Handle click outside to close logic is handled by the backdrop click
+  // Removing the document-level mousedown listener to avoid conflicts with the toggle button
+  /*
   useEffect(() => {
     if (!isOpen) return;
 
@@ -76,6 +79,7 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen, onClose, buttonRef]);
+  */
 
   // Handle escape key
   useEffect(() => {
@@ -93,8 +97,6 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   // Calculate position relative to button
   const getModalPosition = () => {
     if (!buttonRef.current) {
@@ -103,8 +105,8 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
 
     const buttonRect = buttonRef.current.getBoundingClientRect();
     const modalWidth = 400; // Original SVG width
-    const modalHeight = 263; // Original SVG height
-    const gap = 10; // Gap between button and modal
+    const modalHeight = 201; // Original SVG height
+    const gap = 30; // Gap between button and modal
 
     // Position above the button, centered horizontally
     const top = buttonRect.top - modalHeight - gap;
@@ -157,116 +159,125 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
   };
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 999,
-          pointerEvents: "auto",
-        }}
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div
-        ref={modalRef}
-        style={{
-          position: "fixed",
-          top: `${position.top}px`,
-          left: `${position.left}px`,
-          width: "400px",
-          height: "263px",
-          zIndex: 1000,
-          pointerEvents: "auto",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Background */}
-        <img
-          src={selectLanguageBg}
-          alt="Language Select Background"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            pointerEvents: "none",
-          }}
-          draggable={false}
-        />
-
-        {/* Japanese option (top) */}
-        <div
-          onMouseEnter={() => setHoveredLanguage("ja")}
-          onMouseLeave={handleMouseLeave}
-          onMouseDown={() => handleMouseDown("ja")}
-          onMouseUp={() => handleMouseUp("ja")}
-          onTouchStart={() => handleMouseDown("ja")}
-          onTouchEnd={() => handleMouseUp("ja")}
-          style={{
-            position: "absolute",
-            top: "46px", // Calculated from layout
-            left: "20px", // Centered (400 - 360) / 2
-            width: "360px",
-            height: "59px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            src={getJapaneseImage()}
-            alt="日本語"
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              pointerEvents: "none",
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 999,
+              pointerEvents: "auto",
             }}
-            draggable={false}
+            onClick={onClose}
           />
-        </div>
-
-        {/* English option (bottom) */}
-        <div
-          onMouseEnter={() => setHoveredLanguage("en")}
-          onMouseLeave={handleMouseLeave}
-          onMouseDown={() => handleMouseDown("en")}
-          onMouseUp={() => handleMouseUp("en")}
-          onTouchStart={() => handleMouseDown("en")}
-          onTouchEnd={() => handleMouseUp("en")}
-          style={{
-            position: "absolute",
-            top: "142px", // Calculated from layout
-            left: "20px", // Centered (400 - 360) / 2
-            width: "360px",
-            height: "59px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            src={getEnglishImage()}
-            alt="English"
+          
+          {/* Modal */}
+          <motion.div
+            key="language-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            ref={modalRef}
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              pointerEvents: "none",
+              position: "fixed",
+              top: `${position.top}px`,
+              left: `${position.left}px`,
+              width: "400px",
+              height: "263px",
+              zIndex: 1000,
+              pointerEvents: "auto",
             }}
-            draggable={false}
-          />
-        </div>
-      </div>
-    </>
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Background */}
+            <img
+              src={selectLanguageBg}
+              alt="Language Select Background"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                pointerEvents: "none",
+              }}
+              draggable={false}
+            />
+
+            {/* Japanese option (top) */}
+            <div
+              onMouseEnter={() => setHoveredLanguage("ja")}
+              onMouseLeave={handleMouseLeave}
+              onMouseDown={() => handleMouseDown("ja")}
+              onMouseUp={() => handleMouseUp("ja")}
+              onTouchStart={() => handleMouseDown("ja")}
+              onTouchEnd={() => handleMouseUp("ja")}
+              style={{
+                position: "absolute",
+                top: "55px", // Vertically centered in 183px body: (183 - (59*2 + 15)) / 2 = 25px
+                left: "20px", // Centered (400 - 360) / 2
+                width: "360px",
+                height: "59px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <img
+                src={getJapaneseImage()}
+                alt="日本語"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  pointerEvents: "none",
+                }}
+                draggable={false}
+              />
+            </div>
+
+            {/* English option (bottom) */}
+            <div
+              onMouseEnter={() => setHoveredLanguage("en")}
+              onMouseLeave={handleMouseLeave}
+              onMouseDown={() => handleMouseDown("en")}
+              onMouseUp={() => handleMouseUp("en")}
+              onTouchStart={() => handleMouseDown("en")}
+              onTouchEnd={() => handleMouseUp("en")}
+              style={{
+                position: "absolute",
+                top: "129px", // 25px top + 59px button + 15px gap
+                left: "20px", // Centered (400 - 360) / 2
+                width: "360px",
+                height: "59px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <img
+                src={getEnglishImage()}
+                alt="English"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  pointerEvents: "none",
+                }}
+                draggable={false}
+              />
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 };
