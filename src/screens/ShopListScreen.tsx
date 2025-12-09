@@ -1,14 +1,26 @@
 // src/screens/ShopListScreen.tsx
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { TransformWrapper, TransformComponent, type ReactZoomPanPinchContentRef } from "react-zoom-pan-pinch";
 import button1F from "../assets/button-1F.svg";
 import button2F from "../assets/button-2F.svg";
 import button3F from "../assets/button-3F.svg";
+import button4F from "../assets/button-4F.svg";
 import button1FHighlight from "../assets/button-1F-highlight.svg";
 import button2FHighlight from "../assets/button-2F-highlight.svg";
 import button3FHighlight from "../assets/button-3F-highlight.svg";
+import button4FHighlight from "../assets/button-4F-highlight.svg";
 import buttonPrevHighlight from "../assets/button-prev-highlight.svg";
 import buttonNextHighlight from "../assets/button-next-highlight.svg";
+import floor1FMap from "../assets/floor-1F-map.svg";
+import floor2FMap from "../assets/floor-2F-map.svg";
+import floor3FMap from "../assets/floor-3F-map.svg";
+import floor4FMap from "../assets/floor-4F-map.svg";
+import floorLabel1F from "../assets/floor-label-1F.svg";
+import floorLabel2F from "../assets/floor-label-2F.svg";
+import floorLabel3F from "../assets/floor-label-3F.svg";
+import floorLabel4F from "../assets/floor-label-4F.svg";
+import iconCurrentFloor from "../assets/icon-current-floor.svg";
 import selectLanguageSelectedEn from "../assets/select-language-selected-en.svg";
 import selectLanguageSelectedJp from "../assets/select-language-selected-jp.svg";
 import openTime from "../assets/open-time.svg";
@@ -39,6 +51,31 @@ import buttonShopNews from "../assets/button_shop_news.svg";
 import buttonShopNewsHighlight from "../assets/button_shop_news_highlight.svg";
 import buttonOpenTime from "../assets/button-open-time.svg";
 import buttonOpenTimeHighlight from "../assets/button-open-time-highlight.svg";
+import zoomIn from "../assets/zoom-in.svg";
+import zoomInHighlight from "../assets/zoom-in-highlight.svg";
+import zoomOut from "../assets/zoom-out.svg";
+import zoomOutHighlight from "../assets/zoom-out-highlight.svg";
+import buttonInfo from "../assets/button-info.svg";
+import buttonInfoHighlight from "../assets/button-info-highlight.svg";
+import buttonRestroom from "../assets/button-restroom.svg";
+import buttonRestroomHighlight from "../assets/button-restroom-highlight.svg";
+import buttonPriorityRestroom from "../assets/button-priority-restroom.svg";
+import buttonPriorityRestroomHighlight from "../assets/button-priority-restroom-highlight.svg";
+import buttonBabyRoom from "../assets/button-baby-room.svg";
+import buttonBabyRoomHighlight from "../assets/button-baby-room-highlight.svg";
+import buttonSmokingRoom from "../assets/button-smoking-room.svg";
+import buttonSmokingRoomHighlight from "../assets/button-smoking-room-highlight.svg";
+import buttonFreeCoinLockers from "../assets/button-free-coin-lockers.svg";
+import buttonFreeCoinLockersHighlight from "../assets/button-free-coin-lockers-highlight.svg";
+import buttonATM from "../assets/button-ATM.svg";
+import buttonATMHighlight from "../assets/button-ATM-highlight.svg";
+import buttonElevator from "../assets/button-elevator.svg";
+import buttonElevatorHighlight from "../assets/button-elevator-highlight.svg";
+import buttonBusStop from "../assets/button-bus-stop.svg";
+import buttonBusStopHighlight from "../assets/button-bus-stop-highlight.svg";
+import buttonTaxiStand from "../assets/button-taxi-stand.svg";
+import buttonTaxiStandHighlight from "../assets/button-taxi-stand-highlight.svg";
+import hint from "../assets/hint.svg";
 import { fetchShops } from "../repositories/shopRepository";
 import type { Shop } from "../types/shop";
 import ShopDetailScreen from "./ShopDetailScreen";
@@ -338,6 +375,27 @@ type Genre = {
   highlightIcon: string;
 };
 
+// Facility data definition
+type Facility = {
+  id: string;
+  name: string;
+  icon: string;
+  highlightIcon: string;
+};
+
+const FACILITY_LIST: Facility[] = [
+  { id: "info", name: "Info", icon: buttonInfo, highlightIcon: buttonInfoHighlight },
+  { id: "restroom", name: "Restroom", icon: buttonRestroom, highlightIcon: buttonRestroomHighlight },
+  { id: "priority_restroom", name: "Priority Restroom", icon: buttonPriorityRestroom, highlightIcon: buttonPriorityRestroomHighlight },
+  { id: "baby_room", name: "Baby Room", icon: buttonBabyRoom, highlightIcon: buttonBabyRoomHighlight },
+  { id: "smoking_room", name: "Smoking Room", icon: buttonSmokingRoom, highlightIcon: buttonSmokingRoomHighlight },
+  { id: "free_coin_lockers", name: "Coin Lockers", icon: buttonFreeCoinLockers, highlightIcon: buttonFreeCoinLockersHighlight },
+  { id: "atm", name: "ATM", icon: buttonATM, highlightIcon: buttonATMHighlight },
+  { id: "elevator", name: "Elevator", icon: buttonElevator, highlightIcon: buttonElevatorHighlight },
+  { id: "bus_stop", name: "Bus Stop", icon: buttonBusStop, highlightIcon: buttonBusStopHighlight },
+  { id: "taxi_stand", name: "Taxi Stand", icon: buttonTaxiStand, highlightIcon: buttonTaxiStandHighlight },
+];
+
 const GENRE_LIST: Genre[] = [
   { id: "all", name: "All", icon: iconAll, highlightIcon: iconAllHighlight },
   { id: "fashion", name: "Fashion", icon: iconFashion, highlightIcon: iconFashionHighlight },
@@ -350,12 +408,35 @@ const GENRE_LIST: Genre[] = [
   { id: "service", name: "Service", icon: iconService, highlightIcon: iconServiceHighlight },
 ];
 
+const CURRENT_FLOOR: string = "1F";
+
+// Map switch animation variants
+const mapVariants: Variants = {
+  enter: (direction: number) => ({
+    y: direction > 0 ? -200 : 200,
+    opacity: 0,
+  }),
+  center: {
+    zIndex: 1,
+    y: 0,
+    opacity: 1,
+  },
+  exit: (direction: number) => ({
+    zIndex: 0,
+    y: direction > 0 ? 200 : -200,
+    opacity: 0,
+  }),
+};
+
 /**
  * Shop list screen
  * Screen size: 1920x1080
  * Background: White
  */
 const ShopListScreen: React.FC = () => {
+  // Map transform ref
+  const transformComponentRef = useRef<ReactZoomPanPinchContentRef>(null);
+
   // Scroll container ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
@@ -418,12 +499,63 @@ const ShopListScreen: React.FC = () => {
   
   // Selected genre state
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
+
+  // Selected facility state (for map overlay)
+  const [selectedFacility, setSelectedFacility] = useState<string | null>(null);
   
   // Active news button state (null if none selected) -> Changed to track pressed state only
   const [pressedNewsButton, setPressedNewsButton] = useState<"event" | "shop" | "openTime" | null>(null);
   
+  // Active zoom button state
+  const [pressedZoomButton, setPressedZoomButton] = useState<"in" | "out" | null>(null);
+
+  // Active genre navigation button state
+  const [pressedGenreNavButton, setPressedGenreNavButton] = useState<"prev" | "next" | null>(null);
+
+  // Genre scroll state for buttons
+  const [canScrollGenreLeft, setCanScrollGenreLeft] = useState(false);
+  const [canScrollGenreRight, setCanScrollGenreRight] = useState(true);
+
+  const checkGenreScroll = useCallback(() => {
+    const container = genreScrollContainerRef.current;
+    if (!container) return;
+    
+    // Allow a small buffer for float calculation discrepancies
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    setCanScrollGenreLeft(scrollLeft > 1);
+    setCanScrollGenreRight(scrollLeft < scrollWidth - clientWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    const container = genreScrollContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', checkGenreScroll);
+    // Initial check
+    checkGenreScroll();
+    
+    // Check on resize
+    window.addEventListener('resize', checkGenreScroll);
+
+    return () => {
+        container.removeEventListener('scroll', checkGenreScroll);
+        window.removeEventListener('resize', checkGenreScroll);
+    };
+  }, [checkGenreScroll, selectedGenre]); // Re-check when genre changes or on mount
+
+  // Also re-check when genre list layout might change
+  useLayoutEffect(() => {
+      checkGenreScroll();
+  });
+
   // Show open time modal state
   const [showOpenTime, setShowOpenTime] = useState(false);
+
+  // Show hint state
+  const [showHint, setShowHint] = useState(true);
+
+  // Show floor label state
+  const [showFloorLabel, setShowFloorLabel] = useState(true);
   
   const shopsRef = useRef<Shop[]>([]); // Keep track of shops for error handling
 
@@ -434,7 +566,41 @@ const ShopListScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Floor filter state
-  const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
+  const [selectedFloor, setSelectedFloorState] = useState<string | null>(CURRENT_FLOOR);
+  // Floor switch direction (1: up, -1: down)
+  const [floorDirection, setFloorDirection] = useState(0);
+
+  // Wrapper for setting selected floor with direction calculation
+  // Use useCallback to make it stable for useEffect dependencies
+  const setSelectedFloor = useCallback((newFloor: string | null) => {
+    // Note: We need to access the current state value here.
+    // Since we can't easily access the latest state inside a closure without adding it to deps (which might cause loops),
+    // we'll rely on the functional update pattern or a ref if strictly necessary.
+    // However, for the direction logic, we need the "previous" floor.
+    
+    setSelectedFloorState((prevFloor) => {
+      if (newFloor === prevFloor) return prevFloor;
+
+      const getFloorNum = (f: string | null) => parseInt(f?.replace("F", "") || "1");
+      const current = getFloorNum(prevFloor || "1F");
+      const next = getFloorNum(newFloor);
+
+      if (next > current) {
+        setFloorDirection(1); // Moving up (e.g. 1F -> 2F)
+      } else if (next < current) {
+        setFloorDirection(-1); // Moving down (e.g. 2F -> 1F)
+      } else {
+        setFloorDirection(0);
+      }
+      
+      // Reset zoom on floor change
+      if (transformComponentRef.current) {
+        transformComponentRef.current.resetTransform();
+      }
+
+      return newFloor;
+    });
+  }, []);
   
   // Selected shop for detail modal
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
@@ -637,6 +803,12 @@ const ShopListScreen: React.FC = () => {
       scrollContainer.addEventListener('scroll', handleActivity, { passive: true });
     }
 
+    // Listen to scroll events on the genre scroll container
+    const genreScrollContainer = genreScrollContainerRef.current;
+    if (genreScrollContainer) {
+        genreScrollContainer.addEventListener('scroll', handleActivity, { passive: true });
+    }
+
     // Check idle timeout every second
     const checkInterval = setInterval(() => {
       const now = Date.now();
@@ -645,9 +817,24 @@ const ShopListScreen: React.FC = () => {
       if (timeSinceLastActivity >= IDLE_TIMEOUT_MS) {
         // 30 seconds of inactivity - refresh to default state
         setSelectedShop(null);
-        setSelectedFloor(null);
-        setSelectedLanguage("ja"); // Reset to default Japanese (also saves to localStorage)
+        
+        // Use the wrapper function to reset floor (ensures animation direction and button update)
+        // We need to call it even if it seems redundant, to ensure all side effects run
+        setSelectedFloor(CURRENT_FLOOR); 
+        
+        setSelectedGenre("all"); // Reset genre to "all" (default)
+        // Reset genre scroll position to start (left)
+        if (genreScrollContainerRef.current) {
+          genreScrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
+        }
+        
+        setSelectedLanguage("ja");         // Reset to default Japanese (also saves to localStorage)
         setIsLanguageModalOpen(false);
+        setPressedNewsButton(null); // Reset any pressed button state
+        setSelectedFacility(null); // Reset selected facility
+        setShowOpenTime(false); // Close open time modal if open
+        setShowHint(true); // Reset hint visibility
+        setShowFloorLabel(true); // Reset floor label visibility
         
         // Reset scroll position to top with smooth animation (same as scrollToStart)
         if (scrollContainerRef.current) {
@@ -666,18 +853,22 @@ const ShopListScreen: React.FC = () => {
       if (scrollContainer) {
         scrollContainer.removeEventListener('scroll', handleActivity);
       }
+      if (genreScrollContainer) {
+        genreScrollContainer.removeEventListener('scroll', handleActivity);
+      }
       if (throttleTimeout !== null) {
         clearTimeout(throttleTimeout);
       }
       clearInterval(checkInterval);
     };
-  }, []); // Always active, no dependencies
+  }, [setSelectedFloor]); // Added setSelectedFloor to dependencies
 
   // Filter shops by selected floor AND selected genre
   const filteredShops = React.useMemo(() => {
     let result = shops;
 
-    // 1. Filter by Floor
+    // 1. Filter by Floor -> REMOVED (Replaced by Sort)
+    /*
     if (selectedFloor) {
       const normalizedSelectedFloor = normalizeFloor(selectedFloor);
       result = result.filter((shop) => {
@@ -688,6 +879,7 @@ const ShopListScreen: React.FC = () => {
         });
       });
     }
+    */
 
     // 2. Filter by Genre
     if (selectedGenre && selectedGenre !== "all") {
@@ -725,11 +917,36 @@ const ShopListScreen: React.FC = () => {
     // 3. Filter out shops with empty number
     result = result.filter((shop) => shop.number && shop.number.trim() !== "");
 
-    // 4. Sort by Number (Always sort by number ascending)
-    // Filtered or not, the result should be sorted by shop number
+    // 4. Sort
     result = [...result].sort((a, b) => {
-      // Use numeric sort for numbers like "101", "102", "110"
-      // If numbers contain non-numeric chars, use localeCompare with numeric option
+      // Priority 1: Selected Floor Priority
+      if (selectedFloor) {
+        const normalizedSelected = normalizeFloor(selectedFloor);
+        const aOnFloor = a.floors?.some(f => normalizeFloor(String(f)) === normalizedSelected);
+        const bOnFloor = b.floors?.some(f => normalizeFloor(String(f)) === normalizedSelected);
+
+        // If one is on the selected floor and the other isn't, prioritize the one on the selected floor
+        if (aOnFloor && !bOnFloor) return -1;
+        if (!aOnFloor && bOnFloor) return 1;
+      }
+
+      // Priority 2: Floor Order (Ascending) for everyone else (or if both are on selected floor)
+      // Extract floor number for sorting
+      const getFloorVal = (s: Shop) => {
+        if (!s.floors || s.floors.length === 0) return 999;
+        const str = String(s.floors[0]);
+        const match = str.match(/(\d+)/);
+        return match ? parseInt(match[1], 10) : 999;
+      };
+
+      const fA = getFloorVal(a);
+      const fB = getFloorVal(b);
+      
+      if (fA !== fB) {
+        return fA - fB;
+      }
+
+      // Priority 3: Shop Number (Ascending)
       return (a.number || "").localeCompare(b.number || "", "ja", { numeric: true });
     });
 
@@ -845,6 +1062,21 @@ const ShopListScreen: React.FC = () => {
       clearTimeout(timer);
     };
   }, [filteredShops, selectedFloor, handleScroll]);
+
+  // Reset scroll position when genre or floor changes
+  // Use useLayoutEffect to reset scroll before the browser paints the new list
+  // But since we have an animation that waits for exit, we might want to time this carefully
+  // Actually, for "popLayout" or "wait" mode, resetting immediately on state change is usually best
+  // so the new list starts at top.
+  /*
+  useLayoutEffect(() => {
+    // Reset the main shop list scroll container (vertical)
+    const shopListContainer = document.querySelector('.shop-list-scroll-container');
+    if (shopListContainer) {
+      shopListContainer.scrollTop = 0;
+    }
+  }, [selectedGenre, selectedFloor]);
+  */
 
   // Also recalculate when shops data changes
   useEffect(() => {
@@ -997,9 +1229,496 @@ const ShopListScreen: React.FC = () => {
         />
       )}
 
-      {/* Main Content Area (Left) - Flexible width */}
-      <div style={{ flex: 1, height: "100%", position: "relative" }}>
-        {/* Main content will go here */}
+      {/* Map Container (W1460px H1080px) */}
+      <div
+        style={{
+          width: "1460px",
+          height: "100%",
+          position: "relative",
+          backgroundColor: "#fff", // Placeholder color to visualize the area
+          overflow: "hidden", // Ensure zoomed content doesn't overflow
+        }}
+      >
+        {/* Map Image - Bottom Layer */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            zIndex: 0,
+          }}
+        >
+          <TransformWrapper
+            ref={transformComponentRef}
+            initialScale={1}
+            minScale={1}
+            maxScale={4}
+            centerOnInit={true}
+            limitToBounds={true}
+            doubleClick={{ disabled: true }}
+            panning={{ disabled: false, velocityDisabled: true }}
+            wheel={{ step: 0.1 }}
+            alignmentAnimation={{ animationTime: 0, sizeX: 0, sizeY: 0 }}
+            velocityAnimation={{ disabled: true }}
+            zoomAnimation={{ disabled: true }}
+            onPanningStart={() => {
+              setShowHint(false);
+              setShowFloorLabel(false);
+            }}
+            onZoomStart={() => {
+              setShowHint(false);
+              setShowFloorLabel(false);
+            }}
+            onTransformed={(_, state) => {
+              const isDefault = Math.abs(state.scale - 1) < 0.01 && Math.abs(state.positionX) < 1 && Math.abs(state.positionY) < 1;
+              setShowHint(isDefault);
+              setShowFloorLabel(isDefault);
+            }}
+          >
+            <TransformComponent
+              wrapperStyle={{
+                width: "100%",
+                height: "100%",
+              }}
+              contentStyle={{
+                width: "100%",
+                height: "100%",
+              }}
+            >
+              <div style={{ width: "100%", height: "100%", position: "relative" }}>
+                <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
+                  <motion.img
+                    key={selectedFloor || "1F"}
+                    src={selectedFloor === "2F" ? floor2FMap : selectedFloor === "3F" ? floor3FMap : selectedFloor === "4F" ? floor4FMap : floor1FMap}
+                    alt={`${selectedFloor || "1F"} Map`}
+                    custom={floorDirection}
+                    variants={mapVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{
+                      y: { type: "spring", stiffness: 300, damping: 30 },
+                      opacity: { duration: 0.2 }
+                    }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                    }}
+                  />
+                </AnimatePresence>
+              </div>
+            </TransformComponent>
+          </TransformWrapper>
+        </div>
+
+        {/* Hint Image */}
+        <AnimatePresence>
+          {showHint && (
+            <motion.img
+              src={hint}
+              alt="Hint"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                position: "absolute",
+                top: "37px",
+                left: "37px",
+                zIndex: 20,
+                pointerEvents: "none",
+                userSelect: "none",
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Floor Label */}
+        <AnimatePresence>
+          {showFloorLabel && (
+            <motion.img
+              key={selectedFloor || "1F"}
+              src={selectedFloor === "2F" ? floorLabel2F : selectedFloor === "3F" ? floorLabel3F : selectedFloor === "4F" ? floorLabel4F : floorLabel1F}
+              alt="Floor Label"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                position: "absolute",
+                top: "20px",
+                right: "30px",
+                zIndex: 20,
+                pointerEvents: "none",
+                userSelect: "none",
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Pictogram Container (Bottom Center) */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "30px",
+            left: "710px", // Adjusted to center between left (80px width) and right (120px width) buttons
+            transform: "translateX(-50%)",
+            width: "1000px",
+            height: "100px",
+            backgroundColor: "#FFFFFF",
+            borderRadius: "26px",
+            zIndex: 10,
+            filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "20px", // Add gap between icons
+          }}
+        >
+          {FACILITY_LIST.map((facility) => {
+            const isSelected = selectedFacility === facility.id;
+            
+            return (
+              <div 
+                key={facility.id}
+                onClick={() => setSelectedFacility(prev => prev === facility.id ? null : facility.id)}
+                style={{ 
+                  position: "relative", 
+                  height: "80px", // Fit within 100px container
+                  width: "80px", // Assume square icons
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {/* Normal Icon */}
+                <img 
+                  src={facility.icon} 
+                  alt={facility.name} 
+                  style={{ 
+                    height: "100%", 
+                    width: "100%",
+                    objectFit: "contain",
+                    opacity: isSelected ? 0 : 1,
+                    transition: "opacity 0.3s ease-in-out",
+                    display: "block",
+                  }} 
+                />
+                
+                {/* Highlight Icon (Overlay) */}
+                <img 
+                  src={facility.highlightIcon} 
+                  alt={`${facility.name} Highlight`} 
+                  style={{ 
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    height: "100%", 
+                    width: "100%",
+                    objectFit: "contain",
+                    opacity: isSelected ? 1 : 0,
+                    transition: "opacity 0.3s ease-in-out",
+                    pointerEvents: "none",
+                    display: "block",
+                    filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))",
+                  }} 
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Floor Buttons (1F to 4F) */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "30px",
+            right: "30px",
+            zIndex: 10,
+            display: "flex",
+            flexDirection: "column-reverse", // 1F at bottom, 4F at top
+            gap: "20px", // Spacing between buttons
+          }}
+        >
+          {/* 1F Button */}
+          <div 
+            style={{ position: "relative", cursor: "pointer", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
+            onClick={() => setSelectedFloor("1F")}
+          >
+            <img 
+              src={button1F} 
+              alt="1F" 
+              style={{ 
+                display: "block",
+                opacity: selectedFloor === "1F" ? 0 : 1,
+                transition: "opacity 0.3s ease-in-out",
+              }} 
+            />
+            <img 
+              src={button1FHighlight} 
+              alt="1F Highlight" 
+              style={{ 
+                position: "absolute",
+                top: 0,
+                left: 0,
+                display: "block",
+                opacity: selectedFloor === "1F" ? 1 : 0,
+                transition: "opacity 0.3s ease-in-out",
+                pointerEvents: "none",
+              }} 
+            />
+            <img 
+              src={iconCurrentFloor} 
+              alt="Current Floor" 
+              style={{ 
+                position: "absolute",
+                top: "-15px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                display: "block",
+                opacity: CURRENT_FLOOR === "1F" ? 1 : 0,
+                transition: "opacity 0.3s ease-in-out",
+                pointerEvents: "none",
+                zIndex: 2,
+              }} 
+            />
+          </div>
+
+          {/* 2F Button */}
+          <div 
+            style={{ position: "relative", cursor: "pointer", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
+            onClick={() => setSelectedFloor("2F")}
+          >
+            <img 
+              src={button2F} 
+              alt="2F" 
+              style={{ 
+                display: "block",
+                opacity: selectedFloor === "2F" ? 0 : 1,
+                transition: "opacity 0.3s ease-in-out",
+              }} 
+            />
+            <img 
+              src={button2FHighlight} 
+              alt="2F Highlight" 
+              style={{ 
+                position: "absolute",
+                top: 0,
+                left: 0,
+                display: "block",
+                opacity: selectedFloor === "2F" ? 1 : 0,
+                transition: "opacity 0.3s ease-in-out",
+                pointerEvents: "none",
+              }} 
+            />
+            <img 
+              src={iconCurrentFloor} 
+              alt="Current Floor" 
+              style={{ 
+                position: "absolute",
+                top: "-15px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                display: "block",
+                opacity: CURRENT_FLOOR === "2F" ? 1 : 0,
+                transition: "opacity 0.3s ease-in-out",
+                pointerEvents: "none",
+                zIndex: 2,
+              }} 
+            />
+          </div>
+
+          {/* 3F Button */}
+          <div 
+            style={{ position: "relative", cursor: "pointer", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
+            onClick={() => setSelectedFloor("3F")}
+          >
+            <img 
+              src={button3F} 
+              alt="3F" 
+              style={{ 
+                display: "block",
+                opacity: selectedFloor === "3F" ? 0 : 1,
+                transition: "opacity 0.3s ease-in-out",
+              }} 
+            />
+            <img 
+              src={button3FHighlight} 
+              alt="3F Highlight" 
+              style={{ 
+                position: "absolute",
+                top: 0,
+                left: 0,
+                display: "block",
+                opacity: selectedFloor === "3F" ? 1 : 0,
+                transition: "opacity 0.3s ease-in-out",
+                pointerEvents: "none",
+              }} 
+            />
+            <img 
+              src={iconCurrentFloor} 
+              alt="Current Floor" 
+              style={{ 
+                position: "absolute",
+                top: "-15px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                display: "block",
+                opacity: CURRENT_FLOOR === "3F" ? 1 : 0,
+                transition: "opacity 0.3s ease-in-out",
+                pointerEvents: "none",
+                zIndex: 2,
+              }} 
+            />
+          </div>
+
+          {/* 4F Button */}
+          <div 
+            style={{ position: "relative", cursor: "pointer", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
+            onClick={() => setSelectedFloor("4F")}
+          >
+            <img 
+              src={button4F} 
+              alt="4F" 
+              style={{ 
+                display: "block",
+                opacity: selectedFloor === "4F" ? 0 : 1,
+                transition: "opacity 0.3s ease-in-out",
+              }} 
+            />
+            <img 
+              src={button4FHighlight} 
+              alt="4F Highlight" 
+              style={{ 
+                position: "absolute",
+                top: 0,
+                left: 0,
+                display: "block",
+                opacity: selectedFloor === "4F" ? 1 : 0,
+                transition: "opacity 0.3s ease-in-out",
+                pointerEvents: "none",
+              }} 
+            />
+            <img 
+              src={iconCurrentFloor} 
+              alt="Current Floor" 
+              style={{ 
+                position: "absolute",
+                top: "-15px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                display: "block",
+                opacity: CURRENT_FLOOR === "4F" ? 1 : 0,
+                transition: "opacity 0.3s ease-in-out",
+                pointerEvents: "none",
+                zIndex: 2,
+              }} 
+            />
+          </div>
+        </div>
+
+        {/* Zoom Buttons Container */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "30px",
+            left: "30px",
+            zIndex: 10,
+            display: "flex",
+            flexDirection: "column",
+            gap: "0px",
+            filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))",
+          }}
+        >
+          {/* Zoom In Button */}
+          <div
+            style={{
+              position: "relative",
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              if (transformComponentRef.current) {
+                transformComponentRef.current.zoomIn();
+              }
+            }}
+            onMouseDown={() => setPressedZoomButton("in")}
+            onMouseUp={() => setPressedZoomButton(null)}
+            onMouseLeave={() => setPressedZoomButton(null)}
+            onTouchStart={() => setPressedZoomButton("in")}
+            onTouchEnd={() => setPressedZoomButton(null)}
+          >
+            <img
+              src={zoomIn}
+              alt="Zoom In"
+              style={{
+                display: "block",
+                opacity: pressedZoomButton === "in" ? 0 : 1,
+                transition: "opacity 0.1s ease-in-out",
+              }}
+            />
+            <img
+              src={zoomInHighlight}
+              alt="Zoom In Highlight"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                display: "block",
+                opacity: pressedZoomButton === "in" ? 1 : 0,
+                transition: "opacity 0.1s ease-in-out",
+                pointerEvents: "none",
+              }}
+            />
+          </div>
+
+          {/* Zoom Out Button */}
+          <div
+            style={{
+              position: "relative",
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              if (transformComponentRef.current) {
+                transformComponentRef.current.zoomOut();
+              }
+            }}
+            onMouseDown={() => setPressedZoomButton("out")}
+            onMouseUp={() => setPressedZoomButton(null)}
+            onMouseLeave={() => setPressedZoomButton(null)}
+            onTouchStart={() => setPressedZoomButton("out")}
+            onTouchEnd={() => setPressedZoomButton(null)}
+          >
+            <img
+              src={zoomOut}
+              alt="Zoom Out"
+              style={{
+                display: "block",
+                opacity: pressedZoomButton === "out" ? 0 : 1,
+                transition: "opacity 0.1s ease-in-out",
+              }}
+            />
+            <img
+              src={zoomOutHighlight}
+              alt="Zoom Out Highlight"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                display: "block",
+                opacity: pressedZoomButton === "out" ? 1 : 0,
+                transition: "opacity 0.1s ease-in-out",
+                pointerEvents: "none",
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Right Container - Fixed width 460px with left shadow */}
@@ -1075,12 +1794,58 @@ const ShopListScreen: React.FC = () => {
             height: "100px",
             flexShrink: 0,
             borderBottom: "2px solid #D9D9D9",
-            padding: "0", // 左右パディングを削除（内部コンテナで確保するため）
+            padding: "0",
             boxSizing: "border-box",
             display: "flex",
             alignItems: "center",
+            position: "relative", // Needed for absolute positioning of buttons
           }}
         >
+          {/* Prev Button (Absolute Overlay) */}
+          <AnimatePresence>
+            {canScrollGenreLeft && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  width: "22px",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  zIndex: 10,
+                  backgroundColor: "rgba(255, 255, 255, 0.0)", // Transparent background
+                }}
+                onClick={() => {
+                  if (genreScrollContainerRef.current) {
+                    genreScrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
+                  }
+                }}
+                onMouseDown={() => setPressedGenreNavButton("prev")}
+                onMouseUp={() => setPressedGenreNavButton(null)}
+                onMouseLeave={() => setPressedGenreNavButton(null)}
+                onTouchStart={() => setPressedGenreNavButton("prev")}
+                onTouchEnd={() => setPressedGenreNavButton(null)}
+              >
+                <img
+                  src={pressedGenreNavButton === "prev" ? buttonPrevHighlight : prev}
+                  alt="Previous"
+                  style={{
+                    width: "22px",
+                    height: "49px",
+                    display: "block",
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Genre Icons */}
           <div 
             ref={genreScrollContainerRef}
@@ -1092,17 +1857,19 @@ const ShopListScreen: React.FC = () => {
             style={{ 
               display: "flex", 
               gap: "10px", 
-              height: "100%", 
+              height: "100%",
+              width: "100%",
               overflowX: "auto", 
               alignItems: "center",
               cursor: "grab",
               userSelect: "none",
               paddingTop: "10px",
               paddingBottom: "10px",
-              paddingLeft: "10px", // 左側のシャドウ用パディング
-              paddingRight: "10px", // 右側のシャドウ用パディング
+              paddingLeft: "10px", 
+              paddingRight: "10px",
             }}
           >
+
             {GENRE_LIST.map((genre) => {
               const isSelected = selectedGenre === genre.id;
               
@@ -1154,6 +1921,52 @@ const ShopListScreen: React.FC = () => {
               );
             })}
           </div>
+
+          {/* Next Button (Absolute Overlay) */}
+          <AnimatePresence>
+            {canScrollGenreRight && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: 0,
+                  width: "22px",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  zIndex: 10,
+                  backgroundColor: "rgba(255, 255, 255, 0.0)", // Transparent background
+                }}
+                onClick={() => {
+                  if (genreScrollContainerRef.current) {
+                    const { scrollWidth, clientWidth } = genreScrollContainerRef.current;
+                    genreScrollContainerRef.current.scrollTo({ left: scrollWidth - clientWidth, behavior: "smooth" });
+                  }
+                }}
+                onMouseDown={() => setPressedGenreNavButton("next")}
+                onMouseUp={() => setPressedGenreNavButton(null)}
+                onMouseLeave={() => setPressedGenreNavButton(null)}
+                onTouchStart={() => setPressedGenreNavButton("next")}
+                onTouchEnd={() => setPressedGenreNavButton(null)}
+              >
+                <img
+                  src={pressedGenreNavButton === "next" ? buttonNextHighlight : next}
+                  alt="Next"
+                  style={{
+                    width: "22px",
+                    height: "49px",
+                    display: "block",
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Shop List Container (W100% H743px) */}
@@ -1173,13 +1986,20 @@ const ShopListScreen: React.FC = () => {
           }}
         >
           {/* Shop List Items */}
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout" onExitComplete={() => {
+            // Reset scroll position AFTER the old list has exited and BEFORE the new list enters
+            // This ensures the new list starts at the top without visual jumping
+            const shopListContainer = document.querySelector('.shop-list-scroll-container');
+            if (shopListContainer) {
+              shopListContainer.scrollTop = 0;
+            }
+          }}>
             <motion.div
-              key={selectedGenre} // Use selectedGenre as key to trigger full list re-render
+              key={`${selectedGenre}-${selectedFloor || 'none'}`} // Use both genre and floor as key to trigger animation
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               style={{
                 width: "100%",
                 display: "flex",
