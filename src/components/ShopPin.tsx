@@ -33,8 +33,8 @@ function buildShadowStyle(shadow?: ShopPosition['shadow']): React.CSSProperties 
 function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig) {
   if (!animation || !animation.enabled || animation.type === "none") {
     return {
-      initial: { scale: 1 },
-      animate: { scale: 1 },
+      initial: { scale: 1, y: 0 },
+      animate: { scale: 1, y: 0 },
     };
   }
 
@@ -43,6 +43,7 @@ function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig
   switch (animation.type) {
     case "floating":
       return {
+        // Always reset to 0 to avoid sticking at an offset when switching animations
         initial: { y: 0 },
         animate: {
           y: [0, -fixedAmplitude, 0],
@@ -55,9 +56,10 @@ function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig
       };
     case "pulse":
       return {
-        initial: { scale: 1 },
+        initial: { scale: 1, y: 0 },
         animate: {
           scale: [1, 1.1, 1],
+          y: 0,
         },
         transition: {
           duration,
@@ -79,8 +81,8 @@ function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig
       };
     case "blink":
       return {
-        initial: { scale: 1 },
-        animate: { scale: 1 },
+        initial: { scale: 1, y: 0 },
+        animate: { scale: 1, y: 0 },
         transition: {
           duration,
           repeat: Infinity,
@@ -89,8 +91,8 @@ function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig
       };
     default:
       return {
-        initial: { scale: 1 },
-        animate: { scale: 1 },
+        initial: { scale: 1, y: 0 },
+        animate: { scale: 1, y: 0 },
       };
   }
 }
@@ -357,6 +359,7 @@ export const ShopPin: React.FC<ShopPinProps> = ({
 
   const content = animation?.enabled && animation.type !== "none" ? (
     <motion.div
+      key={animation.type}
       style={innerContainerStyle}
       initial={buildAnimationProps(fixedAmplitude, animation).initial}
       animate={buildAnimationProps(fixedAmplitude, animation).animate}
