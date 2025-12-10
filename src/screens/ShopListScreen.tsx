@@ -2133,6 +2133,10 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({ isSettingsOpen = false 
                 onClick={() => {
                   setSelectedShopDetail(null);
                   setPressedCloseButton(false);
+                  // Reset map zoom and position to default
+                  if (transformComponentRef.current) {
+                    transformComponentRef.current.resetTransform();
+                  }
                 }}
                 onMouseDown={() => setPressedCloseButton(true)}
                 onMouseUp={() => setPressedCloseButton(false)}
