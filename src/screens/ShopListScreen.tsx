@@ -45,6 +45,9 @@ import iconEntertainment from "../assets/icon_entertainment.svg";
 import iconEntertainmentHighlight from "../assets/icon_entertainment_highlight.svg";
 import iconService from "../assets/icon_survice.svg";
 import iconServiceHighlight from "../assets/icon_survice_highlight.svg";
+import iconTime from "../assets/icon-time.svg";
+import iconTel from "../assets/icon-tel.svg";
+import iconLocation from "../assets/icon-location.svg";
 import buttonEventNews from "../assets/button_event_news.svg";
 import buttonEventNewsHighlight from "../assets/button_event_news_highlight.svg";
 import buttonShopNews from "../assets/button_shop_news.svg";
@@ -76,7 +79,11 @@ import buttonBusStopHighlight from "../assets/button-bus-stop-highlight.svg";
 import buttonTaxiStand from "../assets/button-taxi-stand.svg";
 import buttonTaxiStandHighlight from "../assets/button-taxi-stand-highlight.svg";
 import hint from "../assets/hint.svg";
+import buttonClose from "../assets/button-close.svg";
+import buttonCloseHighlight from "../assets/button-close-highlight.svg";
+import commingSoon from "../assets/comming-soon.svg";
 import { fetchShops } from "../repositories/shopRepository";
+import { logInfo } from "../logs/logging";
 import type { Shop } from "../types/shop";
 import ShopDetailScreen from "./ShopDetailScreen";
 import { LanguageSelectModal } from "../components/LanguageSelectModal";
@@ -302,8 +309,8 @@ const ShopNameDisplay: React.FC<{ name: string }> = ({ name }) => {
     <div
       ref={containerRef}
       style={{
-        fontSize: "12px",
-        fontWeight: 700,
+        fontSize: "16px",
+        fontWeight: "bold",
         lineHeight: "1.4",
         width: "100%",
         whiteSpace: "nowrap",
@@ -512,6 +519,9 @@ const ShopListScreen: React.FC = () => {
   // Active genre navigation button state
   const [pressedGenreNavButton, setPressedGenreNavButton] = useState<"prev" | "next" | null>(null);
 
+  // Active close button state for detail modal
+  const [pressedCloseButton, setPressedCloseButton] = useState(false);
+
   // Genre scroll state for buttons
   const [canScrollGenreLeft, setCanScrollGenreLeft] = useState(false);
   const [canScrollGenreRight, setCanScrollGenreRight] = useState(true);
@@ -604,6 +614,9 @@ const ShopListScreen: React.FC = () => {
   
   // Selected shop for detail modal
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
+  
+  // Selected shop for side modal (Slide-in)
+  const [selectedShopDetail, setSelectedShopDetail] = useState<Shop | null>(null);
 
   // Scroll position state for navigation buttons
   const [scrollPercentage, setScrollPercentage] = useState(0);
@@ -815,34 +828,10 @@ const ShopListScreen: React.FC = () => {
       const timeSinceLastActivity = now - lastActivityTimeRef.current;
 
       if (timeSinceLastActivity >= IDLE_TIMEOUT_MS) {
-        // 30 seconds of inactivity - refresh to default state
-        setSelectedShop(null);
-        
-        // Use the wrapper function to reset floor (ensures animation direction and button update)
-        // We need to call it even if it seems redundant, to ensure all side effects run
-        setSelectedFloor(CURRENT_FLOOR); 
-        
-        setSelectedGenre("all"); // Reset genre to "all" (default)
-        // Reset genre scroll position to start (left)
-        if (genreScrollContainerRef.current) {
-          genreScrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
-        }
-        
-        setSelectedLanguage("ja");         // Reset to default Japanese (also saves to localStorage)
-        setIsLanguageModalOpen(false);
-        setPressedNewsButton(null); // Reset any pressed button state
-        setSelectedFacility(null); // Reset selected facility
-        setShowOpenTime(false); // Close open time modal if open
-        setShowHint(true); // Reset hint visibility
-        setShowFloorLabel(true); // Reset floor label visibility
-        
-        // Reset scroll position to top with smooth animation (same as scrollToStart)
-        if (scrollContainerRef.current) {
-          smoothScrollTo(0, 800);
-        }
-        
-        // Reset activity time after refresh
-        lastActivityTimeRef.current = Date.now();
+        // 30 seconds of inactivity - force reload to fix potential display issues (images/API)
+        logInfo("idle", "Idle timeout reached. Reloading application.", { timeout: IDLE_TIMEOUT_MS });
+        window.location.reload();
+        return;
       }
     }, 1000); // Check every second
 
@@ -1064,11 +1053,6 @@ const ShopListScreen: React.FC = () => {
   }, [filteredShops, selectedFloor, handleScroll]);
 
   // Reset scroll position when genre or floor changes
-  // Use useLayoutEffect to reset scroll before the browser paints the new list
-  // But since we have an animation that waits for exit, we might want to time this carefully
-  // Actually, for "popLayout" or "wait" mode, resetting immediately on state change is usually best
-  // so the new list starts at top.
-  /*
   useLayoutEffect(() => {
     // Reset the main shop list scroll container (vertical)
     const shopListContainer = document.querySelector('.shop-list-scroll-container');
@@ -1076,7 +1060,6 @@ const ShopListScreen: React.FC = () => {
       shopListContainer.scrollTop = 0;
     }
   }, [selectedGenre, selectedFloor]);
-  */
 
   // Also recalculate when shops data changes
   useEffect(() => {
@@ -1986,31 +1969,23 @@ const ShopListScreen: React.FC = () => {
           }}
         >
           {/* Shop List Items */}
-          <AnimatePresence mode="popLayout" onExitComplete={() => {
-            // Reset scroll position AFTER the old list has exited and BEFORE the new list enters
-            // This ensures the new list starts at the top without visual jumping
-            const shopListContainer = document.querySelector('.shop-list-scroll-container');
-            if (shopListContainer) {
-              shopListContainer.scrollTop = 0;
-            }
-          }}>
-            <motion.div
-              key={`${selectedGenre}-${selectedFloor || 'none'}`} // Use both genre and floor as key to trigger animation
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-              style={{
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "15px",
-              }}
-            >
-              {filteredShops.map((shop, index) => (
+          <motion.div
+            key={`${selectedGenre}-${selectedFloor || 'none'}`} // Use both genre and floor as key to trigger animation
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "15px",
+            }}
+          >
+            {filteredShops.map((shop, index) => (
                 <div
                   key={shop.shopId || `${shop.name}-${index}`}
+                  onClick={() => setSelectedShopDetail(shop)}
                   style={{
                     width: "440px",
                     height: "80px",
@@ -2049,9 +2024,309 @@ const ShopListScreen: React.FC = () => {
                   </span>
                 </div>
               ))}
-            </motion.div>
-          </AnimatePresence>
+          </motion.div>
         </div>
+
+        {/* Shop Detail Modal (Slide-in) */}
+        <AnimatePresence>
+          {selectedShopDetail && (
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
+              style={{
+                position: "absolute",
+                top: "0", 
+                left: 0,
+                width: "100%",
+                height: "100%", 
+                backgroundColor: "#FFFFFF",
+                zIndex: 20,
+                boxShadow: "-4px 0 10px rgba(0, 0, 0, 0.1)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-start", // Top align
+                paddingTop: "0px", // Remove padding to move content up
+                boxSizing: "border-box",
+              }}
+            >
+              {/* Close Button */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "0", // Align to top
+                  right: "0",
+                  width: "70px",
+                  height: "70px",
+                  cursor: "pointer",
+                  margin: "10px",
+                  zIndex: 30, // Topmost
+                }}
+                onClick={() => {
+                  setSelectedShopDetail(null);
+                  setPressedCloseButton(false);
+                }}
+                onMouseDown={() => setPressedCloseButton(true)}
+                onMouseUp={() => setPressedCloseButton(false)}
+                onMouseLeave={() => setPressedCloseButton(false)}
+                onTouchStart={() => setPressedCloseButton(true)}
+                onTouchEnd={() => setPressedCloseButton(false)}
+              >
+                <img
+                  src={buttonClose}
+                  alt="Close"
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: "100%",
+                    opacity: pressedCloseButton ? 0 : 1,
+                    transition: "opacity 0.1s ease-in-out",
+                  }}
+                />
+                <img
+                  src={buttonCloseHighlight}
+                  alt="Close Highlight"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    display: "block",
+                    width: "100%",
+                    height: "100%",
+                    opacity: pressedCloseButton ? 1 : 0,
+                    transition: "opacity 0.1s ease-in-out",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+
+              {/* Image Container (W: 460px, H: 307px) */}
+              <div
+                style={{
+                  width: "460px",
+                  height: "307px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  marginBottom: "0px", // No margin bottom specified, but next element has top margin
+                  flexShrink: 0,
+                }}
+              >
+                 <ShopImage 
+                   photo={selectedShopDetail.photo2 || selectedShopDetail.photo1 || selectedShopDetail.shopLogo} 
+                   shopId={selectedShopDetail.shopId} 
+                 />
+              </div>
+
+              {/* Logo and Name Container */}
+              <div
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  paddingLeft: "20px", // Align with logo margin
+                  boxSizing: "border-box",
+                  marginTop: "20px", // Logo container top margin effectively
+                  flexShrink: 0, // Don't shrink
+                }}
+              >
+                {/* Logo Container (W: 100px, H: 100px, round: 10px, border: 2px, borderColor: #D9D9D9) */}
+                <div
+                  style={{
+                    width: "100px",
+                    height: "100px",
+                    borderRadius: "10px",
+                    border: "2px solid #D9D9D9",
+                    boxSizing: "border-box",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    marginRight: "20px", // Space between logo and name
+                    padding: "5px", // Added padding
+                  }}
+                >
+                  {selectedShopDetail.shopLogo ? (
+                    <ShopLogoImage photo={selectedShopDetail.shopLogo} shopId={selectedShopDetail.shopId} />
+                  ) : (
+                    <img 
+                      src={commingSoon} 
+                      alt="Coming Soon" 
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }} 
+                    />
+                  )}
+                </div>
+
+                {/* Shop Name (W: 300px fixed) */}
+                <div
+                  style={{
+                    width: "300px",
+                    height: "24px", // Fixed height for text
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                   <ShopNameDisplay name={selectedShopDetail.name} />
+                </div>
+              </div>
+
+              {/* Flex Container for Description and Info (Takes remaining height) */}
+              <div
+                style={{
+                  flex: 1, // Take remaining height of the modal
+                  minHeight: 0, // Allow shrinking below content size
+                  width: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-start", // Stack from top
+                }}
+              >
+                {/* Description Container (Shrinkable & Scrollable) - Only render if description exists */}
+                {selectedShopDetail.description && (
+                  <div
+                    style={{
+                      width: "100%",
+                      // flex: "0 1 auto" allows shrinking but uses content height as basis. 
+                      // However, to make scrolling work correctly in nested flex, sometimes we need minHeight: 0.
+                      flex: "0 1 auto", 
+                      padding: "0 20px", // Padding moved to outer container
+                      marginTop: "20px",
+                      marginBottom: "0px",
+                      boxSizing: "border-box",
+                      minHeight: "0", 
+                      display: "flex", // Ensure child fills height
+                      flexDirection: "column",
+                      overflow: "hidden", // Hide overflow on wrapper, let inner div scroll
+                    }}
+                  >
+                  <style>
+                    {`
+                      .shop-detail-description::-webkit-scrollbar {
+                        width: 8px;
+                      }
+                      .shop-detail-description::-webkit-scrollbar-track {
+                        background: #f1f1f1;
+                        border-radius: 4px;
+                      }
+                      .shop-detail-description::-webkit-scrollbar-thumb {
+                        background: #c1c1c1;
+                        border-radius: 4px;
+                      }
+                      .shop-detail-description::-webkit-scrollbar-thumb:hover {
+                        background: #a8a8a8;
+                      }
+                      /* Disable link styles in description */
+                      .shop-detail-description a,
+                      .shop-detail-description u,
+                      .shop-detail-description span {
+                        text-decoration: none !important;
+                        color: inherit !important;
+                        pointer-events: none !important;
+                        border-bottom: none !important;
+                      }
+                      .shop-detail-description * {
+                        text-decoration: none !important;
+                      }
+                    `}
+                  </style>
+                  {/* Container for scroll bar style application */}
+                  <div
+                    className="shop-detail-description"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      overflowY: "auto",
+                      // Apply padding here to content
+                      paddingRight: "5px", // Slight padding for scrollbar space if needed
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontFamily: "'Rounded Mplus 1c', sans-serif",
+                        fontWeight: 400,
+                        color: "#000000",
+                        lineHeight: "1.6",
+                        wordWrap: "break-word",
+                        pointerEvents: "auto",
+                      }}
+                      dangerouslySetInnerHTML={{ __html: selectedShopDetail.description }}
+                    />
+                  </div>
+                  </div>
+                )}
+
+                {/* Border Line (Non-shrinkable) */}
+                <div
+                  style={{
+                    width: "calc(100% - 40px)", // Full width minus margins (20px * 2)
+                    height: "1px",
+                    backgroundColor: "#D9D9D9",
+                    marginLeft: "20px",
+                    marginRight: "20px",
+                    marginBottom: "20px",
+                    marginTop: "20px", 
+                    flexShrink: 0,
+                  }}
+                />
+
+                {/* Information Container (Non-shrinkable) */}
+                <div
+                  style={{
+                    width: "calc(100% - 40px)", // Full width minus margins (20px * 2)
+                    margin: "0 20px 20px 20px",
+                    flexShrink: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "15px",
+                    paddingBottom: "20px", // Add bottom padding to ensure it's not cut off at very bottom
+                  }}
+                >
+                  {/* Floor Info */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
+                    <img src={iconLocation} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "12px", height: "12px", flexShrink: 0 }} />
+                    {selectedShopDetail.floors && selectedShopDetail.floors.length > 0 && <span>{normalizeFloor(selectedShopDetail.floors[0])}</span>}
+                    {selectedShopDetail.number && <span>[{selectedShopDetail.number}]</span>}
+                    {selectedShopDetail.genre && (
+                      <>
+                        <span>/</span>
+                        <span>{selectedShopDetail.genre}</span>
+                      </>
+                    )}
+                    {selectedShopDetail.genreMemo && (
+                      <>
+                        <span>/</span>
+                        <span>{selectedShopDetail.genreMemo.split(/[|]+/).map(s => s.trim()).filter(s => s.length > 0)[0]}</span>
+                      </>
+                    )}
+                  </div>
+                  
+                  {/* Open Time */}
+                  {selectedShopDetail.openTime && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
+                        <img src={iconTime} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "12px", height: "12px", flexShrink: 0 }} />
+                        <div style={{ display: "flex", flexDirection: "column", lineHeight: "1.4" }} dangerouslySetInnerHTML={{ __html: selectedShopDetail.openTime }} />
+                    </div>
+                  )}
+                  
+                  {/* Tel */}
+                  {selectedShopDetail.tel && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
+                      <img src={iconTel} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "12px", height: "12px", flexShrink: 0 }} />
+                      <span>{selectedShopDetail.tel}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Bottom Container (W100% H167px) */}
         <div
