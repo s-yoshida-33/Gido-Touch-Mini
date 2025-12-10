@@ -4,10 +4,10 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import ShopList from "../components/ShopList";
 import type { Shop } from "../types/shop";
 
-import food1FMap from "../assets/food-1F-map.svg";
-import food2FMap from "../assets/food-2F-map.svg";
-import food3FMap from "../assets/food-3F-map.svg";
-import food4FMap from "../assets/food-4F-map.svg";
+import floor1FMap from "../assets/floor-1F-map.svg";
+import floor2FMap from "../assets/floor-2F-map.svg";
+import floor3FMap from "../assets/floor-3F-map.svg";
+import floor4FMap from "../assets/floor-4F-map.svg";
 import openTimeImage from "../assets/open-time.svg";
 
 import { APP_CONFIG, POLLING_INTERVALS } from "../config";
@@ -33,10 +33,10 @@ const DEFAULT_PIN_SIZE = 80;
 
 // Map floor id to image asset
 const FLOOR_MAPS: Record<string, string> = {
-  "1F": food1FMap,
-  "2F": food2FMap,
-  "3F": food3FMap,
-  "4F": food4FMap,
+  "1F": floor1FMap,
+  "2F": floor2FMap,
+  "3F": floor3FMap,
+  "4F": floor4FMap,
 };
 
 type ColumnPadding = {
@@ -176,7 +176,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
 
   const floorId = floor as FloorId;
   const customFloorMap = floorId ? imageSettings?.floorMaps?.[floorId] : undefined;
-  const floorMap = customFloorMap || FLOOR_MAPS[floor] || food1FMap;
+  const floorMap = customFloorMap || FLOOR_MAPS[floor] || floor1FMap;
 
   // Video/List width calculations are no longer needed for fixed layouts
   // We use flexbox to fill available space.
@@ -456,6 +456,10 @@ const ShopPinsOverlay: React.FC<{
     const normalized = value.toUpperCase().trim();
     if (normalized.match(/^[0-9]+F$/)) {
       return normalized;
+    }
+    // Handle "1", "2" etc.
+    if (normalized.match(/^[0-9]+$/)) {
+      return `${normalized}F`;
     }
     return "1F";
   };

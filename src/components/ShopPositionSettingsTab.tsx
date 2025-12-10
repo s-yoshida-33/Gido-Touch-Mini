@@ -11,6 +11,10 @@ function normalizeFloor(value: string): string {
   if (normalized.match(/^[0-9]+F$/)) {
     return normalized;
   }
+  // Handle "1", "2" etc.
+  if (normalized.match(/^[0-9]+$/)) {
+    return `${normalized}F`;
+  }
   return "1F";
 }
 

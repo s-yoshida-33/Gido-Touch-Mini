@@ -11,12 +11,14 @@ interface ShopPinProps {
   isSelected?: boolean;
   shopLogo?: string;
   shopId?: string;
+  // transformScale is deprecated in favor of CSS variable --map-scale
   transformScale?: number;
   style?: React.CSSProperties;
   // Props for absolute pixel positioning
   usePixelPosition?: boolean;
   pixelX?: number;
   pixelY?: number;
+  delay?: number;
 }
 
 function buildShadowStyle(shadow?: ShopPosition['shadow']): React.CSSProperties {
@@ -167,7 +169,8 @@ export const ShopPin: React.FC<ShopPinProps> = ({
   style,
   usePixelPosition = false,
   pixelX,
-  pixelY
+  pixelY,
+  delay = 0,
 }) => {
   if (position.enabled === false) {
     return null;
@@ -220,34 +223,33 @@ export const ShopPin: React.FC<ShopPinProps> = ({
     loadLogo();
   }, [shopLogo, shopId]);
 
-  const inverseScale = 1 / Math.max(transformScale, 0.1);
-
   // Determine coordinates: prioritize pixel props if enabled
   const left = usePixelPosition && pixelX !== undefined ? `${pixelX}px` : `${position.x}%`;
   const top = usePixelPosition && pixelY !== undefined ? `${pixelY}px` : `${position.y}%`;
 
   // Wrapper style: positions the pin on the map
-  const wrapperStyle: React.CSSProperties = {
+  const positionStyle: React.CSSProperties = {
     position: "absolute",
     left,
     top,
-    // Center the element on the coordinate using translate
-    transform: `translate(-50%, -50%) scale(${inverseScale})`,
-    transformOrigin: "center center",
     zIndex: isSelected ? 1000 : 100,
-    pointerEvents: "none", 
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
+    pointerEvents: "none",
     ...buildShadowStyle(shadow),
     ...style,
   };
 
   if (isSelected) {
-    wrapperStyle.filter = wrapperStyle.filter
-      ? `${wrapperStyle.filter}, drop-shadow(0 0 8px rgba(0, 122, 255, 0.8))`
+    positionStyle.filter = positionStyle.filter
+      ? `${positionStyle.filter}, drop-shadow(0 0 8px rgba(0, 122, 255, 0.8))`
       : "drop-shadow(0 0 8px rgba(0, 122, 255, 0.8))";
   }
+
+  // Inner container style: centering only (scaling moved to wrapper)
+  const innerContainerStyle: React.CSSProperties = {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  };
 
   const pinImageStyle: React.CSSProperties = {
     width: `${size}px`,
@@ -338,23 +340,53 @@ export const ShopPin: React.FC<ShopPinProps> = ({
     </div>
   );
 
-  if (animation?.enabled && animation.type !== "none") {
-    const animationProps = buildAnimationProps(fixedAmplitude, animation);
-    return (
-      <motion.div
-        style={wrapperStyle as any} 
-        initial={animationProps.initial}
-        animate={animationProps.animate}
-        transition={animationProps.transition}
-      >
-        {renderContent()}
-      </motion.div>
-    );
-  }
+  // Drop-in animation variants
+  const dropInVariants = {
+    hidden: { y: -100, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: { 
+        delay: delay,
+        type: "spring",
+        stiffness: 300,
+        damping: 20
+      }
+    }
+  };
+
+  const content = animation?.enabled && animation.type !== "none" ? (
+    <motion.div
+      style={innerContainerStyle}
+      initial={buildAnimationProps(fixedAmplitude, animation).initial}
+      animate={buildAnimationProps(fixedAmplitude, animation).animate}
+      transition={buildAnimationProps(fixedAmplitude, animation).transition}
+    >
+      {renderContent()}
+    </motion.div>
+  ) : (
+    <div style={innerContainerStyle}>
+      {renderContent()}
+    </div>
+  );
 
   return (
-    <div style={wrapperStyle}>
-      {renderContent()}
+    <div style={positionStyle}>
+      {/* Inverse Scale Wrapper - using CSS variable to keep size constant relative to screen */}
+      <div 
+        style={{ 
+          transform: 'translate(-50%, -50%) scale(calc(1 / var(--map-scale, 1)))', 
+          transformOrigin: 'center bottom' 
+        }}
+      >
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={dropInVariants}
+        >
+          {content}
+        </motion.div>
+      </div>
     </div>
   );
 };

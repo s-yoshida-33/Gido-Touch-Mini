@@ -3,10 +3,10 @@ import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import buttonClose from "../assets/button-close.svg";
 import buttonCloseHighlight from "../assets/button-close-highlight.svg";
-import food1FMap from "../assets/food-1F-map.svg";
-import food2FMap from "../assets/food-2F-map.svg";
-import food3FMap from "../assets/food-3F-map.svg";
-import food4FMap from "../assets/food-4F-map.svg";
+import floor1FMap from "../assets/floor-1F-map.svg";
+import floor2FMap from "../assets/floor-2F-map.svg";
+import floor3FMap from "../assets/floor-3F-map.svg";
+import floor4FMap from "../assets/floor-4F-map.svg";
 import floorLabel1F from "../assets/floor-label-1F.svg";
 import floorLabel2F from "../assets/floor-label-2F.svg";
 import floorLabel3F from "../assets/floor-label-3F.svg";
@@ -339,11 +339,11 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
 
   const getMapImage = () => {
     switch (normalizedFloor) {
-      case "1F": return food1FMap;
-      case "2F": return food2FMap;
-      case "3F": return food3FMap;
-      case "4F": return food4FMap;
-      default: return food1FMap;
+      case "1F": return floor1FMap;
+      case "2F": return floor2FMap;
+      case "3F": return floor3FMap;
+      case "4F": return floor4FMap;
+      default: return floor1FMap;
     }
   };
   const getFloorLabel = () => {

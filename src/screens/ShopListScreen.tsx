@@ -87,6 +87,7 @@ import { logInfo } from "../logs/logging";
 import type { Shop } from "../types/shop";
 import ShopDetailScreen from "./ShopDetailScreen";
 import { LanguageSelectModal } from "../components/LanguageSelectModal";
+import { ShopPin } from "../components/ShopPin";
 
 /**
  * Build image path using shop_id if photo is relative or filename only
@@ -435,12 +436,19 @@ const mapVariants: Variants = {
   }),
 };
 
+interface ShopListScreenProps {
+  isSettingsOpen?: boolean;
+}
+
 /**
  * Shop list screen
  * Screen size: 1920x1080
  * Background: White
  */
-const ShopListScreen: React.FC = () => {
+const ShopListScreen: React.FC<ShopListScreenProps> = ({ isSettingsOpen = false }) => {
+  // Map content ref for direct style manipulation (zoom scale)
+  const mapContentRef = useRef<HTMLDivElement>(null);
+
   // Map transform ref
   const transformComponentRef = useRef<ReactZoomPanPinchContentRef>(null);
 
@@ -579,6 +587,12 @@ const ShopListScreen: React.FC = () => {
   const [selectedFloor, setSelectedFloorState] = useState<string | null>(CURRENT_FLOOR);
   // Floor switch direction (1: up, -1: down)
   const [floorDirection, setFloorDirection] = useState(0);
+
+  // Map zoom scale state
+  const [currentScale, setCurrentScale] = useState(1);
+
+  // Pin animation delay state
+  const [pinDelay, setPinDelay] = useState(0);
 
   // Wrapper for setting selected floor with direction calculation
   // Use useCallback to make it stable for useEffect dependencies
@@ -824,6 +838,12 @@ const ShopListScreen: React.FC = () => {
 
     // Check idle timeout every second
     const checkInterval = setInterval(() => {
+      // Don't check idle timeout if settings are open
+      if (isSettingsOpen) {
+        lastActivityTimeRef.current = Date.now(); // Keep updating last activity to prevent immediate timeout after closing
+        return;
+      }
+
       const now = Date.now();
       const timeSinceLastActivity = now - lastActivityTimeRef.current;
 
@@ -1254,10 +1274,20 @@ const ShopListScreen: React.FC = () => {
               setShowHint(false);
               setShowFloorLabel(false);
             }}
+            onInit={(ref) => {
+              setCurrentScale(ref.state.scale);
+              if (mapContentRef.current) {
+                mapContentRef.current.style.setProperty('--map-scale', ref.state.scale.toString());
+              }
+            }}
             onTransformed={(_, state) => {
               const isDefault = Math.abs(state.scale - 1) < 0.01 && Math.abs(state.positionX) < 1 && Math.abs(state.positionY) < 1;
               setShowHint(isDefault);
               setShowFloorLabel(isDefault);
+              setCurrentScale(state.scale);
+              if (mapContentRef.current) {
+                mapContentRef.current.style.setProperty('--map-scale', state.scale.toString());
+              }
             }}
           >
             <TransformComponent
@@ -1270,7 +1300,10 @@ const ShopListScreen: React.FC = () => {
                 height: "100%",
               }}
             >
-              <div style={{ width: "100%", height: "100%", position: "relative" }}>
+              <div 
+                ref={mapContentRef}
+                style={{ width: "100%", height: "100%", position: "relative" }}
+              >
                 <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
                   <motion.img
                     key={selectedFloor || "1F"}
@@ -1294,6 +1327,23 @@ const ShopListScreen: React.FC = () => {
                       left: 0,
                     }}
                   />
+                </AnimatePresence>
+
+                {/* Selected Shop Pin */}
+                <AnimatePresence>
+                  {selectedShopDetail && 
+                   selectedShopDetail.position && 
+                   normalizeFloor(String(selectedShopDetail.position.floor)) === normalizeFloor(selectedFloor || "") && (
+                    <ShopPin
+                      position={selectedShopDetail.position}
+                      shopName={selectedShopDetail.name}
+                      shopLogo={selectedShopDetail.shopLogo}
+                      shopId={selectedShopDetail.shopId}
+                      isSelected={true}
+                      transformScale={currentScale}
+                      delay={pinDelay}
+                    />
+                  )}
                 </AnimatePresence>
               </div>
             </TransformComponent>
@@ -1985,7 +2035,23 @@ const ShopListScreen: React.FC = () => {
             {filteredShops.map((shop, index) => (
                 <div
                   key={shop.shopId || `${shop.name}-${index}`}
-                  onClick={() => setSelectedShopDetail(shop)}
+                  onClick={() => {
+                    setSelectedShopDetail(shop);
+                    // Switch to the shop's floor if different
+                    if (shop.floors && shop.floors.length > 0) {
+                      const shopFloor = normalizeFloor(String(shop.floors[0]));
+                      const current = normalizeFloor(selectedFloor || "");
+                      
+                      if (shopFloor !== current) {
+                        setPinDelay(0.6); // Wait for map transition (approx 0.5-0.6s)
+                        setSelectedFloor(shopFloor);
+                      } else {
+                        setPinDelay(0);
+                      }
+                    } else {
+                      setPinDelay(0);
+                    }
+                  }}
                   style={{
                     width: "440px",
                     height: "80px",

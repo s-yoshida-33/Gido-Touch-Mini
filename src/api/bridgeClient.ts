@@ -7,7 +7,12 @@ import { logInfo, logWarn, logError } from "../logs/logging";
 // Normalize floor id string (you can extend this if needed)
 function normalizeFloorId(value: string): FloorId {
   if (!value) return "";
-  return value.trim().toUpperCase(); // e.g. "1f" -> "1F"
+  const trimmed = value.trim().toUpperCase();
+  // If it's just a number like "1", convert to "1F"
+  if (trimmed.match(/^[0-9]+$/)) {
+    return `${trimmed}F`;
+  }
+  return trimmed;
 }
 
 // Parse floors from BridgeShop into FloorId[]
@@ -92,7 +97,12 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
     const defaultFloor = APP_CONFIG.floor;
 
     const shops: Shop[] = rawList.map((item) => {
-      const floors = parseFloorsFromBridge(item.floors, defaultFloor);
+      // Use floors array if available, otherwise fallback to single floor property
+      const sourceFloors = (item.floors && (Array.isArray(item.floors) || String(item.floors).trim().length > 0)) 
+        ? item.floors 
+        : item.floor;
+        
+      const floors = parseFloorsFromBridge(sourceFloors, defaultFloor);
 
       if (floors.length === 0) {
         logWarn("shopList", "Shop has no floors after normalization", {

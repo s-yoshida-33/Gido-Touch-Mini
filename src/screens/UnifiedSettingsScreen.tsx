@@ -15,6 +15,8 @@ import type { Shop } from "../types/shop";
 type TabType = "image" | "shopPosition";
 
 interface UnifiedSettingsScreenProps {
+  isOpen: boolean;
+  onClose: () => void;
   floor: FloorId;
   onSaveFloor: (floor: FloorId) => Promise<void> | void;
   floorLayout: FloorLayout;
@@ -28,6 +30,8 @@ interface UnifiedSettingsScreenProps {
 }
 
 const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
+  isOpen,
+  onClose,
   floor: initialFloor,
   onSaveFloor,
   floorLayout,
@@ -39,7 +43,6 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   onSaveShopPositions,
   shops,
 }) => {
-  const [visible, setVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("image");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -68,6 +71,9 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   
   // Container ref for calculating center position
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Map content ref for CSS variable scale
+  const mapContentRef = useRef<HTMLDivElement>(null);
   
   // Current scale state to control panning (詳細モーダルと同じ仕様)
   const [currentScale, setCurrentScale] = useState(1);
@@ -98,49 +104,35 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   }, [calculateOtherTabCenterPosition]);
 
 
-  // Load initial values when screen opens
+  // Previous isOpen state to detect opening
+  const prevIsOpen = useRef(isOpen);
+
+  // Initialize / Reset values when opened
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-
-    if (window.electronAPI?.onOpenSettings) {
-      unsubscribe = window.electronAPI.onOpenSettings(() => {
-        setVisible(true);
-        setActiveTab("image");
-        setFloor(initialFloor);
-        setLocationIconSettings(initialLocationIconSettings);
-        setImageSettings(initialImageSettings);
-        setShopPositions(initialShopPositions);
-        setErrors({});
-        // Reset transform when opening settings
-        // 設定画面を開くときは"floor"タブが選択されるので、3840×2160のコンテンツを中央に配置
-        if (transformRef.current && previewContainerRef.current) {
-          requestAnimationFrame(() => {
-            if (transformRef.current && previewContainerRef.current) {
-              const { x, y, scale } = calculateOtherTabCenterPosition();
-              transformRef.current.setTransform(x, y, scale);
-            }
-          });
-        }
-      });
-    }
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [initialFloor, initialLocationIconSettings, initialImageSettings, initialShopPositions, calculateOtherTabCenterPosition]);
-
-  // Sync with external changes when screen is closed
-  useEffect(() => {
-    if (!visible) {
+    // Only run initialization when isOpen changes from false to true
+    if (isOpen && !prevIsOpen.current) {
+      setActiveTab("image");
       setFloor(initialFloor);
       setLocationIconSettings(initialLocationIconSettings);
       setImageSettings(initialImageSettings);
       setShopPositions(initialShopPositions);
+      setErrors({});
+      
+      // Reset transform when opening settings
+      if (transformRef.current && previewContainerRef.current) {
+        requestAnimationFrame(() => {
+          if (transformRef.current && previewContainerRef.current) {
+            const { x, y, scale } = calculateOtherTabCenterPosition();
+            transformRef.current.setTransform(x, y, scale);
+          }
+        });
+      }
     }
-  }, [visible, initialFloor, initialLocationIconSettings, initialImageSettings, initialShopPositions]);
+    prevIsOpen.current = isOpen;
+  }, [isOpen, initialFloor, initialLocationIconSettings, initialImageSettings, initialShopPositions, calculateOtherTabCenterPosition]);
 
   const handleClose = () => {
-    setVisible(false);
+    onClose();
     setErrors({});
   };
 
@@ -215,7 +207,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   };
 
 
-  if (!visible) return null;
+  if (!isOpen) return null;
 
   return (
     <div
@@ -391,9 +383,15 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               onInit={(ref) => {
                 transformRef.current = ref;
                 setCurrentScale(ref.state.scale);
+                if (mapContentRef.current) {
+                  mapContentRef.current.style.setProperty('--map-scale', ref.state.scale.toString());
+                }
               }}
               onTransformed={(ref) => {
                 setCurrentScale(ref.state.scale);
+                if (mapContentRef.current) {
+                  mapContentRef.current.style.setProperty('--map-scale', ref.state.scale.toString());
+                }
               }}
             >
             <TransformComponent
@@ -406,6 +404,10 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                 height: `${window.screen.height >= 2160 ? 2160 : 1080}px`,
               }}
             >
+              <div 
+                ref={mapContentRef}
+                style={{ width: "100%", height: "100%", position: "relative" }}
+              >
               {activeTab !== "image" && (
                 <GidoApp
                   locationIconSettings={getLocationIconSettingsForFloor(locationIconSettings, floor)}
@@ -418,6 +420,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                   showOnlyMap={activeTab === "shopPosition"}
                 />
               )}
+              </div>
             </TransformComponent>
           </TransformWrapper>
           </div>

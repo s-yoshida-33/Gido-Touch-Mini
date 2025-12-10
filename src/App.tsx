@@ -3,11 +3,18 @@ import React, { useEffect, useState } from "react";
 import "./styles/global-image.css"; // Global image styles
 import ShopListScreen from "./screens/ShopListScreen";
 
+import floor1FMap from "./assets/floor-1F-map.svg";
+import floor2FMap from "./assets/floor-2F-map.svg";
+import floor3FMap from "./assets/floor-3F-map.svg";
+import floor4FMap from "./assets/floor-4F-map.svg";
+import openTimeImage from "./assets/open-time.svg";
+
 import VersionInfoScreen from "./screens/VersionInfoScreen";
 import UnifiedSettingsScreen from "./screens/UnifiedSettingsScreen";
 import {
   DEFAULT_LOCATION_ICON_SETTINGS,
   DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
+  POLLING_INTERVALS,
 } from "./config";
 import type { LocationIconSettings, LocationIconSettingsPerFloor } from "./types/locationIcon";
 import type { ImageSettings } from "./types/imageSettings";
@@ -41,6 +48,19 @@ const DEFAULT_FLOOR_LAYOUT: FloorLayout = {
   "4F": { columns: 2, rowsPerCol: 18 },
 };
 
+const mergeWithDefaultImages = (settings: ImageSettings): ImageSettings => {
+  return {
+    ...settings,
+    floorMaps: {
+      "1F": settings.floorMaps["1F"] || floor1FMap,
+      "2F": settings.floorMaps["2F"] || floor2FMap,
+      "3F": settings.floorMaps["3F"] || floor3FMap,
+      "4F": settings.floorMaps["4F"] || floor4FMap,
+    },
+    openTimeImage: settings.openTimeImage || openTimeImage,
+  };
+};
+
 const App: React.FC = () => {
   const [locationSettings, setLocationSettings] = useState<LocationIconSettingsPerFloor>(
     DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR
@@ -49,18 +69,70 @@ const App: React.FC = () => {
   // Floor and floor layout state for unified settings
   const [floor, setFloor] = useState<FloorId>("1F");
   const [floorLayout, setFloorLayout] = useState<FloorLayout>(DEFAULT_FLOOR_LAYOUT);
-  const [imageSettings, setImageSettings] = useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
+  const [imageSettings, setImageSettings] = useState<ImageSettings>(
+    mergeWithDefaultImages(DEFAULT_IMAGE_SETTINGS)
+  );
   const [shopPositions, setShopPositions] = useState<ShopPositionSettings>({ positions: {} });
   const [shops, setShops] = useState<Shop[]>([]);
+  
+  // Settings screen open state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Poll shops
+  useEffect(() => {
+    let timeoutId: number;
+
+    const loadShops = async () => {
+      try {
+        const shopData = await fetchShops();
+        
+        // If 0 shops, treat as error/not ready to force quick retry
+        if (shopData.length === 0) {
+           console.warn("[App] 0 shops loaded, retrying...");
+           timeoutId = window.setTimeout(loadShops, 10000);
+           return;
+        }
+
+        // Clean shop names
+        const cleaned = shopData.map((s) => ({
+          ...s,
+          name: s.name.replace(/【.*?】/g, "").trim(),
+        }));
+        
+        setShops(cleaned);
+        
+        // Schedule next poll
+        timeoutId = window.setTimeout(loadShops, POLLING_INTERVALS.SHOP_LIST_MS);
+      } catch (e) {
+        console.error("[App] Failed to load shops:", e);
+        // Retry sooner on error
+        timeoutId = window.setTimeout(loadShops, 10000);
+      }
+    };
+
+    loadShops();
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
 
   // Load initial settings from Electron and subscribe to updates
   useEffect(() => {
     let unsubscribeUpdated: (() => void) | undefined;
     let unsubscribeFloorLayout: (() => void) | undefined;
+    let unsubscribeOpenSettings: (() => void) | undefined;
 
     const init = async () => {
       const api = window.electronAPI;
       if (!api) return;
+
+      // Listen for settings open event
+      if (api.onOpenSettings) {
+        unsubscribeOpenSettings = api.onOpenSettings(() => {
+          setIsSettingsOpen(true);
+        });
+      }
 
       // Load location icon settings
       if (api.getLocationIconSettings) {
@@ -137,7 +209,7 @@ const App: React.FC = () => {
       if (api.getImageSettings) {
         const saved = await api.getImageSettings();
         if (saved) {
-          setImageSettings(saved);
+          setImageSettings(mergeWithDefaultImages(saved));
         }
       }
 
@@ -148,33 +220,14 @@ const App: React.FC = () => {
           setShopPositions(saved);
         }
       }
-
-      // Load shops
-      try {
-        const shopData = await fetchShops();
-        
-        // Filter shops: only "飲食店・食品" or "グルメ" genre
-        const filtered = shopData.filter((shop) => shop.genre === "飲食店・食品" || shop.genre === "グルメ");
-        
-        // Exclude "イオン堺北花田店"
-        const excluded = filtered.filter((shop) => !shop.name.includes("イオン堺北花田店"));
-        
-        // Clean shop names
-        const cleaned = excluded.map((s) => ({
-          ...s,
-          name: s.name.replace(/【.*?】/g, "").trim(),
-        }));
-        
-        setShops(cleaned);
-      } catch (e) {
-        console.error("Failed to load shops:", e);
-      }
     };
 
     init();
 
     const api = window.electronAPI;
     if (api) {
+      // onOpenSettings moved to init/useEffect scope to capture unsubscribe
+
       if (api.onLocationIconSettingsUpdated) {
         unsubscribeUpdated = api.onLocationIconSettingsUpdated((updated) => {
           // Check if updated is per-floor format or old single format
@@ -256,6 +309,7 @@ const App: React.FC = () => {
     return () => {
       if (unsubscribeUpdated) unsubscribeUpdated();
       if (unsubscribeFloorLayout) unsubscribeFloorLayout();
+      if (unsubscribeOpenSettings) unsubscribeOpenSettings();
     };
   }, []);
 
@@ -315,8 +369,10 @@ const App: React.FC = () => {
 
   return (
     <>
-    <ShopListScreen />
+    <ShopListScreen isSettingsOpen={isSettingsOpen} />
     <UnifiedSettingsScreen
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
         floor={floor}
         onSaveFloor={handleSaveFloor}
         floorLayout={floorLayout}
