@@ -600,6 +600,15 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   
   // Floor filter state
   const [selectedFloor, setSelectedFloorState] = useState<string | null>(CURRENT_FLOOR);
+  
+  // Sync selectedFloor with currentFloor prop
+  useEffect(() => {
+    // Only update if currentFloor is a valid string
+    if (currentFloor) {
+      setSelectedFloorState(currentFloor);
+    }
+  }, [currentFloor]);
+  
   // Floor switch direction (1: up, -1: down)
   const [floorDirection, setFloorDirection] = useState(0);
 

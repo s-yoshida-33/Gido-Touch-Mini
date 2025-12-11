@@ -385,8 +385,8 @@ export const ShopPin: React.FC<ShopPinProps> = ({
       {/* Inverse Scale Wrapper - using CSS variable to keep size constant relative to screen */}
       <div 
         style={{ 
-          transform: 'translate(-50%, -50%) scale(calc(1 / var(--map-scale, 1)))', 
-          transformOrigin: 'center center' 
+          transform: 'translate(-50%, -100%) scale(calc(1 / var(--map-scale, 1)))', 
+          transformOrigin: 'center bottom' 
         }}
       >
         <motion.div

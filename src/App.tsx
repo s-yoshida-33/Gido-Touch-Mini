@@ -168,31 +168,45 @@ const App: React.FC = () => {
           } else {
             // New format: LocationIconSettingsPerFloor
             const perFloorSettings: LocationIconSettingsPerFloor = { ...DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR };
-            Object.entries(saved as LocationIconSettingsPerFloor).forEach(([floorId, settings]) => {
-              perFloorSettings[floorId] = {
-                speechBubble: {
-                  ...DEFAULT_LOCATION_ICON_SETTINGS.speechBubble,
-                  ...settings.speechBubble,
-                  enabled: settings.speechBubble?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.enabled,
-                  xPercent: settings.speechBubble?.xPercent ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.xPercent,
-                  yPercent: settings.speechBubble?.yPercent ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.yPercent,
-                  size: settings.speechBubble?.size ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.size,
-                  rotation: settings.speechBubble?.rotation ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.rotation,
-                  shadow: settings.speechBubble?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.shadow,
-                  animation: settings.speechBubble?.animation ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.animation,
-                },
-                location: {
-                  ...DEFAULT_LOCATION_ICON_SETTINGS.location,
-                  ...settings.location,
-                  enabled: settings.location?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.location.enabled,
-                  xPercent: settings.location?.xPercent ?? DEFAULT_LOCATION_ICON_SETTINGS.location.xPercent,
-                  yPercent: settings.location?.yPercent ?? DEFAULT_LOCATION_ICON_SETTINGS.location.yPercent,
-                  size: settings.location?.size ?? DEFAULT_LOCATION_ICON_SETTINGS.location.size,
-                  rotation: settings.location?.rotation ?? DEFAULT_LOCATION_ICON_SETTINGS.location.rotation,
-                  shadow: settings.location?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.location.shadow,
-                  animation: settings.location?.animation ?? DEFAULT_LOCATION_ICON_SETTINGS.location.animation,
-                },
-              };
+            const savedPerFloor = saved as LocationIconSettingsPerFloor;
+            
+            Object.keys(savedPerFloor).forEach((key) => {
+              const floorId = key as FloorId;
+              if (savedPerFloor[floorId]) {
+                const defaultSettings = DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR[floorId];
+                const savedSettings = savedPerFloor[floorId];
+
+                perFloorSettings[floorId] = {
+                  speechBubble: {
+                    ...defaultSettings.speechBubble,
+                    ...savedSettings.speechBubble,
+                    shadow: {
+                      ...defaultSettings.speechBubble.shadow,
+                      ...savedSettings.speechBubble?.shadow
+                    },
+                    animation: defaultSettings.speechBubble.animation && savedSettings.speechBubble?.animation ? {
+                      ...defaultSettings.speechBubble.animation,
+                      ...savedSettings.speechBubble.animation,
+                      enabled: savedSettings.speechBubble.animation.enabled ?? defaultSettings.speechBubble.animation.enabled,
+                      type: savedSettings.speechBubble.animation.type ?? defaultSettings.speechBubble.animation.type
+                    } : defaultSettings.speechBubble.animation
+                  },
+                  location: {
+                    ...defaultSettings.location,
+                    ...savedSettings.location,
+                    shadow: {
+                      ...defaultSettings.location.shadow,
+                      ...savedSettings.location?.shadow
+                    },
+                    animation: defaultSettings.location.animation && savedSettings.location?.animation ? {
+                      ...defaultSettings.location.animation,
+                      ...savedSettings.location.animation,
+                      enabled: savedSettings.location.animation.enabled ?? defaultSettings.location.animation.enabled,
+                      type: savedSettings.location.animation.type ?? defaultSettings.location.animation.type
+                    } : defaultSettings.location.animation
+                  }
+                };
+              }
             });
             setLocationSettings(perFloorSettings);
           }

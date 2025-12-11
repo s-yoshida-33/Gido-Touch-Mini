@@ -56,6 +56,14 @@ const DEFAULT_LOCATION_ICON_SETTINGS = {
   },
 };
 
+// Helper to create fresh copy of default per-floor settings
+const createDefaultPerFloorSettings = () => ({
+  "1F": JSON.parse(JSON.stringify(DEFAULT_LOCATION_ICON_SETTINGS)),
+  "2F": JSON.parse(JSON.stringify(DEFAULT_LOCATION_ICON_SETTINGS)),
+  "3F": JSON.parse(JSON.stringify(DEFAULT_LOCATION_ICON_SETTINGS)),
+  "4F": JSON.parse(JSON.stringify(DEFAULT_LOCATION_ICON_SETTINGS)),
+});
+
 // Default ShopList layout (columns and rows per column for each floor)
 const DEFAULT_FLOOR_LAYOUT = {
   '1F': { columns: 3, rowsPerCol: 20 },
@@ -125,7 +133,7 @@ function loadSettings() {
   
   const base = {
     floor: '1F',
-    locationIcons: DEFAULT_LOCATION_ICON_SETTINGS,
+    locationIcons: createDefaultPerFloorSettings(),
     floorLayout: DEFAULT_FLOOR_LAYOUT,
     shopPositions: defaultShopPositions,
   };
@@ -142,7 +150,13 @@ function loadSettings() {
 
     // Deep merge function to ensure all nested properties are preserved
     const deepMerge = (target, source) => {
-      if (!source) return target;
+      // If source is missing, return a clone of target (if object) to avoid reference pollution
+      if (!source) {
+        if (target && typeof target === 'object' && !Array.isArray(target)) {
+          return JSON.parse(JSON.stringify(target));
+        }
+        return target;
+      }
       
       const result = { ...target };
       
@@ -161,10 +175,17 @@ function loadSettings() {
     let mergedLocationIcons = base.locationIcons;
     if (parsed.locationIcons) {
       if ('speechBubble' in parsed.locationIcons) {
-        // Old single format
+        // Old single format - apply to all floors
+        const oldSettings = {
+          speechBubble: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.speechBubble, parsed.locationIcons.speechBubble || {}),
+          location: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.location, parsed.locationIcons.location || {}),
+        };
+        
         mergedLocationIcons = {
-          speechBubble: deepMerge(base.locationIcons.speechBubble, parsed.locationIcons.speechBubble || {}),
-          location: deepMerge(base.locationIcons.location, parsed.locationIcons.location || {}),
+          "1F": JSON.parse(JSON.stringify(oldSettings)),
+          "2F": JSON.parse(JSON.stringify(oldSettings)),
+          "3F": JSON.parse(JSON.stringify(oldSettings)),
+          "4F": JSON.parse(JSON.stringify(oldSettings)),
         };
       } else {
         // New per-floor format
@@ -172,9 +193,12 @@ function loadSettings() {
         const floors = ['1F', '2F', '3F', '4F'];
         floors.forEach(floorId => {
           const floorSettings = parsed.locationIcons[floorId] || {};
+          // Use base (default) as target for merge
+          const baseSettings = base.locationIcons[floorId];
+          
           mergedLocationIcons[floorId] = {
-            speechBubble: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.speechBubble, floorSettings.speechBubble || {}),
-            location: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.location, floorSettings.location || {}),
+            speechBubble: deepMerge(baseSettings.speechBubble, floorSettings.speechBubble || {}),
+            location: deepMerge(baseSettings.location, floorSettings.location || {}),
           };
         });
       }
@@ -217,10 +241,39 @@ function loadSettings() {
 
 function saveSettings(partial) {
   const current = loadSettings();
-  const next = {
-    ...current,
-    ...partial,
+  
+  // Use deepMerge implementation reused from loadSettings
+  const deepMerge = (target, source) => {
+    // If source is missing, return a clone of target (if object) to avoid reference pollution
+    if (!source) {
+      if (target && typeof target === 'object' && !Array.isArray(target)) {
+        return JSON.parse(JSON.stringify(target));
+      }
+      return target;
+    }
+    
+    // If target is primitive or null, just return a copy of source
+    if (!target || typeof target !== 'object' || Array.isArray(target)) {
+      if (source && typeof source === 'object' && !Array.isArray(source)) {
+        return JSON.parse(JSON.stringify(source));
+      }
+      return source;
+    }
+    
+    const result = { ...target };
+    
+    Object.keys(source).forEach(key => {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = deepMerge(target[key] || {}, source[key]);
+      } else if (source[key] !== undefined) {
+        result[key] = source[key];
+      }
+    });
+    
+    return result;
   };
+
+  const next = deepMerge(current, partial);
 
   try {
     const settingsPath = getSettingsPath();
