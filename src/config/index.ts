@@ -125,6 +125,12 @@ export const DEFAULT_LOCATION_ICON_SETTINGS: LocationIconSettings = {
       blur: 4,
       opacity: 0.5,
     },
+    animation: {
+      enabled: false,
+      type: "floating",
+      duration: 2.2,
+      amplitude: 18,
+    },
   },
 };
 

@@ -86,8 +86,9 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     const containerWidth = containerRect.width;
     const containerHeight = containerRect.height;
     
-    const contentWidth = window.screen.width >= 3840 ? 3840 : 1920;
-    const contentHeight = window.screen.height >= 2160 ? 2160 : 1080;
+    // Main screen map area size (1460x1080)
+    const contentWidth = 1460;
+    const contentHeight = 1080;
     const scale = 0.6;
     const scaledWidth = contentWidth * scale;
     const scaledHeight = contentHeight * scale;
@@ -253,7 +254,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
             }}
           />
           <span style={{ color: "#ffffff", fontSize: 16, fontWeight: 600 }}>
-            Gido Touch Mini
+            Gido Touch Mini - Settings
           </span>
         </div>
 
@@ -400,8 +401,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                 height: "100%",
               }}
               contentStyle={{
-                width: `${window.screen.width >= 3840 ? 3840 : 1920}px`,
-                height: `${window.screen.height >= 2160 ? 2160 : 1080}px`,
+                width: "1460px",
+                height: "1080px",
               }}
             >
               <div 

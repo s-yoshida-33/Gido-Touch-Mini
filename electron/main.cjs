@@ -157,18 +157,32 @@ function loadSettings() {
       return result;
     };
 
+    // Check if locationIcons is per-floor (has "1F", "2F" etc) or single (has "speechBubble")
+    let mergedLocationIcons = base.locationIcons;
+    if (parsed.locationIcons) {
+      if ('speechBubble' in parsed.locationIcons) {
+        // Old single format
+        mergedLocationIcons = {
+          speechBubble: deepMerge(base.locationIcons.speechBubble, parsed.locationIcons.speechBubble || {}),
+          location: deepMerge(base.locationIcons.location, parsed.locationIcons.location || {}),
+        };
+      } else {
+        // New per-floor format
+        mergedLocationIcons = {};
+        const floors = ['1F', '2F', '3F', '4F'];
+        floors.forEach(floorId => {
+          const floorSettings = parsed.locationIcons[floorId] || {};
+          mergedLocationIcons[floorId] = {
+            speechBubble: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.speechBubble, floorSettings.speechBubble || {}),
+            location: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.location, floorSettings.location || {}),
+          };
+        });
+      }
+    }
+
     const merged = {
       floor: typeof parsed.floor === 'string' ? parsed.floor : base.floor,
-      locationIcons: {
-        speechBubble: deepMerge(
-          base.locationIcons.speechBubble,
-          parsed.locationIcons?.speechBubble || {}
-        ),
-        location: deepMerge(
-          base.locationIcons.location,
-          parsed.locationIcons?.location || {}
-        ),
-      },
+      locationIcons: mergedLocationIcons,
       floorLayout: parsed.floorLayout
         ? {
             ...base.floorLayout,

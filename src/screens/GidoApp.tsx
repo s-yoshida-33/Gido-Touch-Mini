@@ -261,8 +261,8 @@ const GidoApp: React.FC<GidoAppProps> = ({
     return (
       <div
         style={{
-          width: "100vw",
-          height: "100vh",
+          width: "100%",
+          height: "100%",
           overflow: "visible",
           fontFamily: "'Rounded Mplus 1c', sans-serif",
           fontWeight: 700,
@@ -535,7 +535,24 @@ const ShopPinsOverlay: React.FC<{
         }}
       />
 
-      <LocationIconsOverlay settings={locationIconSettings} />
+      {imageMetrics && (
+        <LocationIconsOverlay
+          settings={{
+            speechBubble: {
+              ...locationIconSettings.speechBubble,
+              size: locationIconSettings.speechBubble.size * (imageMetrics.displayWidth / REFERENCE_MAP_WIDTH),
+            },
+            location: {
+              ...locationIconSettings.location,
+              size: locationIconSettings.location.size * (imageMetrics.displayWidth / REFERENCE_MAP_WIDTH),
+            },
+          }}
+          mapMetrics={{
+            width: imageMetrics.displayWidth,
+            height: imageMetrics.displayHeight
+          }}
+        />
+      )}
 
       {shopPositions && imageMetrics && Object.entries(positions)
         .filter(([shopId]) => {

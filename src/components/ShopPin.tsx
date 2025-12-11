@@ -350,28 +350,35 @@ export const ShopPin: React.FC<ShopPinProps> = ({
       opacity: 1,
       transition: { 
         delay: delay,
-        type: "spring",
+        type: "spring" as const,
         stiffness: 300,
         damping: 20
       }
     }
   };
 
-  const content = animation?.enabled && animation.type !== "none" ? (
-    <motion.div
-      key={animation.type}
-      style={innerContainerStyle}
-      initial={buildAnimationProps(fixedAmplitude, animation).initial}
-      animate={buildAnimationProps(fixedAmplitude, animation).animate}
-      transition={buildAnimationProps(fixedAmplitude, animation).transition}
-    >
-      {renderContent()}
-    </motion.div>
-  ) : (
-    <div style={innerContainerStyle}>
-      {renderContent()}
-    </div>
-  );
+  const renderInnerContent = () => {
+    if (animation?.enabled && animation.type !== "none") {
+      return (
+        <motion.div
+          key={animation.type}
+          style={{ ...innerContainerStyle, width: '100%', height: '100%' }}
+          initial={buildAnimationProps(fixedAmplitude, animation).initial}
+          animate={buildAnimationProps(fixedAmplitude, animation).animate}
+          transition={buildAnimationProps(fixedAmplitude, animation).transition}
+        >
+          <div style={innerContainerStyle}>
+            {renderContent()}
+          </div>
+        </motion.div>
+      );
+    }
+    return (
+      <div style={innerContainerStyle}>
+        {renderContent()}
+      </div>
+    );
+  };
 
   return (
     <div style={positionStyle}>
@@ -379,7 +386,7 @@ export const ShopPin: React.FC<ShopPinProps> = ({
       <div 
         style={{ 
           transform: 'translate(-50%, -50%) scale(calc(1 / var(--map-scale, 1)))', 
-          transformOrigin: 'center bottom' 
+          transformOrigin: 'center center' 
         }}
       >
         <motion.div
@@ -387,7 +394,7 @@ export const ShopPin: React.FC<ShopPinProps> = ({
           animate="visible"
           variants={dropInVariants}
         >
-          {content}
+          {renderInnerContent()}
         </motion.div>
       </div>
     </div>

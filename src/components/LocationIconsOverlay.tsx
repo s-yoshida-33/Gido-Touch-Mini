@@ -8,6 +8,7 @@ import LocationSvg from "../assets/location.svg";
 
 interface Props {
   settings: LocationIconSettings;
+  mapMetrics?: { width: number; height: number };
 }
 
 function buildWrapperStyle(config: IconPositionConfig): React.CSSProperties {
@@ -15,8 +16,6 @@ function buildWrapperStyle(config: IconPositionConfig): React.CSSProperties {
     position: "absolute",
     left: `${config.xPercent}%`,
     top: `${config.yPercent}%`,
-    transform: "translate(-50%, -50%)",
-    transformOrigin: "center center",
     pointerEvents: "none",
   };
 }
@@ -106,8 +105,25 @@ function buildAnimationProps(animation?: AnimationConfig): {
   }
 }
 
-export const LocationIconsOverlay: React.FC<Props> = ({ settings }) => {
+export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) => {
   const { speechBubble, location } = settings;
+
+  // Calculate fixed pixel offset for speech bubble relative to location if location is enabled
+  // Default map size to 1460x1080 if not provided
+  const mapWidth = mapMetrics?.width || 1460;
+  const mapHeight = mapMetrics?.height || 1080;
+
+  // Use location as base anchor if enabled, otherwise use speech bubble's own position
+  const speechBubbleAnchor = location.enabled ? location : speechBubble;
+
+  // Calculate offset in pixels (from percentage difference)
+  // If anchored to location, offset is the difference. If self-anchored, offset is 0.
+  const speechBubbleOffsetX = location.enabled 
+    ? ((speechBubble.xPercent - location.xPercent) / 100) * mapWidth 
+    : 0;
+  const speechBubbleOffsetY = location.enabled 
+    ? ((speechBubble.yPercent - location.yPercent) / 100) * mapHeight 
+    : 0;
 
   // Create keys based on animation settings to force re-mount when settings change
   const speechBubbleAnimationKey = speechBubble.animation
@@ -118,8 +134,9 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings }) => {
     ? `${location.animation.enabled}-${location.animation.type}-${location.animation.duration}-${location.animation.amplitude}-${location.animation.rippleColor || ""}-${location.animation.rippleSize || ""}`
     : "no-animation";
 
+  // Use the anchor's position for the outer wrapper
   const speechBubbleWrapperStyle = {
-    ...buildWrapperStyle(speechBubble),
+    ...buildWrapperStyle(speechBubbleAnchor),
     ...buildShadowStyle(speechBubble.shadow),
     zIndex: 5,
   };
@@ -207,33 +224,54 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings }) => {
   return (
     <>
       {speechBubble.enabled && (
-        <motion.div
-          key={speechBubbleAnimationKey}
-          style={speechBubbleWrapperStyle}
-          {...buildAnimationProps(speechBubble.animation)}
-        >
-          {renderRippleAnimation(speechBubble, "speech-bubble")}
-          <img
-            src={SpeechBubbleSvg}
-            alt="Current location speech bubble"
-            style={buildImageStyle(speechBubble)}
-          />
-        </motion.div>
+        <div style={speechBubbleWrapperStyle}>
+          {/* Inverse Scale Wrapper - using CSS variable to keep size constant relative to screen */}
+          {/* Apply fixed pixel offset here inside the scale-invariant context */}
+          <div 
+            style={{ 
+              transform: `translate(-50%, -50%) scale(calc(1 / var(--map-scale, 1))) translate(${speechBubbleOffsetX}px, ${speechBubbleOffsetY}px)`,
+              transformOrigin: 'center center' 
+            }}
+          >
+            <motion.div
+              key={speechBubbleAnimationKey}
+              style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
+              {...buildAnimationProps(speechBubble.animation)}
+            >
+              {renderRippleAnimation(speechBubble, "speech-bubble")}
+              <img
+                src={SpeechBubbleSvg}
+                alt="Current location speech bubble"
+                style={buildImageStyle(speechBubble)}
+              />
+            </motion.div>
+          </div>
+        </div>
       )}
 
       {location.enabled && (
-        <motion.div
-          key={locationAnimationKey}
-          style={locationWrapperStyle}
-          {...buildAnimationProps(location.animation)}
-        >
-          {renderRippleAnimation(location, "location")}
-          <img
-            src={LocationSvg}
-            alt="Current location pin"
-            style={buildImageStyle(location)}
-          />
-        </motion.div>
+        <div style={locationWrapperStyle}>
+          {/* Inverse Scale Wrapper - using CSS variable to keep size constant relative to screen */}
+          <div 
+            style={{ 
+              transform: 'translate(-50%, -50%) scale(calc(1 / var(--map-scale, 1)))', 
+              transformOrigin: 'center center' 
+            }}
+          >
+            <motion.div
+              key={locationAnimationKey}
+              style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
+              {...buildAnimationProps(location.animation)}
+            >
+              {renderRippleAnimation(location, "location")}
+              <img
+                src={LocationSvg}
+                alt="Current location pin"
+                style={buildImageStyle(location)}
+              />
+            </motion.div>
+          </div>
+        </div>
       )}
     </>
   );

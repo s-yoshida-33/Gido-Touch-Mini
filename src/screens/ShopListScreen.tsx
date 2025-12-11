@@ -88,6 +88,10 @@ import type { Shop } from "../types/shop";
 import ShopDetailScreen from "./ShopDetailScreen";
 import { LanguageSelectModal } from "../components/LanguageSelectModal";
 import { ShopPin } from "../components/ShopPin";
+import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
+import type { LocationIconSettingsPerFloor } from "../types/locationIcon";
+import type { FloorId } from "../types/floorLayout";
+import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from "../config";
 
 /**
  * Build image path using shop_id if photo is relative or filename only
@@ -436,8 +440,15 @@ const mapVariants: Variants = {
   }),
 };
 
+// Reference width for scaling (Full HD)
+const REFERENCE_MAP_WIDTH = 1920;
+// Current map display width in ShopListScreen
+const CURRENT_MAP_WIDTH = 1460;
+
 interface ShopListScreenProps {
   isSettingsOpen?: boolean;
+  locationIconSettings?: LocationIconSettingsPerFloor;
+  currentFloor?: string;
 }
 
 /**
@@ -445,7 +456,11 @@ interface ShopListScreenProps {
  * Screen size: 1920x1080
  * Background: White
  */
-const ShopListScreen: React.FC<ShopListScreenProps> = ({ isSettingsOpen = false }) => {
+const ShopListScreen: React.FC<ShopListScreenProps> = ({ 
+  isSettingsOpen = false,
+  locationIconSettings = DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
+  currentFloor = "1F",
+}) => {
   // Map content ref for direct style manipulation (zoom scale)
   const mapContentRef = useRef<HTMLDivElement>(null);
 
@@ -844,6 +859,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({ isSettingsOpen = false 
         return;
       }
 
+      /* Idle timeout logic disabled per user request
       const now = Date.now();
       const timeSinceLastActivity = now - lastActivityTimeRef.current;
 
@@ -853,6 +869,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({ isSettingsOpen = false 
         window.location.reload();
         return;
       }
+      */
     }, 1000); // Check every second
 
     return () => {
@@ -870,7 +887,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({ isSettingsOpen = false 
       }
       clearInterval(checkInterval);
     };
-  }, [setSelectedFloor]); // Added setSelectedFloor to dependencies
+  }, [setSelectedFloor, isSettingsOpen]); // Added isSettingsOpen to dependencies
 
   // Filter shops by selected floor AND selected genre
   const filteredShops = React.useMemo(() => {
@@ -1157,6 +1174,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({ isSettingsOpen = false 
     };
   }, []);
 
+  // Calculate scale ratio for consistent pin sizing
+  const scaleRatio = CURRENT_MAP_WIDTH / REFERENCE_MAP_WIDTH;
+
   return (
     <div
       style={{
@@ -1329,13 +1349,37 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({ isSettingsOpen = false 
                   />
                 </AnimatePresence>
 
+                {/* Current Location Icons Overlay */}
+                {normalizeFloor(selectedFloor || "1F") === normalizeFloor(currentFloor) && (
+                  <LocationIconsOverlay
+                    settings={(() => {
+                      const baseSettings = getLocationIconSettingsForFloor(locationIconSettings, (selectedFloor || "1F") as FloorId);
+                      // Apply scale ratio to location icon settings
+                      return {
+                        speechBubble: {
+                          ...baseSettings.speechBubble,
+                          size: baseSettings.speechBubble.size * scaleRatio
+                        },
+                        location: {
+                          ...baseSettings.location,
+                          size: baseSettings.location.size * scaleRatio
+                        }
+                      };
+                    })()}
+                    mapMetrics={{ width: CURRENT_MAP_WIDTH, height: 1080 }}
+                  />
+                )}
+
                 {/* Selected Shop Pin */}
                 <AnimatePresence>
                   {selectedShopDetail && 
                    selectedShopDetail.position && 
                    normalizeFloor(String(selectedShopDetail.position.floor)) === normalizeFloor(selectedFloor || "") && (
                     <ShopPin
-                      position={selectedShopDetail.position}
+                      position={{
+                        ...selectedShopDetail.position,
+                        size: (selectedShopDetail.position.size ?? 80) * scaleRatio
+                      }}
                       shopName={selectedShopDetail.name}
                       shopLogo={selectedShopDetail.shopLogo}
                       shopId={selectedShopDetail.shopId}

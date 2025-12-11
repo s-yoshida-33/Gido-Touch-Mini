@@ -39,9 +39,27 @@ const IconConfigSection: React.FC<{
   config: IconPositionConfig;
   onChange: (next: IconPositionConfig) => void;
   showAnimation?: boolean;
-}> = ({ label, config, onChange, showAnimation = false }) => {
+}> = ({ label, config, onChange, showAnimation = true }) => {
   const update = (partial: Partial<IconPositionConfig>) => {
     onChange({ ...config, ...partial });
+  };
+
+  const updateAnimationField = (field: keyof AnimationConfig, value: any) => {
+    update({
+      animation: {
+        ...(config.animation ?? { enabled: false, type: "floating", duration: 2.2, amplitude: 18 }),
+        [field]: value
+      }
+    });
+  };
+
+  const updateShadowField = (field: keyof ShadowConfig, value: any) => {
+    update({
+      shadow: {
+        ...(config.shadow ?? { enabled: false, offsetX: 0, offsetY: 0, blur: 0, opacity: 0 }),
+        [field]: value
+      }
+    });
   };
 
   return (
@@ -163,6 +181,67 @@ const IconConfigSection: React.FC<{
          </div>
       </div>
 
+      {/* Shadow */}
+      <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+        <label style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+          <input
+            type="checkbox"
+            checked={config.shadow?.enabled ?? false}
+            onChange={(e) => updateShadowField("enabled", e.target.checked)}
+            style={{ marginRight: 10, width: 18, height: 18, accentColor: "#007aff" }}
+          />
+          <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 14, fontWeight: 500 }}>シャドウ</span>
+        </label>
+        {config.shadow?.enabled && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>オフセットX</div>
+                <input
+                  type="number"
+                  value={config.shadow?.offsetX ?? 0}
+                  onChange={(e) => updateShadowField("offsetX", Number(e.target.value) || 0)}
+                  style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>オフセットY</div>
+                <input
+                  type="number"
+                  value={config.shadow?.offsetY ?? 0}
+                  onChange={(e) => updateShadowField("offsetY", Number(e.target.value) || 0)}
+                  style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }}
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>ぼかし</div>
+                <input
+                  type="number"
+                  min={0}
+                  value={config.shadow?.blur ?? 0}
+                  onChange={(e) => updateShadowField("blur", Math.max(0, Number(e.target.value) || 0))}
+                  style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>不透明度</div>
+                <input
+                  type="number"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={config.shadow?.opacity ?? 0}
+                  onChange={(e) => updateShadowField("opacity", Math.max(0, Math.min(1, Number(e.target.value) || 0)))}
+                  style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Animation */}
       {showAnimation && (
         <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
@@ -170,18 +249,62 @@ const IconConfigSection: React.FC<{
             <input
               type="checkbox"
               checked={config.animation?.enabled ?? false}
-              onChange={(e) =>
-                update({
-                  animation: {
-                    ...(config.animation ?? { enabled: false, type: "floating", duration: 2.2, amplitude: 18 }),
-                    enabled: e.target.checked,
-                  },
-                })
-              }
+              onChange={(e) => updateAnimationField("enabled", e.target.checked)}
               style={{ marginRight: 10, width: 18, height: 18, accentColor: "#007aff" }}
             />
             <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 14, fontWeight: 500 }}>アニメーション</span>
           </label>
+          {config.animation?.enabled && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>タイプ</div>
+                <select 
+                  value={config.animation?.type ?? "floating"} 
+                  onChange={(e) => updateAnimationField("type", e.target.value as AnimationType)} 
+                  style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }}
+                >
+                  <option value="floating" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>フローティング</option>
+                  <option value="pulse" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>パルス</option>
+                  <option value="bounce" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>バウンス</option>
+                  <option value="blink" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>点滅・波紋</option>
+                  <option value="none" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>なし</option>
+                </select>
+              </div>
+              
+              <div style={{ display: "flex", gap: 10 }}>
+                 <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>期間 (秒)</div>
+                    <input type="number" min={0.1} step={0.1} value={config.animation?.duration ?? 2.2} onChange={(e) => updateAnimationField("duration", Math.max(0.1, Number(e.target.value) || 2.2))} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                 </div>
+                 <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>振幅</div>
+                    <input type="number" value={config.animation?.amplitude ?? 18} onChange={(e) => updateAnimationField("amplitude", Number(e.target.value) || 0)} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                 </div>
+              </div>
+              
+              {config.animation?.type === "blink" && (
+                <>
+                  <div>
+                    <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>波紋の色 (RGB/HEX)</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                      <span style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRight: "none", borderTopLeftRadius: 6, borderBottomLeftRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13, userSelect: "none" }}>#</span>
+                      <input type="text" value={(config.animation?.rippleColor || "#FFFFFF").replace(/^#/, "")} onChange={(e) => updateAnimationField("rippleColor", `#${e.target.value.replace(/[^0-9A-Fa-f]/g, "").toUpperCase()}`)} placeholder="FFFFFF" maxLength={6} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderLeft: "none", borderTopRightRadius: 6, borderBottomRightRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>波紋サイズ (倍率)</div>
+                      <input type="number" min={1} step={0.1} value={config.animation?.rippleSize ?? 1.5} onChange={(e) => updateAnimationField("rippleSize", Math.max(1, Number(e.target.value) || 1.5))} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>中心サイズ (倍率)</div>
+                      <input type="number" min={0.1} max={2} step={0.05} value={config.animation?.rippleCenterSize ?? 0.95} onChange={(e) => updateAnimationField("rippleCenterSize", Math.max(0.1, Number(e.target.value) || 0.95))} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </fieldset>

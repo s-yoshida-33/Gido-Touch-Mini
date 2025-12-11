@@ -1,7 +1,7 @@
 // src/types/global.d.ts
 export {};
 
-import type { LocationIconSettings } from "./locationIcon";
+import type { LocationIconSettings, LocationIconSettingsPerFloor } from "./locationIcon";
 import type { ImageSettings } from "./imageSettings";
 import type { ShopPositionSettings } from "./shopPosition";
 
@@ -27,12 +27,12 @@ interface ElectronAPI {
   setFloor: (floor: string) => void;
   onFloorChanged: (cb: (floor: string) => void) => void;
 
-  getLocationIconSettings: () => Promise<LocationIconSettings>;
+  getLocationIconSettings: () => Promise<LocationIconSettings | LocationIconSettingsPerFloor>;
   saveLocationIconSettings: (
-    settings: LocationIconSettings
-  ) => Promise<LocationIconSettings>;
+    settings: LocationIconSettings | LocationIconSettingsPerFloor
+  ) => Promise<LocationIconSettings | LocationIconSettingsPerFloor>;
   onLocationIconSettingsUpdated: (
-    cb: (settings: LocationIconSettings) => void
+    cb: (settings: LocationIconSettings | LocationIconSettingsPerFloor) => void
   ) => () => void;
   onOpenLocationIconSettings: (cb: () => void) => () => void;
 
