@@ -98,41 +98,40 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
 
     const shops: Shop[] = rawList.map((item) => {
       // Use floors array if available, otherwise fallback to single floor property
-      const sourceFloors = (item.floors && (Array.isArray(item.floors) || String(item.floors).trim().length > 0)) 
-        ? item.floors 
-        : item.floor;
+      // Note: new format only has floors, no floor
+      const sourceFloors = item.floors;
         
       const floors = parseFloorsFromBridge(sourceFloors, defaultFloor);
 
       if (floors.length === 0) {
         logWarn("shopList", "Shop has no floors after normalization", {
-          shopId: item.shop_id,
-          name: item.shop_name,
+          shopId: item.shopId,
+          name: item.shopName,
           rawFloors: item.floors,
           defaultFloor,
         });
       }
 
-      // Prioritize new API fields (local_path), fallback to legacy fields
-      const shopLogoValue = item.shop_logo_local_path || item.shop_logo;
-      const photo1Value = item.photo1_local_path || item.photo1;
-      const photo2Value = item.photo2_local_path || item.photo2;
+      // Prioritize local paths if available
+      const shopLogoValue = item.shopLogoLocalPath || item.shopLogo;
+      const photo1Value = item.photo1LocalPath || item.photo1;
+      const photo2Value = item.photo2LocalPath || item.photo2;
 
       return {
-        shopId: String(item.shop_id),
-        name: item.shop_name,
-        nameEn: item.shop_name_english,
+        shopId: String(item.shopId),
+        name: item.shopName,
+        nameEn: item.shopNameEnglish,
         genre: item.genre,
-        genreSub: item.genre_sub,
-        genreMemo: item.genre_memo,
-        genreMemoEn: item.genre_memo_english,
+        genreSub: item.genreSub,
+        genreMemo: item.genreMemo,
+        genreMemoEn: item.genreMemoEnglish,
         number: item.number,
         floors,
         photo1: photo1Value,
         photo2: photo2Value,
         shopLogo: shopLogoValue,
         description: item.description,
-        openTime: item.open_time,
+        openTime: item.openTime,
         tel: item.tel,
       };
     });

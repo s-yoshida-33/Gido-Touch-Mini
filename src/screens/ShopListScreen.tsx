@@ -82,10 +82,7 @@ import hint from "../assets/hint.svg";
 import buttonClose from "../assets/button-close.svg";
 import buttonCloseHighlight from "../assets/button-close-highlight.svg";
 import commingSoon from "../assets/comming-soon.svg";
-import { fetchShops } from "../repositories/shopRepository";
-import { logInfo } from "../logs/logging";
 import type { Shop } from "../types/shop";
-import ShopDetailScreen from "./ShopDetailScreen";
 import { LanguageSelectModal } from "../components/LanguageSelectModal";
 import { ShopPin } from "../components/ShopPin";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
@@ -449,6 +446,7 @@ interface ShopListScreenProps {
   isSettingsOpen?: boolean;
   locationIconSettings?: LocationIconSettingsPerFloor;
   currentFloor?: string;
+  shops: Shop[];
 }
 
 /**
@@ -460,20 +458,13 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   isSettingsOpen = false,
   locationIconSettings = DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
   currentFloor = "1F",
+  shops,
 }) => {
   // Map content ref for direct style manipulation (zoom scale)
   const mapContentRef = useRef<HTMLDivElement>(null);
 
   // Map transform ref
   const transformComponentRef = useRef<ReactZoomPanPinchContentRef>(null);
-
-  // Scroll container ref
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Drag scroll state
-  const isDraggingRef = useRef(false);
-  const dragStartXRef = useRef(0);
-  const scrollStartXRef = useRef(0);
 
   // Genre scroll container ref
   const genreScrollContainerRef = useRef<HTMLDivElement>(null);
@@ -524,9 +515,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     container.style.userSelect = "";
   };
 
-  // Shop data state
-  const [shops, setShops] = useState<Shop[]>([]);
-  
   // Selected genre state
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
 
@@ -596,8 +584,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     shopsRef.current = shops;
   }, [shops]);
 
-  const [error, setError] = useState<string | null>(null);
-  
   // Floor filter state
   const [selectedFloor, setSelectedFloorState] = useState<string | null>(CURRENT_FLOOR);
   
@@ -650,18 +636,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     });
   }, []);
   
-  // Selected shop for detail modal
-  const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
-  
   // Selected shop for side modal (Slide-in)
   const [selectedShopDetail, setSelectedShopDetail] = useState<Shop | null>(null);
 
-  // Scroll position state for navigation buttons
-  const [scrollPercentage, setScrollPercentage] = useState(0);
-  const [canScroll, setCanScroll] = useState(false);
-
-  // Idle timeout state (30 seconds for testing)
-  const IDLE_TIMEOUT_MS = 30 * 1000; // 30 seconds
   const lastActivityTimeRef = useRef<number>(Date.now());
 
   // Language select modal state
@@ -708,122 +685,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     }
   }, []); // Run only on mount
 
-  // Fetch shops from API
-  useEffect(() => {
-    let cancelled = false;
-    let timerId: number | null = null;
-
-    const loadShops = async () => {
-      let hasError = false;
-      try {
-        const data = await fetchShops();
-        if (cancelled) return;
-
-        // Check for empty data (likely due to API update in progress)
-        if (data.length === 0 && shopsRef.current.length > 0) {
-          throw new Error("API returned 0 shops");
-        }
-
-        // Clean shop names (remove furigana in brackets)
-        // Removed hardcoded filters: only "飲食店・食品" or "グルメ" and "イオン堺北花田店" exclusion
-        // Now showing all shops by default
-        const cleaned = data.map((s) => ({
-          ...s,
-          name: s.name.replace(/【.*?】/g, "").trim(),
-        }));
-
-        // Load shop positions and merge with shop data
-        const api = window.electronAPI;
-        if (api && api.getShopPositions) {
-          try {
-            const shopPositions = await api.getShopPositions();
-            const shopsWithPositions = cleaned.map((shop) => {
-              if (shop.shopId && shopPositions.positions[shop.shopId]) {
-                return {
-                  ...shop,
-                  position: shopPositions.positions[shop.shopId],
-                };
-              }
-              return shop;
-            });
-            setShops(shopsWithPositions);
-          } catch (e) {
-            console.error("Failed to load shop positions:", e);
-            setShops(cleaned);
-          }
-        } else {
-          setShops(cleaned);
-        }
-
-        setError(null);
-      } catch (e: any) {
-        hasError = true;
-        console.error(e);
-        if (cancelled) return;
-
-        // If we already have shops, don't show error screen, just keep retrying
-        if (shopsRef.current.length === 0) {
-          const message = e?.message ?? "failed to load";
-          setError(message);
-        } else {
-          console.warn("[ShopListScreen] API Error but keeping existing data:", e);
-        }
-      } finally {
-        if (cancelled) return;
-        
-        // ポーリング間隔の設定
-        // エラー（API未接続など）の場合は、リトライ間隔を短くする（例: 10秒）
-        // 成功時は3分（開発環境は10秒）
-        const SHOP_LIST_MS = import.meta.env.DEV ? 10 * 1000 : 3 * 60 * 1000;
-        const nextInterval = hasError 
-          ? 10 * 1000 // エラー時は10秒後にリトライ
-          : SHOP_LIST_MS; // 成功時は設定通りの間隔
-
-        console.log(`[ShopListScreen] Next poll in ${nextInterval}ms (Error: ${hasError})`);
-        timerId = window.setTimeout(loadShops, nextInterval);
-      }
-    };
-
-    loadShops();
-
-    return () => {
-      cancelled = true;
-      if (timerId !== null) {
-        clearTimeout(timerId);
-      }
-    };
-  }, []);
-
-  // ショップ位置情報の更新を監視
-  useEffect(() => {
-    const api = window.electronAPI;
-    if (!api || !api.onShopPositionsUpdated) return;
-
-    const unsubscribe = api.onShopPositionsUpdated(async (updatedPositions) => {
-      // 位置情報が更新されたら、ショップデータを再読み込み
-      try {
-        const shopPositions = updatedPositions;
-        setShops((prevShops) => {
-          return prevShops.map((shop) => {
-            const shopId = shop.shopId || shop.number;
-            if (shopId && shopPositions.positions[shopId]) {
-              return {
-                ...shop,
-                position: shopPositions.positions[shopId],
-              };
-            }
-            return shop;
-          });
-        });
-      } catch (e) {
-        console.error("Failed to update shop positions:", e);
-      }
-    });
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
 
   // Idle timeout: Refresh to default shop list after 30 seconds of inactivity
   // Always active - any touch/activity resets the timer
@@ -847,12 +708,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     events.forEach((event) => {
       window.addEventListener(event, handleActivity, { passive: true });
     });
-
-    // Also listen to scroll events on the scroll container
-    const scrollContainer = scrollContainerRef.current;
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleActivity, { passive: true });
-    }
 
     // Listen to scroll events on the genre scroll container
     const genreScrollContainer = genreScrollContainerRef.current;
@@ -885,9 +740,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       events.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });
-      if (scrollContainer) {
-        scrollContainer.removeEventListener('scroll', handleActivity);
-      }
       if (genreScrollContainer) {
         genreScrollContainer.removeEventListener('scroll', handleActivity);
       }
@@ -987,184 +839,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
     return result;
   }, [shops, selectedFloor, selectedGenre]);
-
-  // Layout: 6 rows per column
-  // Card count is dynamically calculated based on the number of shops from API
-  const rowsPerColumn = 6;
-  const totalColumns = filteredShops.length > 0 ? Math.ceil(filteredShops.length / rowsPerColumn) : 0;
-
-  // Card size calculation (Full HD 1920x1080 based)
-  // Content area: width: 1290px (1320 - 15*2), height: 1020px (1050 - 15*2)
-  // Card grid container height: 1016px (1020 - 2*2 approx) with padding 6px top/bottom
-  // Actual content area: 1004px (1016 - 6 - 6)
-  const cardHeight = (1004 - 10 * (rowsPerColumn - 1)) / rowsPerColumn; // Row gap: 10px
-  const cardWidth = 188; // Card width (half of 376)
-  const columnGap = 10; // Column gap (half of 20)
-  const imageHeight = 125; // Image height (half of 251 approx)
-
-  // Group shops by column
-  const columns: Shop[][] = [];
-  for (let i = 0; i < totalColumns; i++) {
-    const startIndex = i * rowsPerColumn;
-    const endIndex = Math.min(startIndex + rowsPerColumn, filteredShops.length);
-    columns.push(filteredShops.slice(startIndex, endIndex));
-  }
-
-  // Mouse drag scroll
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    isDraggingRef.current = true;
-    dragStartXRef.current = e.clientX;
-    scrollStartXRef.current = container.scrollLeft;
-    container.style.cursor = "grabbing";
-    container.style.userSelect = "none";
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current) return;
-
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const deltaX = dragStartXRef.current - e.clientX;
-    container.scrollLeft = scrollStartXRef.current + deltaX;
-  };
-
-  const handleMouseUp = () => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    isDraggingRef.current = false;
-    container.style.cursor = "grab";
-    container.style.userSelect = "";
-  };
-
-  const handleMouseLeave = () => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    isDraggingRef.current = false;
-    container.style.cursor = "grab";
-    container.style.userSelect = "";
-  };
-
-  // Calculate scroll percentage
-  const calculateScrollPercentage = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return { percentage: 0, canScroll: false };
-    
-    const scrollLeft = container.scrollLeft;
-    const scrollWidth = container.scrollWidth;
-    const clientWidth = container.clientWidth;
-    const maxScroll = scrollWidth - clientWidth;
-    
-    if (maxScroll <= 0) return { percentage: 0, canScroll: false };
-    return { percentage: (scrollLeft / maxScroll) * 100, canScroll: true };
-  }, []);
-
-  // Handle scroll event
-  const handleScroll = useCallback(() => {
-    const result = calculateScrollPercentage();
-    setScrollPercentage(result.percentage);
-    setCanScroll(result.canScroll);
-  }, [calculateScrollPercentage]);
-
-  // Update scroll percentage on scroll
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    container.addEventListener("scroll", handleScroll);
-
-    return () => {
-      container.removeEventListener("scroll", handleScroll);
-    };
-  }, [handleScroll]);
-
-  // Recalculate scroll state when content changes
-  useLayoutEffect(() => {
-    // Immediately check scroll state (synchronous check)
-    handleScroll();
-    
-    // Also check after a short delay to ensure layout is complete
-    const timer = setTimeout(() => {
-      handleScroll();
-    }, 50);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [filteredShops, selectedFloor, handleScroll]);
-
-  // Reset scroll position when genre or floor changes
-  useLayoutEffect(() => {
-    // Reset the main shop list scroll container (vertical)
-    const shopListContainer = document.querySelector('.shop-list-scroll-container');
-    if (shopListContainer) {
-      shopListContainer.scrollTop = 0;
-    }
-  }, [selectedGenre, selectedFloor]);
-
-  // Also recalculate when shops data changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      handleScroll();
-    }, 100);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [shops.length, handleScroll]);
-
-  // Smooth scroll animation helper
-  const smoothScrollTo = (targetScrollLeft: number, duration: number = 800) => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const startScrollLeft = container.scrollLeft;
-    const distance = targetScrollLeft - startScrollLeft;
-    const startTime = performance.now();
-
-    // Easing function: easeInOutCubic
-    const easeInOutCubic = (t: number): number => {
-      return t < 0.5
-        ? 4 * t * t * t
-        : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    };
-
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easedProgress = easeInOutCubic(progress);
-      
-      container.scrollLeft = startScrollLeft + distance * easedProgress;
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-
-    requestAnimationFrame(animate);
-  };
-
-  // Scroll to start
-  const scrollToStart = () => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      smoothScrollTo(0, 800);
-    }
-  };
-
-  // Scroll to end
-  const scrollToEnd = () => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      const maxScroll = container.scrollWidth - container.clientWidth;
-      smoothScrollTo(maxScroll, 800);
-    }
-  };
 
   // Add style to hide scrollbar
   useEffect(() => {

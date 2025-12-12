@@ -2,10 +2,33 @@
 import { DATA_SOURCE, GENRE_ORDER } from "../config";
 import type { Shop } from "../types/shop";
 import { fetchShopsFromBridge } from "../api/bridgeClient";
+import { logInfo, logError } from "../logs/logging";
 
-export interface GroupedShops {
-  genres: string[];
-  byGenre: Record<string, Shop[]>;
+const CACHE_KEY = "gido_shops_cache";
+
+// Save shops to local storage cache
+export function saveShopsToCache(shops: Shop[]) {
+  try {
+    const json = JSON.stringify(shops);
+    localStorage.setItem(CACHE_KEY, json);
+    logInfo("repository", "Saved shops to cache", { count: shops.length });
+  } catch (e) {
+    logError("repository", "Failed to save shops to cache", { error: e });
+  }
+}
+
+// Load shops from local storage cache
+export function loadShopsFromCache(): Shop[] | null {
+  try {
+    const json = localStorage.getItem(CACHE_KEY);
+    if (!json) return null;
+    const shops = JSON.parse(json) as Shop[];
+    logInfo("repository", "Loaded shops from cache", { count: shops.length });
+    return shops;
+  } catch (e) {
+    logError("repository", "Failed to load shops from cache", { error: e });
+    return null;
+  }
 }
 
 // Entry point for fetching shops
@@ -77,4 +100,9 @@ export function groupShopsByGenre(shops: Shop[]): GroupedShops {
   }
 
   return { genres, byGenre };
+}
+
+export interface GroupedShops {
+  genres: string[];
+  byGenre: Record<string, Shop[]>;
 }

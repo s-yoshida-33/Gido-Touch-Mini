@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import "./styles/global-image.css"; // Global image styles
 import ShopListScreen from "./screens/ShopListScreen";
 
@@ -14,14 +14,15 @@ import UnifiedSettingsScreen from "./screens/UnifiedSettingsScreen";
 import {
   DEFAULT_LOCATION_ICON_SETTINGS,
   DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
-  POLLING_INTERVALS,
 } from "./config";
 import type { LocationIconSettings, LocationIconSettingsPerFloor } from "./types/locationIcon";
 import type { ImageSettings } from "./types/imageSettings";
 import { DEFAULT_IMAGE_SETTINGS } from "./types/imageSettings";
 import type { ShopPositionSettings } from "./types/shopPosition";
 import type { Shop } from "./types/shop";
-import { fetchShops } from "./repositories/shopRepository";
+import { fetchShops, loadShopsFromCache, saveShopsToCache } from "./repositories/shopRepository";
+import { sseService } from "./services/SSEService";
+import { logInfo, logError } from "./logs/logging";
 
 type FloorId = "1F" | "2F" | "3F" | "4F";
 
@@ -78,42 +79,56 @@ const App: React.FC = () => {
   // Settings screen open state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Poll shops
-  useEffect(() => {
-    let timeoutId: number;
-
-    const loadShops = async () => {
-      try {
-        const shopData = await fetchShops();
-        
-        // If 0 shops, treat as error/not ready to force quick retry
-        if (shopData.length === 0) {
-           console.warn("[App] 0 shops loaded, retrying...");
-           timeoutId = window.setTimeout(loadShops, 10000);
-           return;
-        }
-
-        // Clean shop names
-        const cleaned = shopData.map((s) => ({
+  // Load shops function
+  const loadShops = async (useCacheFirst = false) => {
+    // 1. Try cache if requested (only on initial load)
+    if (useCacheFirst) {
+      const cached = loadShopsFromCache();
+      if (cached && cached.length > 0) {
+        const cleaned = cached.map((s) => ({
           ...s,
           name: s.name.replace(/【.*?】/g, "").trim(),
         }));
-        
         setShops(cleaned);
-        
-        // Schedule next poll
-        timeoutId = window.setTimeout(loadShops, POLLING_INTERVALS.SHOP_LIST_MS);
-      } catch (e) {
-        console.error("[App] Failed to load shops:", e);
-        // Retry sooner on error
-        timeoutId = window.setTimeout(loadShops, 10000);
+        logInfo("app", "Shops loaded from cache", { count: cleaned.length });
       }
-    };
+    }
 
-    loadShops();
+    // 2. Fetch from API
+    try {
+      const shopData = await fetchShops();
+      
+      // Clean shop names
+      const cleaned = shopData.map((s) => ({
+        ...s,
+        name: s.name.replace(/【.*?】/g, "").trim(),
+      }));
+      
+      setShops(cleaned);
+      
+      // Update cache with raw data
+      saveShopsToCache(shopData);
+      
+      logInfo("app", "Shops loaded from API and cached", { count: cleaned.length });
+    } catch (e) {
+      logError("app", "Failed to load shops from API", { error: e });
+    }
+  };
+
+  // Initial load and SSE subscription
+  useEffect(() => {
+    // Initial fetch with cache
+    loadShops(true);
+
+    // Subscribe to SSE updates
+    const unsubscribe = sseService.on("update", (data) => {
+      logInfo("app", "Received update event from SSE, reloading shops...", data as unknown as Record<string, unknown>);
+      // Force refresh from API, ignore cache
+      loadShops(false);
+    });
 
     return () => {
-      window.clearTimeout(timeoutId);
+      unsubscribe?.();
     };
   }, []);
 
@@ -241,6 +256,7 @@ const App: React.FC = () => {
       if (api.getShopPositions) {
         const saved = await api.getShopPositions();
         if (saved) {
+          logInfo("app", "Loaded shop positions", { count: Object.keys(saved.positions).length });
           setShopPositions(saved);
         }
       }
@@ -405,14 +421,31 @@ const App: React.FC = () => {
     if (!api) return;
 
     try {
+      logInfo("app", "Saving shop positions", { count: Object.keys(settings.positions).length });
       const saved = await api.saveShopPositions(settings);
       if (saved) {
         setShopPositions(saved);
+        logInfo("app", "Shop positions saved successfully");
       }
     } catch (e) {
+      logError("app", "Failed to save shop positions", { error: e });
       console.error("Failed to save shop positions", e);
     }
   };
+
+  // Merge shops with positions
+  const mergedShops = useMemo(() => {
+    return shops.map((shop) => {
+      const shopId = shop.shopId || shop.number;
+      if (shopId && shopPositions.positions[shopId]) {
+        return {
+          ...shop,
+          position: shopPositions.positions[shopId],
+        };
+      }
+      return shop;
+    });
+  }, [shops, shopPositions]);
 
   return (
     <>
@@ -420,6 +453,7 @@ const App: React.FC = () => {
       isSettingsOpen={isSettingsOpen} 
       locationIconSettings={locationSettings}
       currentFloor={floor}
+      shops={mergedShops}
     />
     <UnifiedSettingsScreen
         isOpen={isSettingsOpen}
@@ -433,7 +467,7 @@ const App: React.FC = () => {
         onSaveImageSettings={handleSaveImageSettings}
         shopPositions={shopPositions}
         onSaveShopPositions={handleSaveShopPositions}
-        shops={shops}
+        shops={mergedShops}
       />
       <VersionInfoScreen onClose={() => {}} />
     </>

@@ -170,14 +170,25 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
 
     try {
       setSaving(true);
-      await Promise.all([
-        onSaveFloor(floor),
-        onSaveLocationIconSettings(locationIconSettings),
-        onSaveImageSettings(imageSettings),
-        onSaveShopPositions(shopPositions),
-      ]);
+      console.log("Saving settings...");
+      
+      // Save sequentially to avoid race conditions in main process file writing
+      console.log("Saving floor...");
+      await onSaveFloor(floor);
+      
+      console.log("Saving location icons...");
+      await onSaveLocationIconSettings(locationIconSettings);
+      
+      console.log("Saving image settings...");
+      await onSaveImageSettings(imageSettings);
+      
+      console.log("Saving shop positions...", shopPositions);
+      await onSaveShopPositions(shopPositions);
+      
+      console.log("Settings saved successfully");
       handleClose();
     } catch (e) {
+      console.error("Failed to save settings", e);
       console.error("Failed to save settings", e);
       setErrors({ save: "設定の保存に失敗しました" });
     } finally {

@@ -11,8 +11,6 @@ import floor4FMap from "../assets/floor-4F-map.svg";
 import openTimeImage from "../assets/open-time.svg";
 
 import { APP_CONFIG, POLLING_INTERVALS } from "../config";
-import { fetchShops } from "../repositories/shopRepository";
-
 import type { LocationIconSettings, LocationIconSettingsPerFloor } from "../types/locationIcon";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
 import { getLocationIconSettingsForFloor } from "../config";
@@ -83,14 +81,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
   selectedShopId,
   showOnlyMap = false,
 }) => {
-  const [shops, setShops] = useState<Shop[]>([]);
-  const shopsRef = useRef<Shop[]>([]); // Keep track of shops for error handling
-
-  useEffect(() => {
-    shopsRef.current = shops;
-  }, [shops]);
-
-  const [error, setError] = useState<string | null>(null);
+  const shops = previewShops || [];
 
   const [floor, setFloor] = useState<string>(
     previewFloor ?? APP_CONFIG.floor
@@ -181,77 +172,6 @@ const GidoApp: React.FC<GidoAppProps> = ({
   // Video/List width calculations are no longer needed for fixed layouts
   // We use flexbox to fill available space.
 
-  useEffect(() => {
-    let cancelled = false;
-    let timerId: number | null = null;
-
-    const loadShops = async () => {
-      let hasError = false;
-      try {
-        const data = await fetchShops();
-        if (cancelled) return;
-
-        // Check for empty data (likely due to API update in progress)
-        if (data.length === 0 && shopsRef.current.length > 0) {
-          throw new Error("API returned 0 shops");
-        }
-
-        const cleaned = data.map((s) => ({
-          ...s,
-          name: s.name.replace(/【.*?】/g, "").trim(),
-        }));
-
-        setShops(cleaned);
-        setError(null);
-
-        logInfo("shopList", "Shop data synced", {
-          count: cleaned.length,
-        });
-      } catch (e: any) {
-        hasError = true;
-        console.error(e);
-        if (cancelled) return;
-
-        const message = e?.message ?? "failed to load";
-
-        // If we already have shops, don't show error screen, just keep retrying
-        if (shopsRef.current.length === 0) {
-          setError(message);
-        } else {
-          console.warn("[ShopList] API Error but keeping existing data:", e);
-        }
-
-        logError("shopList", "Failed to load shop list", {
-          error: message,
-          keepingExistingData: shopsRef.current.length > 0
-        });
-      } finally {
-        if (cancelled) return;
-        
-        // ポーリング間隔の設定
-        // エラー（API未接続など）の場合は、リトライ間隔を短くする（例: 10秒）
-        // これにより、アプリ起動後にAPIが起動した場合でも、最大10秒で反映される
-        // 注意: useStateのerrorはクロージャ内で古い値のままの可能性があるため、
-        // ローカル変数 hasError を使用して判定する
-        const nextInterval = hasError 
-          ? 10 * 1000 // エラー時は10秒後にリトライ
-          : POLLING_INTERVALS.SHOP_LIST_MS; // 成功時は設定通りの間隔
-
-        console.log(`[ShopList] Next poll in ${nextInterval}ms (Error: ${hasError})`);
-        timerId = window.setTimeout(loadShops, nextInterval);
-      }
-    };
-
-    loadShops();
-
-    return () => {
-      cancelled = true;
-      if (timerId !== null) {
-        window.clearTimeout(timerId);
-      }
-    };
-  }, []);
-
   const currentLayout =
     floorLayout[floor] ??
     DEFAULT_FLOOR_LAYOUT[floor] ??
@@ -332,20 +252,14 @@ const GidoApp: React.FC<GidoAppProps> = ({
             height: "100%",
           }}
         >
-          {error ? (
-            <div style={{ padding: "16px 32px", color: "red" }}>
-              Error: {error}
-            </div>
-          ) : (
-            <ShopList
-              shops={shops}
-              floor={floor}
-              columnCount={currentLayout.columns}
-              rowsPerColumn={currentLayout.rowsPerCol}
-              perColumnRows={currentLayout.perColumnRows}
-              perColumnPadding={currentLayout.perColumnPadding}
-            />
-          )}
+          <ShopList
+            shops={shops}
+            floor={floor}
+            columnCount={currentLayout.columns}
+            rowsPerColumn={currentLayout.rowsPerCol}
+            perColumnRows={currentLayout.perColumnRows}
+            perColumnPadding={currentLayout.perColumnPadding}
+          />
         </div>
 
         <div

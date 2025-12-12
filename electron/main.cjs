@@ -158,6 +158,14 @@ function loadSettings() {
         return target;
       }
       
+      // If target is primitive or null, just return a copy of source
+      if (!target || typeof target !== 'object' || Array.isArray(target)) {
+        if (source && typeof source === 'object' && !Array.isArray(source)) {
+          return JSON.parse(JSON.stringify(source));
+        }
+        return source;
+      }
+      
       const result = { ...target };
       
       Object.keys(source).forEach(key => {
@@ -204,29 +212,20 @@ function loadSettings() {
       }
     }
 
-    const merged = {
-      floor: typeof parsed.floor === 'string' ? parsed.floor : base.floor,
-      locationIcons: mergedLocationIcons,
-      floorLayout: parsed.floorLayout
-        ? {
-            ...base.floorLayout,
-            ...parsed.floorLayout,
-          }
-        : base.floorLayout,
-      shopPositions: parsed.shopPositions
-        ? {
-            positions: typeof parsed.shopPositions.positions === 'object' && parsed.shopPositions.positions !== null
-              ? parsed.shopPositions.positions
-              : base.shopPositions.positions,
-          }
-        : base.shopPositions,
-    };
-
+    // Merge base with parsed using deepMerge to ensure no data loss
+    const merged = deepMerge(base, parsed);
+    
+    // Explicitly set processed fields
+    merged.locationIcons = mergedLocationIcons;
+    // Ensure shopPositions has correct structure if it was missing in parsed
+    if (!merged.shopPositions || !merged.shopPositions.positions) {
+      merged.shopPositions = base.shopPositions;
+    }
 
     logger.debug('Settings loaded', {
       floor: merged.floor,
-      hasAnimation: !!merged.locationIcons.speechBubble.animation,
-      animationEnabled: merged.locationIcons.speechBubble.animation?.enabled,
+      hasAnimation: !!merged.locationIcons['1F']?.speechBubble?.animation,
+      animationEnabled: merged.locationIcons['1F']?.speechBubble?.animation?.enabled,
     });
 
     return merged;
