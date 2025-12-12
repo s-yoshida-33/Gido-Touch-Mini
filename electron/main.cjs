@@ -128,6 +128,37 @@ function loadDefaultShopPositions() {
   };
 }
 
+// Deep merge function to ensure all nested properties are preserved
+const deepMerge = (target, source) => {
+  // If source is missing, return a clone of target (if object) to avoid reference pollution
+  if (!source) {
+    if (target && typeof target === 'object' && !Array.isArray(target)) {
+      return JSON.parse(JSON.stringify(target));
+    }
+    return target;
+  }
+  
+  // If target is primitive or null, just return a copy of source
+  if (!target || typeof target !== 'object' || Array.isArray(target)) {
+    if (source && typeof source === 'object' && !Array.isArray(source)) {
+      return JSON.parse(JSON.stringify(source));
+    }
+    return source;
+  }
+  
+  const result = { ...target };
+  
+  Object.keys(source).forEach(key => {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      result[key] = deepMerge(target[key] || {}, source[key]);
+    } else if (source[key] !== undefined) {
+      result[key] = source[key];
+    }
+  });
+  
+  return result;
+};
+
 function loadSettings() {
   const defaultShopPositions = loadDefaultShopPositions();
   
@@ -147,37 +178,6 @@ function loadSettings() {
 
     const raw = fs.readFileSync(settingsPath, 'utf-8');
     const parsed = JSON.parse(raw);
-
-    // Deep merge function to ensure all nested properties are preserved
-    const deepMerge = (target, source) => {
-      // If source is missing, return a clone of target (if object) to avoid reference pollution
-      if (!source) {
-        if (target && typeof target === 'object' && !Array.isArray(target)) {
-          return JSON.parse(JSON.stringify(target));
-        }
-        return target;
-      }
-      
-      // If target is primitive or null, just return a copy of source
-      if (!target || typeof target !== 'object' || Array.isArray(target)) {
-        if (source && typeof source === 'object' && !Array.isArray(source)) {
-          return JSON.parse(JSON.stringify(source));
-        }
-        return source;
-      }
-      
-      const result = { ...target };
-      
-      Object.keys(source).forEach(key => {
-        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-          result[key] = deepMerge(target[key] || {}, source[key]);
-        } else if (source[key] !== undefined) {
-          result[key] = source[key];
-        }
-      });
-      
-      return result;
-    };
 
     // Check if locationIcons is per-floor (has "1F", "2F" etc) or single (has "speechBubble")
     let mergedLocationIcons = base.locationIcons;
@@ -217,15 +217,24 @@ function loadSettings() {
     
     // Explicitly set processed fields
     merged.locationIcons = mergedLocationIcons;
-    // Ensure shopPositions has correct structure if it was missing in parsed
-    if (!merged.shopPositions || !merged.shopPositions.positions) {
+    
+    // Ensure shopPositions has correct structure and merge explicitly to be safe
+    if (parsed.shopPositions) {
+      merged.shopPositions = deepMerge(base.shopPositions, parsed.shopPositions);
+    } else {
       merged.shopPositions = base.shopPositions;
+    }
+
+    // Double check structure
+    if (!merged.shopPositions || !merged.shopPositions.positions) {
+       merged.shopPositions = { positions: {} };
     }
 
     logger.debug('Settings loaded', {
       floor: merged.floor,
       hasAnimation: !!merged.locationIcons['1F']?.speechBubble?.animation,
       animationEnabled: merged.locationIcons['1F']?.speechBubble?.animation?.enabled,
+      shopPositionsCount: Object.keys(merged.shopPositions?.positions || {}).length,
     });
 
     return merged;
@@ -240,43 +249,19 @@ function loadSettings() {
 
 function saveSettings(partial) {
   const current = loadSettings();
-  
-  // Use deepMerge implementation reused from loadSettings
-  const deepMerge = (target, source) => {
-    // If source is missing, return a clone of target (if object) to avoid reference pollution
-    if (!source) {
-      if (target && typeof target === 'object' && !Array.isArray(target)) {
-        return JSON.parse(JSON.stringify(target));
-      }
-      return target;
-    }
-    
-    // If target is primitive or null, just return a copy of source
-    if (!target || typeof target !== 'object' || Array.isArray(target)) {
-      if (source && typeof source === 'object' && !Array.isArray(source)) {
-        return JSON.parse(JSON.stringify(source));
-      }
-      return source;
-    }
-    
-    const result = { ...target };
-    
-    Object.keys(source).forEach(key => {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = deepMerge(target[key] || {}, source[key]);
-      } else if (source[key] !== undefined) {
-        result[key] = source[key];
-      }
-    });
-    
-    return result;
-  };
-
   const next = deepMerge(current, partial);
 
   try {
     const settingsPath = getSettingsPath();
     fs.writeFileSync(settingsPath, JSON.stringify(next, null, 2), 'utf-8');
+    
+    // Log saving of shop positions specifically if present
+    if (partial.shopPositions) {
+       logger.info('Shop positions saved to disk', {
+         count: Object.keys(next.shopPositions?.positions || {}).length
+       });
+    }
+
     logger.info('Settings saved', {
       floor: next.floor,
     });
