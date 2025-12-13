@@ -471,6 +471,27 @@ function getAlphabetRegex(char: string): RegExp {
   return new RegExp(`^[${c}${c.toUpperCase()}]`);
 }
 
+function getGenreBadgeColor(genre: string | undefined): string {
+  if (!genre) return "#999999";
+  switch (genre) {
+    case "ファッション":
+    case "ファッション雑貨":
+    case "キッズ":
+      return "#1AAE48";
+    case "スポーツ・アウトドア":
+    case "ライフスタイル":
+      return "#176FC1";
+    case "グルメ":
+      return "#F68712";
+    case "エンターテインメント":
+      return "#EC008C";
+    case "サービス":
+      return "#633B9F";
+    default:
+      return "#999999";
+  }
+}
+
 /**
  * Shop list screen
  * Screen size: 1920x1080
@@ -923,7 +944,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     if (shopListScrollContainerRef.current) {
       shopListScrollContainerRef.current.scrollTop = 0;
     }
-  }, [selectedGenre]);
+  }, [selectedGenre, searchQuery]);
 
   // Add style to hide scrollbar
   useEffect(() => {
@@ -1956,10 +1977,41 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     <ShopLogoImage photo={shop.shopLogo || (shop.shopId ? `files/shop/${shop.shopId}/shop_logo.png` : undefined)} shopId={shop.shopId} />
                   </div>
 
-                  {/* Temporary Content */}
-                  <span style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Rounded Mplus 1c', sans-serif", color: "#333", marginLeft: "20px" }}>
-                    {shop.name}
-                  </span>
+                  {/* Name and Floor Container */}
+                  <div style={{ display: "flex", flexDirection: "column", marginLeft: "20px", justifyContent: "flex-start", height: "100%" }}>
+                    <div style={{ display: "flex", flexDirection: "row", gap: "0px", marginBottom: "10px", marginTop: "0px" }}>
+                      {/* Floor Badge */}
+                      <div style={{
+                        fontSize: "14px",
+                        color: "#FFFFFF",
+                        width: "37px",
+                        height: "21px",
+                        background: "#000000",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}>
+                         {shop.floors && shop.floors.length > 0 ? normalizeFloor(String(shop.floors[0])) : ""}
+                      </div>
+                      {/* Number Badge */}
+                      <div style={{
+                        fontSize: "14px",
+                        color: "#FFFFFF",
+                        width: "60px",
+                        height: "21px",
+                        background: getGenreBadgeColor(shop.genre),
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}>
+                         {shop.number}
+                      </div>
+                    </div>
+                    {/* Shop Name */}
+                    <span style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Rounded Mplus 1c', sans-serif", color: "#333" }}>
+                      {shop.name}
+                    </span>
+                  </div>
                 </div>
               ))}
           </motion.div>

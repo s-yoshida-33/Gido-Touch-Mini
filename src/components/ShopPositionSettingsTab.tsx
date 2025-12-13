@@ -317,20 +317,23 @@ const createDefaultShopPosition = (floor: FloorId): ShopPosition => ({
   y: 50.0,
   floor,
   enabled: true,
-  size: 60,
+  size: 80,
   rotation: 0,
   shadow: {
-    enabled: false,
-    offsetX: 0,
-    offsetY: 0,
-    blur: 0,
-    opacity: 0,
+    enabled: true,
+    offsetX: 4,
+    offsetY: 4,
+    blur: 2,
+    opacity: 0.3,
   },
   animation: {
-    enabled: false,
-    type: "floating",
-    duration: 2.2,
-    amplitude: 18,
+    enabled: true,
+    type: "blink",
+    duration: 2,
+    amplitude: 20,
+    rippleColor: "#E63B93",
+    rippleSize: 1.6,
+    rippleCenterSize: 0.8,
   },
 });
 
@@ -524,7 +527,7 @@ export const ShopPositionSettingsTab: React.FC<ShopPositionSettingsTabProps> = (
               <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
                 <div style={{ minWidth: 150 }}>
                   <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>サイズ (px)</div>
-                  <input type="number" min={1} max={512} step={0.1} value={selectedShopPosition.size ?? 60} onChange={(e) => updatePositionField("size", Math.max(1, Math.min(512, Number(e.target.value) || 60)))} style={{ width: 100, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                  <input type="number" min={1} max={512} step={0.1} value={selectedShopPosition.size ?? 80} onChange={(e) => updatePositionField("size", Math.max(1, Math.min(512, Number(e.target.value) || 80)))} style={{ width: 100, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>回転 (°)</div>
@@ -587,11 +590,11 @@ export const ShopPositionSettingsTab: React.FC<ShopPositionSettingsTabProps> = (
                     <div style={{ display: "flex", gap: 10 }}>
                        <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>期間 (秒)</div>
-                          <input type="number" min={0.1} step={0.1} value={selectedShopPosition.animation?.duration ?? 2.2} onChange={(e) => updateAnimationField("duration", Math.max(0.1, Number(e.target.value) || 2.2))} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                          <input type="number" min={0.1} step={0.1} value={selectedShopPosition.animation?.duration ?? 2} onChange={(e) => updateAnimationField("duration", Math.max(0.1, Number(e.target.value) || 2))} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
                        </div>
                        <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>振幅</div>
-                          <input type="number" value={selectedShopPosition.animation?.amplitude ?? 18} onChange={(e) => updateAnimationField("amplitude", Number(e.target.value) || 0)} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                          <input type="number" value={selectedShopPosition.animation?.amplitude ?? 20} onChange={(e) => updateAnimationField("amplitude", Number(e.target.value) || 0)} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
                        </div>
                     </div>
                     {selectedShopPosition.animation?.type === "blink" && (
@@ -600,17 +603,17 @@ export const ShopPositionSettingsTab: React.FC<ShopPositionSettingsTabProps> = (
                           <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>波紋の色 (RGB/HEX)</div>
                           <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
                             <span style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRight: "none", borderTopLeftRadius: 6, borderBottomLeftRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13, userSelect: "none" }}>#</span>
-                            <input type="text" value={(selectedShopPosition.animation?.rippleColor || "#FFFFFF").replace(/^#/, "")} onChange={(e) => updateAnimationField("rippleColor", `#${e.target.value.replace(/[^0-9A-Fa-f]/g, "").toUpperCase()}`)} placeholder="FFFFFF" maxLength={6} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderLeft: "none", borderTopRightRadius: 6, borderBottomRightRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                            <input type="text" value={(selectedShopPosition.animation?.rippleColor || "#E63B93").replace(/^#/, "")} onChange={(e) => updateAnimationField("rippleColor", `#${e.target.value.replace(/[^0-9A-Fa-f]/g, "").toUpperCase()}`)} placeholder="E63B93" maxLength={6} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderLeft: "none", borderTopRightRadius: 6, borderBottomRightRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: 10 }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>波紋サイズ (倍率)</div>
-                            <input type="number" min={1} step={0.1} value={selectedShopPosition.animation?.rippleSize ?? 1.5} onChange={(e) => updateAnimationField("rippleSize", Math.max(1, Number(e.target.value) || 1.5))} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                            <input type="number" min={1} step={0.1} value={selectedShopPosition.animation?.rippleSize ?? 1.6} onChange={(e) => updateAnimationField("rippleSize", Math.max(1, Number(e.target.value) || 1.6))} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
                           </div>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>中心サイズ (倍率)</div>
-                            <input type="number" min={0.1} max={2} step={0.05} value={selectedShopPosition.animation?.rippleCenterSize ?? 0.95} onChange={(e) => updateAnimationField("rippleCenterSize", Math.max(0.1, Number(e.target.value) || 0.95))} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                            <input type="number" min={0.1} max={2} step={0.05} value={selectedShopPosition.animation?.rippleCenterSize ?? 0.8} onChange={(e) => updateAnimationField("rippleCenterSize", Math.max(0.1, Number(e.target.value) || 0.8))} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
                           </div>
                         </div>
                       </>

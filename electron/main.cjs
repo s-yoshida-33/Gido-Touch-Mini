@@ -413,9 +413,9 @@ function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1920,
     height: 1080,
-    fullscreen: true,
+    fullscreen: !isDev, // Fullscreen in production, windowed in dev
     autoHideMenuBar: true,
-    alwaysOnTop: true, // Keep window always on top
+    alwaysOnTop: !isDev, // Always on top in production only
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
@@ -425,27 +425,47 @@ function createMainWindow() {
     },
   });
 
-  // Set to 'screen-saver' level to ensure it stays on top of other apps
-  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  // Set to 'screen-saver' level to ensure it stays on top of other apps (production only)
+  if (!isDev) {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  }
 
-  // Re-apply always on top when window loses focus to ensure it stays visible
-  mainWindow.on('blur', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      // Small delay to let the other window finish its focus event
-      setTimeout(() => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.setAlwaysOnTop(true, 'screen-saver');
-          // Optionally bring to front, but setAlwaysOnTop should be enough
-          // mainWindow.moveTop(); 
-        }
-      }, 100);
-    }
-  });
+  // Re-apply always on top when window loses focus to ensure it stays visible (production only)
+  if (!isDev) {
+    mainWindow.on('blur', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        // Small delay to let the other window finish its focus event
+        setTimeout(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.setAlwaysOnTop(true, 'screen-saver');
+            // Optionally bring to front, but setAlwaysOnTop should be enough
+            // mainWindow.moveTop(); 
+          }
+        }, 100);
+      }
+    });
+  }
 
   // Enable F12 shortcut to toggle dev tools
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'F12') {
       mainWindow.webContents.toggleDevTools();
+    }
+    // Enable F11 to toggle fullscreen
+    if (input.key === 'F11') {
+      const isFullScreen = mainWindow.isFullScreen();
+      const nextState = !isFullScreen;
+      
+      // Toggle fullscreen mode (hides taskbar and window frame)
+      mainWindow.setFullScreen(nextState);
+
+      if (nextState) {
+        // Entering fullscreen -> Force Always On Top to ensure taskbar is covered
+        mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      } else {
+        // Exiting fullscreen -> Follow isDev setting (windowed mode in dev shouldn't be always on top)
+        mainWindow.setAlwaysOnTop(!isDev, 'screen-saver');
+      }
     }
     // Enable Ctrl+R to reload window in development mode
     if (isDev && input.key === 'r' && input.control && !input.shift && !input.alt && !input.meta) {

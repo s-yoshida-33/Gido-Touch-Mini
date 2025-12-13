@@ -274,9 +274,9 @@ export const ShopPin: React.FC<ShopPinProps> = ({
     zIndex: 2,
   };
 
-  const rippleColor = animation?.rippleColor || "#FFFFFF";
-  const rippleSize = animation?.rippleSize || 1.5;
-  const rippleCenterSize = animation?.rippleCenterSize ?? 0.95;
+  const rippleColor = animation?.rippleColor || "#E63B93";
+  const rippleSize = animation?.rippleSize || 1.6;
+  const rippleCenterSize = animation?.rippleCenterSize ?? 0.8;
   const isBlinkAnimation = animation?.enabled && animation.type === "blink";
 
   const renderContent = () => (
