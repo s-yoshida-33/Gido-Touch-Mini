@@ -86,6 +86,7 @@ import type { Shop } from "../types/shop";
 import { LanguageSelectModal } from "../components/LanguageSelectModal";
 import { ShopPin } from "../components/ShopPin";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
+import { KeyboardModal } from "../components/KeyboardModal";
 import type { LocationIconSettingsPerFloor } from "../types/locationIcon";
 import type { FloorId } from "../types/floorLayout";
 import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from "../config";
@@ -449,6 +450,27 @@ interface ShopListScreenProps {
   shops: Shop[];
 }
 
+// 五十音行マッピング
+const KANA_MAP: Record<string, RegExp> = {
+  'あ': /^[あいうえおぁぃぅぇぉアイウエオァィゥェォ]/,
+  'か': /^[かきくけこがぎぐげごカキクケコガギグゲゴ]/,
+  'さ': /^[さしすせそざじずぜぞサシスセソザジズゼゾ]/,
+  'た': /^[たちつてとだぢづでどタチツテトダヂヅデド]/,
+  'な': /^[なにぬねのナニヌネノ]/,
+  'は': /^[はひふへほばびぶべぼぱぴぷぺぽハヒフヘホバビブベボパピプペポ]/,
+  'ま': /^[まみむめもマミムメモ]/,
+  'や': /^[やゆよゃゅょヤユヨャュョ]/,
+  'ら': /^[らりるれろラリルレロ]/,
+  'わ': /^[わをんワヲン]/,
+};
+
+// アルファベットマッピング（大文字小文字無視）
+function getAlphabetRegex(char: string): RegExp {
+  const c = char.toLowerCase();
+  // エスケープが必要な文字はないはずだが念のため単純に
+  return new RegExp(`^[${c}${c.toUpperCase()}]`);
+}
+
 /**
  * Shop list screen
  * Screen size: 1920x1080
@@ -469,6 +491,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Genre scroll container ref
   const genreScrollContainerRef = useRef<HTMLDivElement>(null);
   
+  // Shop list scroll container ref
+  const shopListScrollContainerRef = useRef<HTMLDivElement>(null);
+
   // Genre drag scroll state
   const isGenreDraggingRef = useRef(false);
   const genreDragStartXRef = useRef(0);
@@ -643,6 +668,11 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
   // Language select modal state
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  
+  // Search Keyboard Modal State
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const languageButtonRef = useRef<HTMLDivElement>(null);
   
   // Get selected language from localStorage (default to Japanese)
@@ -754,6 +784,55 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   const filteredShops = React.useMemo(() => {
     let result = shops;
 
+    // 0. Filter by Search Query
+    if (searchQuery) {
+      // 1文字の入力と仮定（キーボードモーダルの仕様）
+      const queryChar = searchQuery.charAt(0);
+      
+      // 正規表現の決定
+      let targetRegex: RegExp | null = null;
+
+      if (KANA_MAP[queryChar]) {
+        // かな行検索
+        targetRegex = KANA_MAP[queryChar];
+      } else if (/[a-zA-Z]/.test(queryChar)) {
+        // アルファベット頭文字検索
+        targetRegex = getAlphabetRegex(queryChar);
+      } else {
+        // その他（数字など）の場合はそのまま前方一致
+         targetRegex = new RegExp(`^${queryChar}`, 'i');
+      }
+
+      if (targetRegex) {
+        result = result.filter((shop) => {
+          // 1. nameKana (読み仮名) の先頭文字チェック
+          if (shop.nameKana && targetRegex!.test(shop.nameKana)) {
+            return true;
+          }
+
+          // 2. nameEn (英語名) の先頭文字チェック
+          if (shop.nameEn && targetRegex!.test(shop.nameEn)) {
+            return true;
+          }
+          
+          // 3. name (店舗名) の先頭文字チェック（漢字の場合はヒットしにくいが念のため）
+          if (shop.name && targetRegex!.test(shop.name)) {
+            return true;
+          }
+
+          // 4. searches (検索キーワード) のチェック
+          // カンマ区切りの各キーワードの先頭がマッチするか
+          if (shop.searches) {
+             const keywords = shop.searches.split(',');
+             const match = keywords.some(k => targetRegex!.test(k.trim()));
+             if (match) return true;
+          }
+          
+          return false;
+        });
+      }
+    }
+
     // 1. Filter by Floor -> REMOVED (Replaced by Sort)
     /*
     if (selectedFloor) {
@@ -838,7 +917,13 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     });
 
     return result;
-  }, [shops, selectedFloor, selectedGenre]);
+  }, [shops, selectedFloor, selectedGenre, searchQuery]);
+
+  useEffect(() => {
+    if (shopListScrollContainerRef.current) {
+      shopListScrollContainerRef.current.scrollTop = 0;
+    }
+  }, [selectedGenre]);
 
   // Add style to hide scrollbar
   useEffect(() => {
@@ -1523,6 +1608,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             <input
               type="text"
               placeholder="店舗名でさがす"
+              value=""
+              readOnly
+              onClick={() => setIsKeyboardOpen(true)}
               style={{
                 flex: 1,
                 border: "none",
@@ -1532,6 +1620,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 background: "transparent",
                 padding: 0,
                 margin: 0,
+                cursor: "pointer",
               }}
               className="shoplist-search-input"
             />
@@ -1731,6 +1820,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
         {/* Shop List Container (W100% H743px) */}
         <div
+          ref={shopListScrollContainerRef}
           className="shop-list-scroll-container"
           style={{
             width: "100%",
@@ -1747,7 +1837,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         >
           {/* Shop List Items */}
           <motion.div
-            key={`${selectedGenre}-${selectedFloor || 'none'}`} // Use both genre and floor as key to trigger animation
+            key={`${selectedGenre}-${selectedFloor || 'none'}-${searchQuery}`} // Added searchQuery to key to re-render on search change
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
@@ -1759,6 +1849,61 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               gap: "15px",
             }}
           >
+            {/* Search Header */}
+            {searchQuery && (
+              <div
+                style={{
+                  width: "440px",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "0 10px",
+                  boxSizing: "border-box",
+                  backgroundColor: "#F5F5F5",
+                  borderRadius: "10px",
+                  marginBottom: "0px",
+                  border: "1px solid #D9D9D9",
+                  boxShadow: "2px 2px 4px 1px rgba(0, 0, 0, 0.2)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                    color: "#333",
+                    fontFamily: "'Rounded Mplus 1c', sans-serif",
+                  }}
+                >
+                  頭文字：{KANA_MAP[searchQuery] ? `${searchQuery}行` : searchQuery}
+                </span>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSearchQuery("");
+                  }}
+                  style={{
+                    cursor: "pointer",
+                    padding: "5px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "20px",
+                      fontWeight: "bold",
+                      color: "#666",
+                      lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </span>
+                </div>
+              </div>
+            )}
+
             {filteredShops.map((shop, index) => (
                 <div
                   key={shop.shopId || `${shop.name}-${index}`}
@@ -2287,6 +2432,14 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         onClose={() => setIsLanguageModalOpen(false)}
         buttonRef={languageButtonRef}
         onLanguageChange={(lang) => setSelectedLanguage(lang)}
+      />
+
+      {/* Keyboard Modal */}
+      <KeyboardModal
+        isOpen={isKeyboardOpen}
+        onClose={() => setIsKeyboardOpen(false)}
+        value={searchQuery}
+        onChange={setSearchQuery}
       />
     </div>
   );

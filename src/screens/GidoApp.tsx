@@ -10,7 +10,7 @@ import floor3FMap from "../assets/floor-3F-map.svg";
 import floor4FMap from "../assets/floor-4F-map.svg";
 import openTimeImage from "../assets/open-time.svg";
 
-import { APP_CONFIG, POLLING_INTERVALS } from "../config";
+import { APP_CONFIG } from "../config";
 import type { LocationIconSettings, LocationIconSettingsPerFloor } from "../types/locationIcon";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
 import { getLocationIconSettingsForFloor } from "../config";

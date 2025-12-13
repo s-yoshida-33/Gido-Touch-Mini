@@ -11,11 +11,11 @@ function getSettingsPath() {
   let userDataPath;
   
   if (platform === 'win32') {
-    userDataPath = path.join(os.homedir(), 'AppData', 'Roaming', 'gido-touch');
+    userDataPath = path.join(os.homedir(), 'AppData', 'Roaming', 'gido-touch-mini');
   } else if (platform === 'darwin') {
-    userDataPath = path.join(os.homedir(), 'Library', 'Application Support', 'gido-touch');
+    userDataPath = path.join(os.homedir(), 'Library', 'Application Support', 'gido-touch-mini');
   } else {
-    userDataPath = path.join(os.homedir(), '.config', 'gido-touch');
+    userDataPath = path.join(os.homedir(), '.config', 'gido-touch-mini');
   }
   
   return path.join(userDataPath, 'settings.json');

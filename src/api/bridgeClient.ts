@@ -120,6 +120,7 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
       return {
         shopId: String(item.shopId),
         name: item.shopName,
+        nameKana: item.shopNameKana, // マッピング追加
         nameEn: item.shopNameEnglish,
         genre: item.genre,
         genreSub: item.genreSub,
@@ -133,6 +134,7 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
         description: item.description,
         openTime: item.openTime,
         tel: item.tel,
+        searches: item.searches, // 検索用キーワード（カンマ区切り）
       };
     });
 

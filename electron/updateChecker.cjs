@@ -46,14 +46,10 @@ function initAutoUpdater(opts) {
 
     win.webContents.send('update-status', {
       state: 'none',
-      message: 'You are running the latest version. Launching app…',
+      message: 'You are running the latest version. Preparing to launch...',
     });
 
-    setTimeout(() => {
-      const w = getPatchWindow && getPatchWindow();
-      if (w) w.close();
-      if (createMainWindow) createMainWindow();
-    }, 0);
+    // Auto-transition logic removed. Renderer will signal completion via IPC.
   });
 
   autoUpdater.on('download-progress', (progress) => {
@@ -91,11 +87,7 @@ function initAutoUpdater(opts) {
       message: `Update error: ${err?.message ?? err}`,
     });
 
-    setTimeout(() => {
-      const w = getPatchWindow && getPatchWindow();
-      if (w) w.close();
-      if (createMainWindow) createMainWindow();
-    }, 1500);
+    // Auto-transition logic removed. Renderer will signal completion via IPC.
   });
 }
 

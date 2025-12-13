@@ -24,6 +24,7 @@ export interface ShopPosition {
 export interface Shop {
   shopId?: string;
   name: string;
+  nameKana?: string; // 追加: 読み仮名
   nameEn?: string;
   genre: string;
   genreSub?: string;
@@ -37,6 +38,7 @@ export interface Shop {
   description?: string;
   openTime?: string;
   tel?: string;
+  searches?: string; // 検索用キーワード（カンマ区切り）
   position?: ShopPosition; // 位置情報（オプショナル）
 }
 

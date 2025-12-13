@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from "../config";
-import { logInfo, logError, logWarn } from "../logs/logging";
+import { logInfo, logError } from "../logs/logging";
 
 type SSEEventType = "connected" | "heartbeat" | "update";
 
@@ -46,9 +46,9 @@ class SSEService {
         }
       });
 
-      this.eventSource.addEventListener("heartbeat", (e) => {
+      this.eventSource.addEventListener("heartbeat", () => {
         try {
-          const data = JSON.parse(e.data);
+          // const data = JSON.parse(e.data);
           // Optional: log heartbeat only occasionally or not at all to avoid noise
           // this.emit("heartbeat", data); 
         } catch (error) {

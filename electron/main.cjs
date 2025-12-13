@@ -373,12 +373,16 @@ function createPatchWindow() {
     transparent: true,
     backgroundColor: '#00000000',
     show: false,
+    alwaysOnTop: true, // Keep patch window visible
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
+
+  // Ensure patch window is also on top with high priority
+  patchWindow.setAlwaysOnTop(true, 'screen-saver');
 
   // Use #patch hash so renderer can show PatchScreen instead of app UI
   patchWindow.loadURL(`${rendererBaseUrl}#patch`);
@@ -411,6 +415,7 @@ function createMainWindow() {
     height: 1080,
     fullscreen: true,
     autoHideMenuBar: true,
+    alwaysOnTop: true, // Keep window always on top
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
@@ -418,6 +423,23 @@ function createMainWindow() {
       devTools: true, // Enable dev tools even in production for debugging
       webSecurity: false, // Allow loading local file:// resources for shop images
     },
+  });
+
+  // Set to 'screen-saver' level to ensure it stays on top of other apps
+  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+
+  // Re-apply always on top when window loses focus to ensure it stays visible
+  mainWindow.on('blur', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      // Small delay to let the other window finish its focus event
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+          // Optionally bring to front, but setAlwaysOnTop should be enough
+          // mainWindow.moveTop(); 
+        }
+      }, 100);
+    }
   });
 
   // Enable F12 shortcut to toggle dev tools
@@ -436,14 +458,19 @@ function createMainWindow() {
   mainWindow.loadURL(rendererBaseUrl);
 
   // Send current floor setting after renderer has finished loading
-  const settings = loadSettings();
   mainWindow.webContents.on('did-finish-load', () => {
+    const settings = loadSettings();
     logger.info('Main window finished loading, broadcasting settings', {
       floor: settings.floor,
     });
     broadcastFloor(settings.floor);
     broadcastLocationIconSettings(settings.locationIcons);
     broadcastFloorLayout(settings.floorLayout);
+    
+    // Also broadcast shop positions to ensure renderer has the latest (especially in Dev mode)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('shop-positions-updated', settings.shopPositions);
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -549,6 +576,13 @@ function createAppMenu() {
 /**
  * IPC handlers for settings and app info.
  */
+ipcMain.handle('get-bridge-base-url', () => {
+  logger.debug('IPC get-bridge-base-url');
+  // For now, return default port 8090.
+  // In the future, we might implement port scanning or reading from BWP config.
+  return 'http://localhost:8090';
+});
+
 ipcMain.handle('settings:get-floor', () => {
   const settings = loadSettings();
   logger.debug('IPC settings:get-floor', { floor: settings.floor });
@@ -727,6 +761,19 @@ ipcMain.on('menu:one-click-update', () => {
 // Quit app
 ipcMain.on('menu:quit', () => {
   app.quit();
+});
+
+// Startup wait completed signal from renderer
+ipcMain.on('startup-wait-completed', () => {
+  logger.info('Startup wait completed, switching to main window');
+  
+  // Close patch window
+  if (patchWindow && !patchWindow.isDestroyed()) {
+    patchWindow.close();
+  }
+  
+  // Create and show main window
+  createMainWindow();
 });
 
 /**

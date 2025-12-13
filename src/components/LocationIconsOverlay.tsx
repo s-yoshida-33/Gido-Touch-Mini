@@ -229,7 +229,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
           {/* Apply fixed pixel offset here inside the scale-invariant context */}
           <div 
             style={{ 
-              transform: `translate(-50%, -50%) scale(calc(1 / var(--map-scale, 1))) translate(${speechBubbleOffsetX}px, ${speechBubbleOffsetY}px)`,
+              transform: `translate(-50%, -50%) translate(${speechBubbleOffsetX}px, ${speechBubbleOffsetY}px)`,
               transformOrigin: 'center center' 
             }}
           >
@@ -254,7 +254,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
           {/* Inverse Scale Wrapper - using CSS variable to keep size constant relative to screen */}
           <div 
             style={{ 
-              transform: 'translate(-50%, -50%) scale(calc(1 / var(--map-scale, 1)))', 
+              transform: 'translate(-50%, -50%)', 
               transformOrigin: 'center center' 
             }}
           >
