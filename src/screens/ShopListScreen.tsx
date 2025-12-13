@@ -448,6 +448,7 @@ interface ShopListScreenProps {
   locationIconSettings?: LocationIconSettingsPerFloor;
   currentFloor?: string;
   shops: Shop[];
+  shopPositions?: any;
 }
 
 // 五十音行マッピング
@@ -502,6 +503,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   locationIconSettings = DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
   currentFloor = "1F",
   shops,
+  shopPositions,
 }) => {
   // Map content ref for direct style manipulation (zoom scale)
   const mapContentRef = useRef<HTMLDivElement>(null);
@@ -966,6 +968,101 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Calculate scale ratio for consistent pin sizing
   const scaleRatio = CURRENT_MAP_WIDTH / REFERENCE_MAP_WIDTH;
 
+  // Map click handler
+  const handleMapClick = (e: React.MouseEvent) => {
+    // If shop positions aren't available, we can't find nearest shop
+    if (!shopPositions || !shopPositions.positions) return;
+
+    // 1. Calculate click position in percentage relative to map content
+    const rect = e.currentTarget.getBoundingClientRect();
+    const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+    const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+
+    // 2. Find nearest shop on current floor
+    let nearestShop: Shop | null = null;
+    let minDistance = Number.MAX_VALUE;
+    const HIT_RADIUS = 5.0; // 5% radius hit area
+
+    // Normalize current floor for comparison
+    const normalizedCurrentFloor = normalizeFloor(selectedFloor || "1F");
+
+    shops.forEach(shop => {
+      const shopId = shop.shopId || shop.number;
+      if (!shopId) return;
+
+      const pos = shopPositions.positions[shopId];
+      // Check if shop has position and is on current floor
+      if (!pos || normalizeFloor(pos.floor) !== normalizedCurrentFloor) return;
+
+      // Calculate distance
+      const dx = pos.x - xPercent;
+      const dy = pos.y - yPercent;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < HIT_RADIUS && distance < minDistance) {
+        minDistance = distance;
+        nearestShop = shop;
+      }
+    });
+
+    // 3. Select nearest shop if found
+    if (nearestShop) {
+      setSelectedShopDetail(nearestShop);
+      setPinDelay(0);
+    }
+  };
+
+  // Focus on selected shop
+  useEffect(() => {
+    if (!selectedShopDetail || !selectedShopDetail.position) return;
+
+    const shopFloor = normalizeFloor(String(selectedShopDetail.position.floor));
+    const current = normalizeFloor(selectedFloor || "1F");
+
+    // Only focus if shop is on the current floor
+    if (shopFloor !== current) return;
+
+    const performFocus = () => {
+      if (transformComponentRef.current) {
+        const { x, y } = selectedShopDetail.position!;
+        const scale = 1.6; // Slight zoom
+        const duration = 1000; // Animation duration in ms (1s)
+
+        // Map container dimensions (fixed in CSS)
+        const containerW = 1460;
+        const containerH = 1080;
+
+        // Target pixel coordinates at scale 1
+        const targetX = (x / 100) * containerW;
+        const targetY = (y / 100) * containerH;
+
+        // Calculate center offsets: center - target * scale
+        let newX = (containerW / 2) - targetX * scale;
+        let newY = (containerH / 2) - targetY * scale;
+
+        // Clamp values to keep map within bounds
+        // Max x/y is 0 (cannot pan further right/down than the edge)
+        // Min x/y is container dimension - scaled content dimension
+        // Since containerW and H match the content size at scale 1, we can use simple logic
+        const minX = containerW * (1 - scale);
+        const minY = containerH * (1 - scale);
+        const maxX = 0;
+        const maxY = 0;
+
+        newX = Math.min(maxX, Math.max(minX, newX));
+        newY = Math.min(maxY, Math.max(minY, newY));
+
+        transformComponentRef.current.setTransform(newX, newY, scale, duration, "easeOut");
+      }
+    };
+
+    // Delay focus if there's a pin delay (e.g. floor switching)
+    const delay = pinDelay > 0 ? pinDelay * 1000 : 0;
+    
+    const timer = setTimeout(performFocus, delay);
+    return () => clearTimeout(timer);
+  }, [selectedShopDetail, selectedFloor, pinDelay]);
+
   return (
     <div
       style={{
@@ -1112,6 +1209,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               <div 
                 ref={mapContentRef}
                 style={{ width: "100%", height: "100%", position: "relative" }}
+                onClick={handleMapClick}
               >
                 <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
                   <motion.img
@@ -1165,6 +1263,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                    selectedShopDetail.position && 
                    normalizeFloor(String(selectedShopDetail.position.floor)) === normalizeFloor(selectedFloor || "") && (
                     <ShopPin
+                      key={selectedShopDetail.shopId || selectedShopDetail.number}
                       position={{
                         ...selectedShopDetail.position,
                         size: (selectedShopDetail.position.size ?? 80) * scaleRatio
@@ -2057,9 +2156,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 onClick={() => {
                   setSelectedShopDetail(null);
                   setPressedCloseButton(false);
-                  // Reset map zoom and position to default
+                  // Reset map zoom and position to default with animation
                   if (transformComponentRef.current) {
-                    transformComponentRef.current.resetTransform();
+                    transformComponentRef.current.setTransform(0, 0, 1, 1000, "easeOut");
                   }
                 }}
                 onMouseDown={() => setPressedCloseButton(true)}

@@ -454,6 +454,7 @@ const App: React.FC = () => {
       locationIconSettings={locationSettings}
       currentFloor={floor}
       shops={mergedShops}
+      shopPositions={shopPositions}
     />
     <UnifiedSettingsScreen
         isOpen={isSettingsOpen}
