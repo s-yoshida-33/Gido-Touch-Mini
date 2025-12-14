@@ -1,6 +1,7 @@
 // src/api/bridgeClient.ts
 import { getApiBaseUrl, APP_CONFIG } from "../config";
 import type { BridgeShop, Shop, FloorId } from "../types/shop";
+import type { BridgeShopNews, ShopNews } from "../types/shopNews";
 
 import { logInfo, logWarn, logError } from "../logs/logging";
 
@@ -150,5 +151,74 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
       url,
     });
     throw error;
+  }
+}
+
+// Fetches shop news from BridgeWebPopper and normalizes it to ShopNews[]
+export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
+  const baseUrl = await getApiBaseUrl();
+  const url = `${baseUrl}/api/shop-news`; // Correct endpoint provided by user
+
+  logInfo("shopNews", "Requesting shop news from Bridge API", { url });
+
+  try {
+    const res = await fetch(url, { method: "GET" });
+
+    if (!res.ok) {
+      logWarn("shopNews", "Bridge API returned non-200 response", {
+        status: res.status,
+        statusText: res.statusText,
+      });
+      // 失敗しても空配列を返してアプリが落ちないようにする
+      return [];
+    }
+
+    const json = await res.json();
+
+    // Detect structure
+    let rawList: BridgeShopNews[] = [];
+    if (Array.isArray(json)) {
+      rawList = json;
+    } else if (Array.isArray((json as any).data)) {
+      rawList = (json as any).data;
+    } else if (Array.isArray((json as any).items)) {
+      rawList = (json as any).items;
+    } else if (json && typeof json === "object" && "shop_news_id" in json) {
+      // Single object response
+      rawList = [json as BridgeShopNews];
+      logInfo("shopNews", "Bridge API response is a single object, treating as array of 1");
+    } else {
+      logInfo("shopNews", "Bridge API response did not contain an array", {
+        receivedKeys: Object.keys(json),
+      });
+    }
+
+    const news: ShopNews[] = rawList.map((item) => {
+      // Prioritize local paths if available
+      const imageUrl = item.photo1_local_path || item.photo1_remote_url;
+
+      return {
+        id: String(item.shop_news_id),
+        shopId: String(item.shop_id),
+        title: item.title,
+        body: item.body,
+        imageUrl,
+        startDate: item.start_date,
+        endDate: item.end_date,
+        updatedAt: item.update_date,
+      };
+    });
+
+    logInfo("shopNews", "Shop news fetched & normalized", {
+      count: news.length,
+    });
+
+    return news;
+  } catch (error: any) {
+    logError("shopNews", "Failed to fetch shop news from Bridge API", {
+      error: error?.message,
+      url,
+    });
+    return [];
   }
 }

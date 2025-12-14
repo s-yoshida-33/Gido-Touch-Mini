@@ -87,6 +87,7 @@ import { LanguageSelectModal } from "../components/LanguageSelectModal";
 import { ShopPin } from "../components/ShopPin";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
 import { KeyboardModal } from "../components/KeyboardModal";
+import { EventNewsModal } from "../components/EventNewsModal";
 import type { LocationIconSettingsPerFloor } from "../types/locationIcon";
 import type { FloorId } from "../types/floorLayout";
 import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from "../config";
@@ -695,6 +696,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Search Keyboard Modal State
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Event News Modal State
+  const [isEventNewsModalOpen, setIsEventNewsModalOpen] = useState(false);
 
   const languageButtonRef = useRef<HTMLDivElement>(null);
   
@@ -2441,6 +2445,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             {/* Event News Button */}
             <div 
               style={{ position: "relative", cursor: "pointer" }}
+              onClick={() => setIsEventNewsModalOpen(true)}
               onMouseDown={() => setPressedNewsButton("event")}
               onMouseUp={() => setPressedNewsButton(null)}
               onMouseLeave={() => setPressedNewsButton(null)}
@@ -2591,6 +2596,12 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         onClose={() => setIsKeyboardOpen(false)}
         value={searchQuery}
         onChange={setSearchQuery}
+      />
+
+      {/* Event News Modal */}
+      <EventNewsModal
+        isOpen={isEventNewsModalOpen}
+        onClose={() => setIsEventNewsModalOpen(false)}
       />
     </div>
   );
