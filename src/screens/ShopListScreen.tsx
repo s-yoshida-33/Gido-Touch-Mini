@@ -286,7 +286,8 @@ const GENRE_LIST: Genre[] = [
   { id: "service", name: "Service", icon: iconService, highlightIcon: iconServiceHighlight },
 ];
 
-const CURRENT_FLOOR: string = "1F";
+// Remove CURRENT_FLOOR constant as it is now passed via props
+// const CURRENT_FLOOR: string = "1F";
 
 // Map switch animation variants
 const mapVariants: Variants = {
@@ -304,6 +305,30 @@ const mapVariants: Variants = {
     y: direction > 0 ? 200 : -200,
     opacity: 0,
   }),
+};
+
+// List switch animation variants
+const listVariants: Variants = {
+  enter: (direction: number) => {
+    if (direction === 0) return { opacity: 0 };
+    return {
+      x: direction > 0 ? 300 : -300,
+      opacity: 0,
+    };
+  },
+  center: {
+    zIndex: 1,
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction: number) => {
+    if (direction === 0) return { opacity: 0 };
+    return {
+      zIndex: 0,
+      x: direction > 0 ? -300 : 300,
+      opacity: 0,
+    };
+  },
 };
 
 // Reference width for scaling (Full HD)
@@ -433,6 +458,35 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
   // Selected genre state
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
+  
+  // Genre switch direction (1: right to left (next), -1: left to right (prev))
+  const [genreDirection, setGenreDirection] = useState(0);
+
+  // Wrapper for setting selected genre with direction calculation
+  const handleSetSelectedGenre = (newGenreId: string) => {
+    if (newGenreId === selectedGenre) return;
+
+    const currentIndex = GENRE_LIST.findIndex(g => g.id === selectedGenre);
+    const newIndex = GENRE_LIST.findIndex(g => g.id === newGenreId);
+    
+    if (currentIndex !== -1 && newIndex !== -1) {
+        if (newIndex > currentIndex) {
+            setGenreDirection(1);
+        } else {
+            setGenreDirection(-1);
+        }
+    } else {
+        setGenreDirection(0);
+    }
+    
+    setSelectedGenre(newGenreId);
+  };
+  
+  // Update searchQuery and reset direction
+  const handleSetSearchQuery = (query: string) => {
+      setGenreDirection(0);
+      setSearchQuery(query);
+  };
 
   // Selected facility state (for map overlay)
   const [selectedFacility, setSelectedFacility] = useState<string | null>(null);
@@ -501,7 +555,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   }, [shops]);
 
   // Floor filter state
-  const [selectedFloor, setSelectedFloorState] = useState<string | null>(CURRENT_FLOOR);
+  const [selectedFloor, setSelectedFloorState] = useState<string | null>(currentFloor);
   
   // Sync selectedFloor with currentFloor prop
   useEffect(() => {
@@ -678,7 +732,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           !selectedShopDetail && 
           !isKeyboardOpen &&
           !isLanguageModalOpen &&
-          Math.abs(currentScale - 1) < 0.01; // Scale check: if zoomed, not default state
+          Math.abs(currentScale - 1) < 0.01 && // Scale check: if zoomed, not default state
+          normalizeFloor(selectedFloor || "1F") === normalizeFloor(currentFloor || "1F"); // Floor check
 
         if (isDefaultState) {
           // Already in default state, just update timestamp to check again later
@@ -702,8 +757,10 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           setSelectedShopDetail(null);
           setIsKeyboardOpen(false);
           setIsLanguageModalOpen(false);
-          // Also reset floor if needed? Usually we keep floor or reset to 1F?
-          // Let's assume we keep floor for now unless requested.
+          // Also reset floor to current floor
+          if (currentFloor) {
+            setSelectedFloor(currentFloor);
+          }
           
           // Reset internal states like zoom/pan if possible
           if (transformComponentRef.current) {
@@ -749,7 +806,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     selectedShopDetail, 
     isKeyboardOpen,
     isLanguageModalOpen,
-    currentScale // Check zoom scale
+    currentScale, // Check zoom scale
+    selectedFloor, // Check selected floor
+    currentFloor // Check current floor
   ]);
 
   // Filter shops by selected floor AND selected genre
@@ -891,11 +950,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     return result;
   }, [shops, selectedFloor, selectedGenre, searchQuery]);
 
-  useEffect(() => {
-    if (shopListScrollContainerRef.current) {
-      shopListScrollContainerRef.current.scrollTop = 0;
-    }
-  }, [selectedGenre, searchQuery]);
 
   // Add style to hide scrollbar
   useEffect(() => {
@@ -1031,7 +1085,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 1 }}
             style={{
               position: "absolute",
               bottom: "145px", // Just above the bottom container
@@ -1171,8 +1225,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     animate="center"
                     exit="exit"
                     transition={{
-                      y: { type: "spring", stiffness: 300, damping: 30 },
-                      opacity: { duration: 0.2 }
+                      y: { type: "tween", duration: 0.5, ease: "easeInOut" },
+                      opacity: { duration: 0.5 }
                     }}
                     style={{
                       width: "100%",
@@ -1240,7 +1294,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 1 }}
               style={{
                 position: "absolute",
                 top: "37px",
@@ -1263,7 +1317,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 1 }}
               style={{
                 position: "absolute",
                 top: "20px",
@@ -1397,7 +1451,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 left: "50%",
                 transform: "translateX(-50%)",
                 display: "block",
-                opacity: CURRENT_FLOOR === "1F" ? 1 : 0,
+                opacity: normalizeFloor(currentFloor) === "1F" ? 1 : 0,
                 transition: "opacity 0.3s ease-in-out",
                 pointerEvents: "none",
                 zIndex: 2,
@@ -1441,7 +1495,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 left: "50%",
                 transform: "translateX(-50%)",
                 display: "block",
-                opacity: CURRENT_FLOOR === "2F" ? 1 : 0,
+                opacity: normalizeFloor(currentFloor) === "2F" ? 1 : 0,
                 transition: "opacity 0.3s ease-in-out",
                 pointerEvents: "none",
                 zIndex: 2,
@@ -1485,7 +1539,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 left: "50%",
                 transform: "translateX(-50%)",
                 display: "block",
-                opacity: CURRENT_FLOOR === "3F" ? 1 : 0,
+                opacity: normalizeFloor(currentFloor) === "3F" ? 1 : 0,
                 transition: "opacity 0.3s ease-in-out",
                 pointerEvents: "none",
                 zIndex: 2,
@@ -1529,7 +1583,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 left: "50%",
                 transform: "translateX(-50%)",
                 display: "block",
-                opacity: CURRENT_FLOOR === "4F" ? 1 : 0,
+                opacity: normalizeFloor(currentFloor) === "4F" ? 1 : 0,
                 transition: "opacity 0.3s ease-in-out",
                 pointerEvents: "none",
                 zIndex: 2,
@@ -1794,7 +1848,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               return (
                 <div 
                   key={genre.id}
-                  onClick={() => setSelectedGenre(genre.id)}
+                  onClick={() => handleSetSelectedGenre(genre.id)}
                   style={{ 
                     position: "relative", 
                     height: "100%", 
@@ -1890,35 +1944,50 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         {/* Shop List Container (W100% H743px) */}
         <div
           ref={shopListScrollContainerRef}
-          className="shop-list-scroll-container"
           style={{
             width: "100%",
             height: "743px",
             flexShrink: 0,
-            overflowY: "auto",
-            paddingTop: "15px", // Top padding for visual balance
-            paddingBottom: "15px", // Bottom padding
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center", // Center items horizontally (440px inside 460px)
-            gap: "15px", // Spacing between items
+            overflowY: "hidden",
+            overflowX: "hidden", // Prevent horizontal overflow during transition
+            position: "relative",
+            display: "grid",
+            gridTemplateColumns: "100%",
+            gridTemplateRows: "100%",
+            gridTemplateAreas: "'content'",
+            alignItems: "start",
+            justifyItems: "center",
           }}
         >
           {/* Shop List Items */}
-          <motion.div
-            key={`${selectedGenre}-${selectedFloor || 'none'}-${searchQuery}`} // Added searchQuery to key to re-render on search change
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            style={{
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "15px",
-            }}
-          >
-            {/* Search Header */}
+          <AnimatePresence initial={false} custom={genreDirection}>
+            <motion.div
+              key={`${selectedGenre}-${selectedFloor || 'none'}-${searchQuery}`} // Added searchQuery to key to re-render on search change
+              custom={genreDirection}
+              variants={listVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              className="shop-list-scroll-container"
+              transition={{
+                x: { type: "tween", duration: 0.5, ease: "easeInOut" },
+                opacity: { duration: 0.5 }
+              }}
+              style={{
+                width: "100%",
+                height: "100%",
+                overflowY: "auto",
+                paddingTop: "15px",
+                paddingBottom: "15px",
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "15px",
+                gridArea: "content",
+              }}
+            >
+              {/* Search Header */}
             {searchQuery && (
               <div
                 style={{
@@ -1973,7 +2042,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               </div>
             )}
 
-            {filteredShops.map((shop, index) => (
+              {filteredShops.map((shop, index) => (
                 <div
                   key={shop.shopId || `${shop.name}-${index}`}
                   onClick={() => {
@@ -2062,7 +2131,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   </div>
                 </div>
               ))}
-          </motion.div>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Shop Detail Modal (Slide-in) */}
@@ -2540,8 +2610,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       <KeyboardModal
         isOpen={isKeyboardOpen}
         onClose={() => setIsKeyboardOpen(false)}
-        value={searchQuery}
-        onChange={setSearchQuery}
+        onChange={handleSetSearchQuery}
       />
 
       {/* Event News Modal */}

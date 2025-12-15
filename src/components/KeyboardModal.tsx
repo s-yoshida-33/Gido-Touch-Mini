@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 interface KeyboardModalProps {
   isOpen: boolean;
   onClose: () => void;
-  value: string;
   onChange: (value: string) => void;
 }
 
@@ -15,7 +14,6 @@ const ALPHABET_ROW_2 = ['N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', '
 export const KeyboardModal: React.FC<KeyboardModalProps> = ({
   isOpen,
   onClose,
-  value,
   onChange,
 }) => {
   const [pressedKey, setPressedKey] = React.useState<string | null>(null);
@@ -241,7 +239,7 @@ const KeyButton: React.FC<KeyButtonProps> = ({
         borderRadius: "20px",
         backgroundColor: "#FFE3F1",
         border: "2px solid #E63B93",
-        boxShadow: "4px 4px 8px rgba(0, 0, 0, 0.25)",
+        // boxShadow: "4px 4px 8px rgba(0, 0, 0, 0.25)", // Remove duplicate
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -265,7 +263,7 @@ const KeyButton: React.FC<KeyButtonProps> = ({
         style={{
           fontSize: "24px",
           fontWeight: "bold",
-          color: "#E63B93", // Match border color for text? Or black? Using brand pink for now or standard black.
+          // color: "#E63B93", // Match border color for text? Or black? Using brand pink for now or standard black.
           // Let's use black or dark gray for better readability, or maybe the pink if intended.
           // Given the border color is pink, pink text might look nice.
           // But usually keys are black. Let's try Dark Gray #333.

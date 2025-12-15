@@ -1,7 +1,7 @@
 // src/api/bridgeClient.ts
 import { getApiBaseUrl, APP_CONFIG } from "../config";
 import type { BridgeShop, Shop, FloorId } from "../types/shop";
-import type { BridgeShopNews, ShopNews } from "../types/shopNews";
+import type { ShopNews } from "../types/shopNews";
 
 import { logInfo, logWarn, logError } from "../logs/logging";
 

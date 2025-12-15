@@ -7,12 +7,13 @@ import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLO
 import type { FloorId, FloorLayout } from "../types/floorLayout";
 import { ImageSettingsTab } from "../components/ImageSettingsTab";
 import { ShopPositionSettingsTab } from "../components/ShopPositionSettingsTab";
+import { FloorSettingsTab } from "../components/FloorSettingsTab";
 import iconSvg from "../assets/icon.svg";
 import type { ImageSettings } from "../types/imageSettings";
 import type { ShopPositionSettings } from "../types/shopPosition";
 import type { Shop } from "../types/shop";
 
-type TabType = "image" | "shopPosition";
+type TabType = "image" | "shopPosition" | "floor";
 
 interface UnifiedSettingsScreenProps {
   isOpen: boolean;
@@ -112,7 +113,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   useEffect(() => {
     // Only run initialization when isOpen changes from false to true
     if (isOpen && !prevIsOpen.current) {
-      setActiveTab("image");
+      setActiveTab("floor");
       setFloor(initialFloor);
       setLocationIconSettings(initialLocationIconSettings);
       setImageSettings(initialImageSettings);
@@ -335,6 +336,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
           {/* Tabs */}
           <div style={{ flex: 1, padding: "16px 0" }}>
             {[
+              { id: "floor" as TabType, label: "フロア設定" },
               { id: "image" as TabType, label: "画像" },
               { id: "shopPosition" as TabType, label: "座標設定" },
             ].map((tab) => (
@@ -420,7 +422,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                 ref={mapContentRef}
                 style={{ width: "100%", height: "100%", position: "relative" }}
               >
-              {activeTab !== "image" && (
+              {activeTab === "shopPosition" && (
                 <GidoApp
                   locationIconSettings={getLocationIconSettingsForFloor(locationIconSettings, floor)}
                   previewFloor={floor}
@@ -515,6 +517,12 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
             padding: "24px",
           }}
         >
+          {activeTab === "floor" && (
+            <FloorSettingsTab
+              floor={floor}
+              onChangeFloor={setFloor}
+            />
+          )}
           {activeTab === "image" && (
             <ImageSettingsTab
               floor={floor}
