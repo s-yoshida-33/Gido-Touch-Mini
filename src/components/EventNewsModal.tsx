@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import buttonClose from "../assets/button-close.svg";
 import buttonCloseHighlight from "../assets/button-close-highlight.svg";
+import iconDate from "../assets/icon_date.svg";
+import iconTime from "../assets/icon-time.svg";
+import iconLocation from "../assets/icon-location.svg";
 import { fetchShopNewsFromBridge } from "../api/bridgeClient";
 import type { ShopNews } from "../types/shopNews";
 import { logError } from "../logs/logging";
@@ -17,6 +20,7 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
 }) => {
   const [isPressed, setIsPressed] = useState(false);
   const [shopNews, setShopNews] = useState<ShopNews[]>([]);
+  const [selectedNews, setSelectedNews] = useState<ShopNews | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -25,15 +29,34 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
         setLoading(true);
         try {
           const news = await fetchShopNewsFromBridge();
-          // Sort by date descending (newest first)
-          const sortedNews = news.sort((a, b) => 
-            new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime()
-          );
+          // Sort: Closest endDate/startDate first, items with no period at the end
+          const sortedNews = news.sort((a, b) => {
+            const getTime = (item: ShopNews) => {
+              const dStr = item.endDate || item.startDate;
+              if (!dStr) return null;
+              const t = new Date(dStr).getTime();
+              return isNaN(t) ? null : t;
+            };
+
+            const tA = getTime(a);
+            const tB = getTime(b);
+
+            if (tA !== null && tB !== null) return tA - tB;
+            if (tA !== null && tB === null) return -1;
+            if (tA === null && tB !== null) return 1;
+            return 0;
+          });
           setShopNews(sortedNews);
+          if (sortedNews.length > 0) {
+            setSelectedNews(sortedNews[0]);
+          } else {
+            setSelectedNews(null);
+          }
         } catch (error) {
           logError("EventNewsModal", "Failed to load shop news", { error });
           // Fallback or empty state
           setShopNews([]);
+          setSelectedNews(null);
         } finally {
           setLoading(false);
         }
@@ -43,8 +66,20 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
     }
   }, [isOpen]);
 
-  // Get the latest news item
-  const latestNews = shopNews.length > 0 ? shopNews[0] : null;
+  // Helper to format date string to YYYY/MM/DD(Weekday)
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString; // Invalid date, return original
+
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+    const weekday = weekdays[date.getDay()];
+
+    return `${year}/${month}/${day}(${weekday})`;
+  };
 
   return (
     <AnimatePresence>
@@ -111,19 +146,17 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                 style={{
                   width: "600px",
                   height: "880px",
-                  padding: "40px",
-                  paddingLeft: "60px", // Original 40px + added 20px = 60px
+                  padding: "20px",
                   boxSizing: "border-box",
                   display: "flex",
                   flexDirection: "column",
-                  alignItems: "center", // Center content horizontally
-                  // 左側の背景色は指定がないため白のまま
+                  alignItems: "center",
                 }}
               >
                 {/* Title */}
                 <div
                   style={{
-                    width: "560px", // Changed from 520px
+                    width: "560px",
                     height: "63px",
                     display: "flex",
                     alignItems: "center",
@@ -134,69 +167,110 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                     fontFamily: "'Rounded Mplus 1c', sans-serif",
                     background: "linear-gradient(90deg, rgba(230, 59, 147, 0) 0%, #E63B93 40%, #E63B93 60%, rgba(230, 59, 147, 0) 100%)",
                     borderRadius: "4px",
-                    marginBottom: "30px", // User requested margin-bottom: 30px
+                    marginBottom: "30px",
                     flexShrink: 0,
                   }}
                 >
                   イベントニュース
                 </div>
 
+                {/* Info Section removed from here to move inside Shop News Content */}
+
                 {/* Shop News Content */}
-                <div
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "20px",
-                    // overflowY: "auto", // Remove scroll from here
-                    flex: 1,
-                    minHeight: 0, // Critical for flex column scrolling
-                  }}
-                >
+                  <div
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "20px",
+                      flex: 1,
+                      minHeight: 0,
+                    }}
+                  >
                    {loading ? (
                     <div style={{ textAlign: "center", marginTop: "20px", fontFamily: "'Rounded Mplus 1c', sans-serif" }}>読み込み中...</div>
-                   ) : latestNews ? (
-                     <div style={{ fontFamily: "'Rounded Mplus 1c', sans-serif", width: "100%", paddingRight: "10px", display: "flex", flexDirection: "column", height: "100%" }}>
+                   ) : selectedNews ? (
+                     <div style={{ fontFamily: "'Rounded Mplus 1c', sans-serif", width: "100%", paddingRight: "0px", display: "flex", flexDirection: "column", height: "100%" }}>
                         {/* News Title (Fixed) */}
                         <div style={{ 
                           fontSize: "24px", 
                           fontWeight: "bold", 
-                          marginBottom: "10px",
+                          marginBottom: "20px",
                           color: "#333",
                           lineHeight: "1.4",
-                          flexShrink: 0 // Don't shrink
+                          flexShrink: 0 
                         }}>
-                          {latestNews.title}
-                        </div>
-                        {/* Date (Fixed) */}
-                        <div style={{ fontSize: "14px", color: "#666", marginBottom: "20px", flexShrink: 0 }}>
-                          {latestNews.startDate && `${latestNews.startDate} ~`} {latestNews.endDate}
+                          {selectedNews.title}
                         </div>
 
-                        {/* Image if available (Fixed) */}
-                        {latestNews.imageUrl && (
-                          <div style={{ marginBottom: "20px", width: "100%", display: "flex", justifyContent: "flex-start", flexShrink: 0 }}>
-                            <img 
-                              src={latestNews.imageUrl} 
-                              alt={latestNews.title} 
-                              style={{ 
-                                width: "200px", 
-                                height: "200px", 
-                                borderRadius: "20px", 
-                                objectFit: "cover",
-                                border: "2px solid #D9D9D9"
-                              }} 
-                            />
+                        {/* Image and Info Section Container */}
+                        <div style={{ 
+                          display: "flex", 
+                          flexDirection: "row", 
+                          marginBottom: "20px", 
+                          width: "100%",
+                          flexShrink: 0 
+                        }}>
+                          {/* Image if available */}
+                          {selectedNews.imageUrl && (
+                            <div style={{ width: "200px", height: "200px", flexShrink: 0 }}>
+                              <img 
+                                src={selectedNews.imageUrl} 
+                                alt={selectedNews.title} 
+                                style={{ 
+                                  width: "100%", 
+                                  height: "100%", 
+                                  borderRadius: "20px", 
+                                  objectFit: "contain",
+                                  border: "2px solid #D9D9D9",
+                                  boxSizing: "border-box"
+                                }} 
+                              />
+                            </div>
+                          )}
+
+                          {/* Info Section (Right of Image) */}
+                          <div style={{ 
+                            flex: 1, 
+                            paddingLeft: selectedNews.imageUrl ? "20px" : "0px", 
+                            display: "flex", 
+                            flexDirection: "column", 
+                            gap: "10px" 
+                          }}>
+                            {/* Date */}
+                            {(selectedNews.startDate || selectedNews.endDate) && (
+                              <div style={{ display: "flex", alignItems: "flex-start", fontSize: "14px", color: "#333" }}>
+                                <img src={iconDate} alt="Date" style={{ width: "16px", height: "16px", marginRight: "8px", marginTop: "3px" }} />
+                                <span>
+                                  {formatDate(selectedNews.startDate)} 
+                                  {selectedNews.endDate ? ` 〜 ${formatDate(selectedNews.endDate)}` : ""}
+                                </span>
+                              </div>
+                            )}
+                            {/* Time */}
+                            {selectedNews.time && (
+                              <div style={{ display: "flex", alignItems: "flex-start", fontSize: "14px", color: "#333" }}>
+                                <img src={iconTime} alt="Time" style={{ width: "16px", height: "16px", marginRight: "8px", marginTop: "3px" }} />
+                                <span style={{ whiteSpace: "pre-wrap" }}>{selectedNews.time}</span>
+                              </div>
+                            )}
+                            {/* Place */}
+                            {selectedNews.place && (
+                              <div style={{ display: "flex", alignItems: "flex-start", fontSize: "14px", color: "#333" }}>
+                                <img src={iconLocation} alt="Location" style={{ width: "16px", height: "16px", marginRight: "8px", marginTop: "3px" }} />
+                                <span>{selectedNews.place}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
 
                         {/* HTML Body (Scrollable) */}
                         <div 
                           className="shop-news-body"
                           style={{
-                            flex: 1, // Fill remaining space
-                            overflowY: "auto", // Scroll this area
-                            paddingRight: "10px"
+                            flex: 1, 
+                            overflowY: "auto", 
+                            paddingRight: "0px"
                           }}
                         >
                           <style>
@@ -235,12 +309,12 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                           </style>
                           <div 
                             style={{ 
-                              fontSize: "14px", // Changed from 16px
+                              fontSize: "14px", 
                               lineHeight: "1.6", 
                               color: "#333",
                               wordWrap: "break-word"
                             }}
-                            dangerouslySetInnerHTML={{ __html: latestNews.body }}
+                            dangerouslySetInnerHTML={{ __html: selectedNews.body }}
                           />
                         </div>
                      </div>
@@ -250,15 +324,146 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                 </div>
               </div>
 
-              {/* Right Side */}
+              {/* Right Side - News List */}
               <div
+                className="event-news-list"
                 style={{
                   width: "1110px",
                   height: "880px",
-                  backgroundColor: "#D9D9D9",
+                  backgroundColor: "#EDEDED",
+                  padding: "20px",
+                  boxSizing: "border-box",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignContent: "flex-start",
+                  gap: "10px",
+                  overflowY: "auto",
                 }}
               >
-                {/* Right Content Placeholder */}
+                {/* Scrollbar Style for Right Side */}
+                <style>
+                  {`
+                    .event-news-list::-webkit-scrollbar {
+                      display: none;
+                    }
+                  `}
+                </style>
+                
+                {shopNews.map((news) => {
+                  const isSelected = selectedNews?.id === news.id;
+                  
+                  return (
+                    <motion.div
+                      key={news.id}
+                      onClick={() => setSelectedNews(news)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.95 }}
+                      animate={{ 
+                        boxShadow: isSelected 
+                          ? "0px 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 3px #E63B93" 
+                          : "0px 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 0px transparent",
+                      }}
+                      transition={{ duration: 0.2 }}
+                      style={{
+                        width: "260px",
+                        height: "374px", // 260px (Image) + 114px (Text)
+                        borderRadius: "20px",
+                        backgroundColor: "#ffffff",
+                        boxSizing: "border-box",
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        overflow: "hidden", // Clip content to border radius
+                        flexShrink: 0,
+                        position: "relative",
+                      }}
+                    >
+                      {/* Image Area */}
+                      <div
+                        style={{
+                          width: "100%", // 260px
+                          height: "260px", // Full height
+                          backgroundColor: "#F8F8F8",
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          overflow: "hidden",
+                        }}
+                      >
+                         {news.imageUrl ? (
+                           <img 
+                             src={news.imageUrl} 
+                             alt={news.title}
+                             style={{
+                               width: "100%",
+                               height: "100%",
+                               objectFit: "contain", // Changed to contain to show full image
+                             }}
+                           />
+                         ) : (
+                           // Placeholder or empty
+                           <span style={{ color: "#ccc", fontSize: "12px" }}>No Image</span>
+                         )}
+                      </div>
+
+                      {/* Text Area */}
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "114px",
+                          padding: "10px",
+                          boxSizing: "border-box",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "flex-start",
+                          backgroundColor: "#ffffff",
+                        }}
+                      >
+                        {/* Title */}
+                        <div
+                          style={{
+                            fontSize: "16px",
+                            fontWeight: "bold",
+                            color: "#333",
+                            fontFamily: "'Rounded Mplus 1c', sans-serif",
+                            lineHeight: "1.4",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          {news.title}
+                        </div>
+                        
+                        {/* Date */}
+                        <div style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}>
+                           {formatDate(news.startDate)}
+                           {news.endDate ? ` 〜 ${formatDate(news.endDate)}` : ""}
+                        </div>
+
+                        {/* Body (truncated) */}
+                        <div
+                          style={{
+                            fontSize: "16px", // Same as title
+                            color: "#666",
+                            fontFamily: "'Rounded Mplus 1c', sans-serif",
+                            lineHeight: "1.4",
+                            height: "44px", // Fixed height for 2 lines
+                            overflow: "hidden",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                          }}
+                        >
+                          {/* Remove HTML tags */}
+                          {news.body.replace(/<[^>]+>/g, '')}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
 
@@ -266,8 +471,8 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
             <div
               style={{
                 position: "absolute",
-                top: "-85px", // モーダルの上外側
-                right: "0px", // モーダルの右端揃え
+                top: "-85px",
+                right: "0px",
                 width: "70px",
                 height: "70px",
                 cursor: "pointer",

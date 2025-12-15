@@ -157,7 +157,7 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
 // Fetches shop news from BridgeWebPopper and normalizes it to ShopNews[]
 export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
   const baseUrl = await getApiBaseUrl();
-  const url = `${baseUrl}/api/shop-news`; // Correct endpoint provided by user
+  const url = `${baseUrl}/api/event-news`; // Changed from /api/shop-news
 
   logInfo("shopNews", "Requesting shop news from Bridge API", { url });
 
@@ -176,16 +176,16 @@ export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
     const json = await res.json();
 
     // Detect structure
-    let rawList: BridgeShopNews[] = [];
+    let rawList: any[] = []; // Use any for raw processing before casting
     if (Array.isArray(json)) {
       rawList = json;
     } else if (Array.isArray((json as any).data)) {
       rawList = (json as any).data;
     } else if (Array.isArray((json as any).items)) {
       rawList = (json as any).items;
-    } else if (json && typeof json === "object" && "shop_news_id" in json) {
+    } else if (json && typeof json === "object" && ("shop_news_id" in json || "id" in json || "event_id" in json)) {
       // Single object response
-      rawList = [json as BridgeShopNews];
+      rawList = [json];
       logInfo("shopNews", "Bridge API response is a single object, treating as array of 1");
     } else {
       logInfo("shopNews", "Bridge API response did not contain an array", {
@@ -193,19 +193,31 @@ export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
       });
     }
 
+    if (rawList.length > 0) {
+      logInfo("shopNews", "Raw shop news item sample (first item)", {
+        keys: Object.keys(rawList[0]),
+        sample: rawList[0]
+      });
+    }
+
     const news: ShopNews[] = rawList.map((item) => {
       // Prioritize local paths if available
-      const imageUrl = item.photo1_local_path || item.photo1_remote_url;
+      const imageUrl = item.photo1_local_path || item.photo1_remote_url || item.image_url || item.imageUrl;
+
+      // Handle ID: Try shop_news_id, then id, then event_id, then fallback to index or unique property
+      const id = String(item.shop_news_id || item.id || item.event_id || item.news_id || Math.random().toString(36).substr(2, 9));
 
       return {
-        id: String(item.shop_news_id),
-        shopId: String(item.shop_id),
+        id,
+        shopId: String(item.shop_id || item.shopId || ""),
         title: item.title,
-        body: item.body,
+        body: item.body || item.content || "",
         imageUrl,
-        startDate: item.start_date,
-        endDate: item.end_date,
-        updatedAt: item.update_date,
+        startDate: item.start_date || item.startDate || item.date_start,
+        endDate: item.end_date || item.endDate || item.date_end,
+        time: item.time || "", // Map potential time field
+        place: item.place || item.location || item.venues || "", // Map potential place/location field
+        updatedAt: item.update_date || item.updatedAt || "",
       };
     });
 
@@ -216,6 +228,78 @@ export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
     return news;
   } catch (error: any) {
     logError("shopNews", "Failed to fetch shop news from Bridge API", {
+      error: error?.message,
+      url,
+    });
+    return [];
+  }
+}
+
+// Fetches shop events/news list from BridgeWebPopper (/api/shop-news)
+export async function fetchShopNewsListFromBridge(): Promise<ShopNews[]> {
+  const baseUrl = await getApiBaseUrl();
+  const url = `${baseUrl}/api/shop-news`;
+
+  logInfo("shopNewsList", "Requesting shop news list from Bridge API", { url });
+
+  try {
+    const res = await fetch(url, { method: "GET" });
+
+    if (!res.ok) {
+      logWarn("shopNewsList", "Bridge API returned non-200 response", {
+        status: res.status,
+        statusText: res.statusText,
+      });
+      return [];
+    }
+
+    const json = await res.json();
+
+    // Detect structure
+    let rawList: any[] = [];
+    if (Array.isArray(json)) {
+      rawList = json;
+    } else if (Array.isArray((json as any).data)) {
+      rawList = (json as any).data;
+    } else if (Array.isArray((json as any).items)) {
+      rawList = (json as any).items;
+    } else if (json && typeof json === "object" && ("shop_news_id" in json || "id" in json)) {
+      rawList = [json];
+      logInfo("shopNewsList", "Bridge API response is a single object, treating as array of 1");
+    } else {
+      logInfo("shopNewsList", "Bridge API response did not contain an array", {
+        receivedKeys: Object.keys(json),
+      });
+    }
+
+    const news: ShopNews[] = rawList.map((item) => {
+      // Prioritize local paths if available
+      const imageUrl = item.photo1_local_path || item.photo1_remote_url || item.image_url || item.imageUrl;
+
+      // Handle ID
+      const id = String(item.shop_news_id || item.id || item.news_id || Math.random().toString(36).substr(2, 9));
+
+      return {
+        id,
+        shopId: String(item.shop_id || item.shopId || ""),
+        title: item.title,
+        body: item.body || item.content || "",
+        imageUrl,
+        startDate: item.date_start || item.start_date || item.startDate,
+        endDate: item.date_end || item.end_date || item.endDate,
+        time: item.time || "",
+        place: item.place || item.location || "",
+        updatedAt: item.update_date || item.updatedAt || "",
+      };
+    });
+
+    logInfo("shopNewsList", "Shop news list fetched & normalized", {
+      count: news.length,
+    });
+
+    return news;
+  } catch (error: any) {
+    logError("shopNewsList", "Failed to fetch shop news list from Bridge API", {
       error: error?.message,
       url,
     });

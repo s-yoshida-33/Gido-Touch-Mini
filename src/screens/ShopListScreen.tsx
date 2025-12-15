@@ -88,122 +88,19 @@ import { ShopPin } from "../components/ShopPin";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
 import { KeyboardModal } from "../components/KeyboardModal";
 import { EventNewsModal } from "../components/EventNewsModal";
+import { ShopEventModal } from "../components/ShopEventModal";
+import { ShopLogoImage } from "../components/ShopLogoImage";
+import { buildImagePath, toFileUrl } from "../utils/imageUtils";
 import type { LocationIconSettingsPerFloor } from "../types/locationIcon";
 import type { FloorId } from "../types/floorLayout";
+import { logInfo } from "../logs/logging";
 import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from "../config";
 
-/**
- * Build image path using shop_id if photo is relative or filename only
- * Expected full path format: C:\Users\...\AppData\Roaming\TTI\BridgeWebPopper\files\shop\{shop_id}\photo2.png
- */
-function buildImagePath(photo: string | undefined, shopId: string | undefined): string {
-  if (!photo) {
-    // If no photo but shop_id is available, try to build path from shop_id
-    if (shopId) {
-      // This is a fallback - API should provide photo, but if not, we can try to construct it
-      // However, we don't know the base path, so return empty
-      return "";
-    }
-    return "";
-  }
-  
-  // If already a full path (contains drive letter like C:\), return as is
-  if (photo.match(/^[A-Za-z]:[\\/]/)) {
-    return photo;
-  }
-  
-  // If already a URL (file://, http://, https://, or data:), return as is
-  if (photo.startsWith("file://") || 
-      photo.startsWith("http://") || 
-      photo.startsWith("https://") ||
-      photo.startsWith("data:")) {
-    return photo;
-  }
-  
-  // If starts with absolute path markers (/, \), might be absolute path
-  // But without drive letter, it's likely a Unix-style path or network path
-  if (photo.startsWith("/") || photo.startsWith("\\")) {
-    // Check if it looks like a Windows network path (\\server\share)
-    if (photo.startsWith("\\\\")) {
-      return photo;
-    }
-    // For Unix-style absolute paths, return as is
-    if (photo.startsWith("/")) {
-      return photo;
-    }
-  }
-  
-  // If shop_id is available and photo is relative or filename only, build path
-  if (shopId) {
-    // Check if photo already contains shop_id in path (e.g., "shop/31/photo2.png" or "files/shop/31/photo2.png")
-    if (photo.includes(`shop/${shopId}/`) || photo.includes(`shop\\${shopId}\\`) ||
-        photo.includes(`files/shop/${shopId}/`) || photo.includes(`files\\shop\\${shopId}\\`)) {
-      return photo;
-    }
-    
-    // Normalize path separators
-    const normalizedPhoto = photo.replace(/\\/g, "/");
-    // Remove leading slash if present
-    const cleanPhoto = normalizedPhoto.startsWith("/") ? normalizedPhoto.slice(1) : normalizedPhoto;
-    
-    // If it's just a filename (no path separators), build full path
-    if (!cleanPhoto.includes("/")) {
-      return `files/shop/${shopId}/${cleanPhoto}`;
-    }
-    
-    // If it's a relative path, prepend shop_id folder
-    // But check if it already starts with files/shop
-    if (cleanPhoto.startsWith("files/shop/")) {
-      return cleanPhoto;
-    }
-    return `files/shop/${shopId}/${cleanPhoto}`;
-  }
-  
-  return photo;
-}
+// Idle timeout configuration (30 seconds)
+const IDLE_TIMEOUT_MS = 30000;
 
-/**
- * Shop logo image component that loads images via Electron IPC or falls back to file:// URL
- */
-const ShopLogoImage: React.FC<{ photo: string | undefined; shopId: string | undefined }> = ({ photo, shopId }) => {
-  const [imageUrl, setImageUrl] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    if (!photo) { setIsLoading(false); setHasError(true); return; }
-    const loadImage = async () => {
-      const imagePath = buildImagePath(photo, shopId);
-      if (!imagePath) { setIsLoading(false); setHasError(true); return; }
-      const electronAPI = window.electronAPI;
-      if (electronAPI && electronAPI.getShopImage) {
-        try {
-          const normalizedPath = imagePath.replace(/\\/g, "/");
-          const dataUrl = await electronAPI.getShopImage(normalizedPath);
-          if (dataUrl) { setImageUrl(dataUrl); setIsLoading(false); setHasError(false); return; }
-        } catch (error) { console.error(error); setHasError(true); }
-      }
-      const fileUrl = toFileUrl(imagePath);
-      setImageUrl(fileUrl);
-      setIsLoading(false);
-    };
-    loadImage();
-  }, [photo, shopId]);
-
-  if (hasError || (!imageUrl && !isLoading) || imageUrl === "") return null;
-  if (isLoading || !imageUrl) return null;
-
-  return (
-    <img 
-      src={imageUrl} 
-      alt="" 
-      draggable={false} 
-      onDragStart={(e) => e.preventDefault()} 
-      style={{ width: "100%", height: "100%", objectFit: "contain", userSelect: "none", pointerEvents: "auto", display: "block" }} 
-      onError={(e) => { setHasError(true); (e.target as HTMLImageElement).style.display = "none"; }} 
-    />
-  );
-};
+// buildImagePath and toFileUrl moved to src/utils/imageUtils.ts
+// ShopLogoImage moved to src/components/ShopLogoImage.tsx
 
 /**
  * Shop image component that loads images via Electron IPC or falls back to file:// URL
@@ -226,7 +123,7 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
       }
 
       // Check if we're in Electron environment
-      const electronAPI = window.electronAPI;
+      const electronAPI = (window as any).electronAPI; // Cast window to any
       if (electronAPI && electronAPI.getShopImage) {
         try {
           // Use Electron IPC to load image as data URL
@@ -337,37 +234,7 @@ const ShopNameDisplay: React.FC<{ name: string }> = ({ name }) => {
   );
 };
 
-/**
- * Convert a local file path to a file:// URL for Electron
- */
-function toFileUrl(filePath: string): string {
-  if (!filePath) return "";
-  
-  // If already a URL (file://, http://, https://, or data:), return as is
-  if (filePath.startsWith("file://") || 
-      filePath.startsWith("http://") || 
-      filePath.startsWith("https://") ||
-      filePath.startsWith("data:")) {
-    return filePath;
-  }
-  
-  // Convert Windows backslashes to forward slashes
-  const normalized = filePath.replace(/\\/g, "/");
-  
-  // Add file:// protocol
-  // For Windows absolute paths (C:/...), use file:///C:/...
-  if (normalized.match(/^[A-Za-z]:\//)) {
-    return `file:///${normalized}`;
-  }
-  
-  // For paths starting with /, use file://
-  if (normalized.startsWith("/")) {
-    return `file://${normalized}`;
-  }
-  
-  // For relative paths, use file:///
-  return `file:///${normalized}`;
-}
+// toFileUrl moved to src/utils/imageUtils.ts
 
 /**
  * Normalize floor value to standard format (e.g., "1" -> "1F", "1F" -> "1F")
@@ -699,6 +566,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   
   // Event News Modal State
   const [isEventNewsModalOpen, setIsEventNewsModalOpen] = useState(false);
+  
+  // Shop Event Modal State
+  const [isShopEventModalOpen, setIsShopEventModalOpen] = useState(false);
 
   const languageButtonRef = useRef<HTMLDivElement>(null);
   
@@ -743,6 +613,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   }, []); // Run only on mount
 
 
+  // Refreshing state for white fade effect
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   // Idle timeout: Refresh to default shop list after 30 seconds of inactivity
   // Always active - any touch/activity resets the timer
   useEffect(() => {
@@ -752,6 +625,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     // Throttle activity handler to avoid too frequent updates
     let throttleTimeout: number | null = null;
     const handleActivity = () => {
+      // If currently refreshing, ignore activity
+      if (isRefreshing) return;
+      
       if (throttleTimeout === null) {
         lastActivityTimeRef.current = Date.now();
         throttleTimeout = window.setTimeout(() => {
@@ -774,23 +650,79 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
     // Check idle timeout every second
     const checkInterval = setInterval(() => {
-      // Don't check idle timeout if settings are open
-      if (isSettingsOpen) {
-        lastActivityTimeRef.current = Date.now(); // Keep updating last activity to prevent immediate timeout after closing
+      // Don't check idle timeout if settings are open or already refreshing
+      if (isSettingsOpen || isRefreshing) {
+        lastActivityTimeRef.current = Date.now(); // Keep updating last activity
         return;
       }
 
-      /* Idle timeout logic disabled per user request
       const now = Date.now();
       const timeSinceLastActivity = now - lastActivityTimeRef.current;
 
       if (timeSinceLastActivity >= IDLE_TIMEOUT_MS) {
-        // 30 seconds of inactivity - force reload to fix potential display issues (images/API)
-        logInfo("idle", "Idle timeout reached. Reloading application.", { timeout: IDLE_TIMEOUT_MS });
-        window.location.reload();
-        return;
+        // Check if we are in default state (if so, no need to refresh)
+        // Default state: 
+        // - No search query
+        // - "all" category
+        // - "ja" language
+        // - No event news modal
+        // - No shop detail modal
+        // - No keyboard
+        // - No language modal
+        const isDefaultState = 
+          searchQuery === "" && 
+          selectedGenre === "all" && 
+          selectedLanguage === "ja" && 
+          !isEventNewsModalOpen && 
+          !isShopEventModalOpen &&
+          !selectedShopDetail && 
+          !isKeyboardOpen &&
+          !isLanguageModalOpen &&
+          Math.abs(currentScale - 1) < 0.01; // Scale check: if zoomed, not default state
+
+        if (isDefaultState) {
+          // Already in default state, just update timestamp to check again later
+          lastActivityTimeRef.current = Date.now();
+          return;
+        }
+
+        // 30 seconds of inactivity AND not in default state -> Refresh
+        logInfo("idle", "Idle timeout reached. Resetting UI with fade.", { timeout: IDLE_TIMEOUT_MS });
+        
+        // Start refresh sequence
+        setIsRefreshing(true);
+        
+        // After fade in (500ms), reset state
+        setTimeout(() => {
+          setIsEventNewsModalOpen(false);
+          setIsShopEventModalOpen(false);
+          setSearchQuery("");
+          setSelectedGenre("all"); // Assuming 'all' is the default genre ID
+          setSelectedLanguage("ja");
+          setSelectedShopDetail(null);
+          setIsKeyboardOpen(false);
+          setIsLanguageModalOpen(false);
+          // Also reset floor if needed? Usually we keep floor or reset to 1F?
+          // Let's assume we keep floor for now unless requested.
+          
+          // Reset internal states like zoom/pan if possible
+          if (transformComponentRef.current) {
+             // Force reset to initial state (scale 1, position 0,0) without animation
+             transformComponentRef.current.setTransform(0, 0, 1, 0);
+          }
+          setCurrentScale(1);
+          if (mapContentRef.current) {
+            mapContentRef.current.style.setProperty('--map-scale', '1');
+          }
+          
+          // After state reset, fade out (another 500ms delay for visibility)
+          setTimeout(() => {
+             setIsRefreshing(false);
+             lastActivityTimeRef.current = Date.now(); // Reset timer
+          }, 500);
+          
+        }, 500); // Wait for fade in
       }
-      */
     }, 1000); // Check every second
 
     return () => {
@@ -805,7 +737,20 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       }
       clearInterval(checkInterval);
     };
-  }, [setSelectedFloor, isSettingsOpen]); // Added isSettingsOpen to dependencies
+  }, [
+    isSettingsOpen, 
+    isRefreshing,
+    // Add all state dependencies to ensure "isDefaultState" check is accurate
+    searchQuery, 
+    selectedGenre, 
+    selectedLanguage, 
+    isEventNewsModalOpen, 
+    isShopEventModalOpen,
+    selectedShopDetail, 
+    isKeyboardOpen,
+    isLanguageModalOpen,
+    currentScale // Check zoom scale
+  ]);
 
   // Filter shops by selected floor AND selected genre
   const filteredShops = React.useMemo(() => {
@@ -2479,6 +2424,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             {/* Shop News Button */}
             <div 
               style={{ position: "relative", cursor: "pointer" }}
+              onClick={() => setIsShopEventModalOpen(true)}
               onMouseDown={() => setPressedNewsButton("shop")}
               onMouseUp={() => setPressedNewsButton(null)}
               onMouseLeave={() => setPressedNewsButton(null)}
@@ -2487,7 +2433,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             >
               <img 
                 src={buttonShopNews} 
-                alt="Shop News" 
+                alt="Shop News"  
                 style={{ 
                   display: "block",
                   opacity: pressedNewsButton === "shop" ? 0 : 1,
@@ -2602,6 +2548,29 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       <EventNewsModal
         isOpen={isEventNewsModalOpen}
         onClose={() => setIsEventNewsModalOpen(false)}
+      />
+
+      {/* Shop Event Modal */}
+      <ShopEventModal
+        isOpen={isShopEventModalOpen}
+        onClose={() => setIsShopEventModalOpen(false)}
+        shops={shops}
+      />
+
+      {/* White Fade Overlay for Refresh */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          backgroundColor: "#ffffff",
+          opacity: isRefreshing ? 1 : 0,
+          pointerEvents: isRefreshing ? "auto" : "none",
+          transition: "opacity 0.5s ease-in-out",
+          zIndex: 9999, // Highest z-index to cover everything
+        }}
       />
     </div>
   );
