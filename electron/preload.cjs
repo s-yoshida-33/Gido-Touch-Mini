@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld('updater', {
   onProgress(callback) {
     ipcRenderer.on('update-progress', (_event, data) => callback(data));
   },
+  checkForUpdatesReady() {
+    ipcRenderer.send('check-for-updates-ready');
+  },
   startupWaitCompleted() {
     ipcRenderer.send('startup-wait-completed');
   },

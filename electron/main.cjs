@@ -787,6 +787,12 @@ ipcMain.on('menu:set-floor', (_event, floorId) => {
   updateFloorSetting(floorId);
 });
 
+// Renderer is ready for updates
+ipcMain.on('check-for-updates-ready', () => {
+  logger.info('Renderer is ready, starting update check');
+  checkForUpdates(false);
+});
+
 // Manual update check
 ipcMain.on('menu:check-updates', () => {
   checkForUpdates(true);
@@ -853,8 +859,8 @@ app.whenReady().then(() => {
   // Skip update check in development mode
   if (!isDev) {
     createPatchWindow();
-    logger.info('Starting initial update check');
-    checkForUpdates(false);
+    // checkForUpdates(false) is now triggered by renderer via 'check-for-updates-ready' IPC
+    // to prevent race conditions where main process sends events before renderer is ready.
   } else {
     logger.info('Skipping update check in development mode');
     // In dev mode, open main window immediately without patch window
