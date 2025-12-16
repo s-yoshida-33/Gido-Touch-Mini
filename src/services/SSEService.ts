@@ -1,6 +1,8 @@
 import { getApiBaseUrl } from "../config";
 import { logInfo, logError } from "../logs/logging";
 
+export type SseConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
 type Listener = (data: any) => void;
 
 class SSEService {
@@ -8,6 +10,18 @@ class SSEService {
   private listeners: Map<string, Set<Listener>> = new Map();
   private isDestroyed = false;
   private retryTimeout: ReturnType<typeof setTimeout> | null = null;
+  private _status: SseConnectionStatus = 'disconnected';
+
+  public get status(): SseConnectionStatus {
+    return this._status;
+  }
+
+  private setStatus(status: SseConnectionStatus) {
+    if (this._status !== status) {
+      this._status = status;
+      this.emit('status_change', { status });
+    }
+  }
 
   constructor() {
     this.connect();
@@ -15,6 +29,8 @@ class SSEService {
 
   private async connect() {
     if (this.isDestroyed) return;
+
+    this.setStatus('connecting');
 
     try {
       const baseUrl = await getApiBaseUrl();
@@ -26,6 +42,7 @@ class SSEService {
 
       this.eventSource.addEventListener("open", () => {
         logInfo("sse", "SSE connection opened");
+        this.setStatus('connected');
       });
 
       this.eventSource.addEventListener("connected", (e) => {
@@ -59,11 +76,13 @@ class SSEService {
 
       this.eventSource.onerror = (e) => {
         logError("sse", "SSE Error occurred", { event: e });
+        this.setStatus('error');
         this.reconnect();
       };
 
     } catch (error) {
       logError("sse", "Failed to initialize SSE connection", { error });
+      this.setStatus('error');
       this.reconnect();
     }
   }
@@ -115,6 +134,7 @@ class SSEService {
       this.eventSource.close();
       this.eventSource = null;
     }
+    this.setStatus('disconnected');
     if (this.retryTimeout) {
       clearTimeout(this.retryTimeout);
       this.retryTimeout = null;

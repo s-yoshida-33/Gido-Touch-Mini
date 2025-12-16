@@ -5,23 +5,8 @@ import type { LocationIconSettings, LocationIconSettingsPerFloor } from "./locat
 import type { ImageSettings } from "./imageSettings";
 import type { ShopPositionSettings } from "./shopPosition";
 
-type ColumnPadding = {
-  top?: number;
-  right?: number;
-  bottom?: number;
-  left?: number;
-};
-
-type FloorLayoutPerFloor = {
-  columns: number;
-  rowsPerCol: number;
-  perColumnRows?: number[];
-  perColumnPadding?: ColumnPadding[];
-};
-
-type FloorLayout = Record<string, FloorLayoutPerFloor>;
-
 interface ElectronAPI {
+  getDebugSettingsStatus: () => Promise<any>;
   getBridgeBaseUrl: () => Promise<string>;
   getFloor: () => Promise<string>;
   setFloor: (floor: string) => void;
@@ -36,18 +21,6 @@ interface ElectronAPI {
   ) => () => void;
   onOpenLocationIconSettings: (cb: () => void) => () => void;
 
-  onUpdateFloorLayout?: (
-    callback: (payload: {
-      floor: string;
-      columns: number;
-      rowsPerCol: number;
-    }) => void
-  ) => void;
-
-  getFloorLayout: () => Promise<FloorLayout>;
-  saveFloorLayout: (layout: FloorLayout) => Promise<FloorLayout>;
-  onFloorLayoutChanged: (cb: (layout: FloorLayout) => void) => () => void;
-  onOpenFloorLayoutSettings: (cb: () => void) => () => void;
   onOpenFloorSettings: (cb: () => void) => () => void;
   onOpenVersionInfo: (cb: () => void) => () => void;
   onOpenSettings: (cb: () => void) => () => void;

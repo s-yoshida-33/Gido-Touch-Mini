@@ -4,7 +4,7 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import GidoApp from "./GidoApp";
 import type { LocationIconSettingsPerFloor } from "../types/locationIcon";
 import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from "../config";
-import type { FloorId, FloorLayout } from "../types/floorLayout";
+import type { FloorId } from "../types/floorLayout";
 import { ImageSettingsTab } from "../components/ImageSettingsTab";
 import { ShopPositionSettingsTab } from "../components/ShopPositionSettingsTab";
 import { FloorSettingsTab } from "../components/FloorSettingsTab";
@@ -20,7 +20,6 @@ interface UnifiedSettingsScreenProps {
   onClose: () => void;
   floor: FloorId;
   onSaveFloor: (floor: FloorId) => Promise<void> | void;
-  floorLayout: FloorLayout;
   locationIconSettings: LocationIconSettingsPerFloor;
   onSaveLocationIconSettings: (settings: LocationIconSettingsPerFloor) => Promise<void> | void;
   imageSettings: ImageSettings;
@@ -35,7 +34,6 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   onClose,
   floor: initialFloor,
   onSaveFloor,
-  floorLayout,
   locationIconSettings: initialLocationIconSettings,
   onSaveLocationIconSettings,
   imageSettings: initialImageSettings,
@@ -426,7 +424,6 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                 <GidoApp
                   locationIconSettings={getLocationIconSettingsForFloor(locationIconSettings, floor)}
                   previewFloor={floor}
-                  previewFloorLayout={floorLayout}
                   imageSettings={imageSettings}
                   shopPositions={activeTab === "shopPosition" ? shopPositions : undefined}
                   shops={activeTab === "shopPosition" ? shops : undefined}

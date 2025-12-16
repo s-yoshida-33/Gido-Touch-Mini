@@ -11,20 +11,9 @@ import {
 import "../styles/ShopList.css";
 import { logInfo, logError } from "../logs/logging";
 
-type ColumnPadding = {
-  top?: number;
-  right?: number;
-  bottom?: number;
-  left?: number;
-};
-
 interface ShopListProps {
   shops: Shop[];
   floor: string;
-  columnCount?: number;
-  rowsPerColumn?: number;
-  perColumnRows?: number[]; // Column-by-column row overrides
-  perColumnPadding?: ColumnPadding[]; // Column-by-column padding
 }
 
 // Internal representation of a single line item (header or shop row)
@@ -87,10 +76,6 @@ function compareShopNumberAsc(a: Shop, b: Shop): number {
 const ShopList: React.FC<ShopListProps> = ({
   shops,
   floor,
-  columnCount,
-  rowsPerColumn,
-  perColumnRows,
-  perColumnPadding,
 }) => {
   const normalizedFloor = normalizeFloor(floor);
 
@@ -183,29 +168,22 @@ const ShopList: React.FC<ShopListProps> = ({
     const defaultRowsPerCol = FLOOR_ROWS_PER_COL[normalizedFloor];
 
     const effectiveColumns = (() => {
-      const base = columnCount ?? defaultColumns;
+      const base = defaultColumns;
       const safe = base > 0 ? base : 1;
       return Math.min(maxColumns, safe);
     })();
 
     // Determine base rows per column
     const baseRowsPerCol = (() => {
-      if (rowsPerColumn && rowsPerColumn > 0) return rowsPerColumn;
       if (defaultRowsPerCol && defaultRowsPerCol > 0) return defaultRowsPerCol;
       const auto = Math.ceil(totalLines / effectiveColumns);
       return auto > 0 ? auto : 1;
     })();
 
-    const perColumnOverrides: number[] = perColumnRows ?? [];
-
     // Build row capacities for each column
     const capacities: number[] = Array.from(
       { length: effectiveColumns },
-      (_: unknown, idx: number) => {
-        const override = perColumnOverrides[idx];
-        if (typeof override === "number" && override > 0) return override;
-        return baseRowsPerCol;
-      }
+      () => baseRowsPerCol
     );
 
     // Split lines into columns with capacity constraints
@@ -273,15 +251,6 @@ const ShopList: React.FC<ShopListProps> = ({
       >
         {nonEmptyColumns.map((colLines, colIdx) => {
           const sections = buildSectionsForColumn(colLines);
-          const padding = perColumnPadding?.[colIdx];
-          const paddingStyle = padding
-            ? {
-                paddingTop: padding.top !== undefined ? `${padding.top}em` : undefined,
-                paddingRight: padding.right !== undefined ? `${padding.right}em` : undefined,
-                paddingBottom: padding.bottom !== undefined ? `${padding.bottom}em` : undefined,
-                paddingLeft: padding.left !== undefined ? `${padding.left}em` : undefined,
-              }
-            : {};
 
           return (
             <div
@@ -289,7 +258,6 @@ const ShopList: React.FC<ShopListProps> = ({
               style={{
                 flex: 1,
                 minWidth: 0,
-                ...paddingStyle,
               }}
             >
               {sections.map((section) => (

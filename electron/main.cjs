@@ -18,6 +18,17 @@ const isDev = !app.isPackaged;
 let patchWindow = null;
 let mainWindow = null;
 
+// DEBUG: Track internal state of loadSettings
+let lastLoadSettingsDebug = {
+  timestamp: null,
+  rawPreview: null,
+  parsedValue: null,
+  parsedType: null,
+  checkResult: null,
+  finalValue: null,
+  error: null
+};
+
 // Default location icon settings (for both speech bubble and location pin)
 const DEFAULT_LOCATION_ICON_SETTINGS = {
   speechBubble: {
@@ -63,14 +74,6 @@ const createDefaultPerFloorSettings = () => ({
   "3F": JSON.parse(JSON.stringify(DEFAULT_LOCATION_ICON_SETTINGS)),
   "4F": JSON.parse(JSON.stringify(DEFAULT_LOCATION_ICON_SETTINGS)),
 });
-
-// Default ShopList layout (columns and rows per column for each floor)
-const DEFAULT_FLOOR_LAYOUT = {
-  '1F': { columns: 3, rowsPerCol: 20 },
-  '2F': { columns: 2, rowsPerCol: 19 },
-  '3F': { columns: 3, rowsPerCol: 20 },
-  '4F': { columns: 2, rowsPerCol: 18 },
-};
 
 // Prevent multiple instances from starting with a single-instance lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -165,7 +168,6 @@ function loadSettings() {
   const base = {
     floor: '1F',
     locationIcons: createDefaultPerFloorSettings(),
-    floorLayout: DEFAULT_FLOOR_LAYOUT,
     shopPositions: defaultShopPositions,
   };
 
@@ -173,6 +175,18 @@ function loadSettings() {
     const settingsPath = getSettingsPath();
     if (!fs.existsSync(settingsPath)) {
       logger.debug('Settings file does not exist, using defaults');
+      
+      // DEBUG: Record internal state (defaults)
+      lastLoadSettingsDebug = {
+        timestamp: new Date().toISOString(),
+        rawPreview: null,
+        parsedValue: null,
+        parsedType: null,
+        checkResult: false,
+        finalValue: base,
+        error: "File not found, using defaults"
+      };
+      
       return base;
     }
 
@@ -237,11 +251,30 @@ function loadSettings() {
       shopPositionsCount: Object.keys(merged.shopPositions?.positions || {}).length,
     });
 
+    // DEBUG: Record internal state
+    lastLoadSettingsDebug = {
+      timestamp: new Date().toISOString(),
+      rawPreview: raw.substring(0, 100),
+      parsedValue: parsed.currentFloorSetting, // Note: currentFloorSetting might not exist in parsed structure based on code, but following user request
+      parsedType: typeof parsed.currentFloorSetting,
+      checkResult: typeof parsed.currentFloorSetting === 'string',
+      finalValue: merged,
+      error: null
+    };
+
     return merged;
   } catch (error) {
     logger.error('Failed to load settings, using defaults', {
       error: error?.message,
     });
+    
+    // DEBUG: Record error
+    lastLoadSettingsDebug = {
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      stack: error.stack
+    };
+
     // Fallback to base defaults on any error
     return base;
   }
@@ -281,43 +314,6 @@ function broadcastFloor(floor) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('settings:floor-changed', floor);
   }
-}
-
-/**
- * Broadcast floor layout changes to renderer processes
- */
-function broadcastFloorLayout(floorLayout) {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('settings:floor-layout-changed', floorLayout);
-  }
-}
-
-/**
- * Update floor layout (per floor) and notify renderer
- * partialLayout: { columns?: number; rowsPerCol?: number }
- */
-function updateFloorLayout(floor, partialLayout) {
-  const current = loadSettings();
-  const prevLayout = current.floorLayout || DEFAULT_FLOOR_LAYOUT;
-  const prevForFloor = prevLayout[floor] || DEFAULT_FLOOR_LAYOUT[floor] || {};
-
-  const nextFloorLayout = {
-    ...prevLayout,
-    [floor]: {
-      ...prevForFloor,
-      ...partialLayout,
-    },
-  };
-
-  const next = saveSettings({ floorLayout: nextFloorLayout });
-
-  logger.info('Floor layout updated', {
-    floor,
-    columns: next.floorLayout[floor].columns,
-    rowsPerCol: next.floorLayout[floor].rowsPerCol,
-  });
-
-  broadcastFloorLayout(next.floorLayout);
 }
 
 /**
@@ -485,7 +481,6 @@ function createMainWindow() {
     });
     broadcastFloor(settings.floor);
     broadcastLocationIconSettings(settings.locationIcons);
-    broadcastFloorLayout(settings.floorLayout);
     
     // Also broadcast shop positions to ensure renderer has the latest (especially in Dev mode)
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -508,8 +503,6 @@ function createAppMenu() {
   logger.info('Creating application menu', {
     initialFloor: settings.floor,
   });
-
-  const layout = settings.floorLayout || DEFAULT_FLOOR_LAYOUT;
 
   const template = [
     {
@@ -603,23 +596,49 @@ ipcMain.handle('get-bridge-base-url', () => {
   return 'http://localhost:8090';
 });
 
+ipcMain.handle('debug:get-settings-status', () => {
+  const settingsPath = getSettingsPath();
+  const exists = fs.existsSync(settingsPath);
+  let content = null;
+  let parsed = null;
+  let error = null;
+
+  if (exists) {
+    try {
+      let raw = fs.readFileSync(settingsPath, 'utf-8');
+      if (raw.charCodeAt(0) === 0xFEFF) { // BOM除去
+        raw = raw.slice(1);
+      }
+      content = raw.substring(0, 200) + (raw.length > 200 ? '...' : '');
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      error = e.message;
+    }
+  }
+
+  const loadedSettings = loadSettings();
+
+  return {
+    path: settingsPath,
+    exists,
+    contentPreview: content,
+    jsonParseResult: parsed ? {
+      currentFloorSetting: parsed.currentFloorSetting,
+      typeOfFloor: typeof parsed.currentFloorSetting
+    } : null,
+    loadSettingsResult: {
+      currentFloorSetting: loadedSettings.currentFloorSetting,
+      typeOfFloor: typeof loadedSettings.currentFloorSetting
+    },
+    internalDebug: lastLoadSettingsDebug,
+    error
+  };
+});
+
 ipcMain.handle('settings:get-floor', () => {
   const settings = loadSettings();
   logger.debug('IPC settings:get-floor', { floor: settings.floor });
   return settings.floor;
-});
-
-ipcMain.handle('settings:get-floor-layout', () => {
-  const settings = loadSettings();
-  logger.debug('IPC settings:get-floor-layout');
-  return settings.floorLayout || DEFAULT_FLOOR_LAYOUT;
-});
-
-ipcMain.handle('settings:save-floor-layout', (_event, floorLayout) => {
-  logger.info('IPC settings:save-floor-layout');
-  const settings = saveSettings({ floorLayout });
-  broadcastFloorLayout(settings.floorLayout);
-  return settings.floorLayout;
 });
 
 ipcMain.handle('get-app-version', () => {

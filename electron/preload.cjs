@@ -25,6 +25,10 @@ contextBridge.exposeInMainWorld('appInfo', {
 });
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // DEBUG API
+  getDebugSettingsStatus() {
+    return ipcRenderer.invoke('debug:get-settings-status');
+  },
   getBridgeBaseUrl() {
     return ipcRenderer.invoke('get-bridge-base-url');
   },
@@ -60,28 +64,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Return unsubscribe function
     return () => {
       ipcRenderer.removeListener('open-location-icon-settings', listener);
-    };
-  },
-  getFloorLayout() {
-    return ipcRenderer.invoke('settings:get-floor-layout');
-  },
-  saveFloorLayout(layout) {
-    return ipcRenderer.invoke('settings:save-floor-layout', layout);
-  },
-  onFloorLayoutChanged(callback) {
-    const listener = (_event, layout) => callback(layout);
-    ipcRenderer.on('settings:floor-layout-changed', listener);
-
-    return () => {
-      ipcRenderer.removeListener('settings:floor-layout-changed', listener);
-    };
-  },
-  onOpenFloorLayoutSettings(callback) {
-    const listener = () => callback();
-    ipcRenderer.on('open-floor-layout-settings', listener);
-
-    return () => {
-      ipcRenderer.removeListener('open-floor-layout-settings', listener);
     };
   },
   onOpenFloorSettings(callback) {

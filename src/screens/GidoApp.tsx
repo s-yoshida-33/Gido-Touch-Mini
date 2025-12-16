@@ -37,33 +37,9 @@ const FLOOR_MAPS: Record<string, string> = {
   "4F": floor4FMap,
 };
 
-type ColumnPadding = {
-  top?: number;
-  right?: number;
-  bottom?: number;
-  left?: number;
-};
-
-type FloorLayoutPerFloor = {
-  columns: number;
-  rowsPerCol: number;
-  perColumnRows?: number[];
-  perColumnPadding?: ColumnPadding[];
-};
-
-type FloorLayout = Record<string, FloorLayoutPerFloor>;
-
-const DEFAULT_FLOOR_LAYOUT: FloorLayout = {
-  "1F": { columns: 3, rowsPerCol: 20 },
-  "2F": { columns: 2, rowsPerCol: 19 },
-  "3F": { columns: 3, rowsPerCol: 20 },
-  "4F": { columns: 2, rowsPerCol: 18 },
-};
-
 interface GidoAppProps {
   locationIconSettings: LocationIconSettings | LocationIconSettingsPerFloor;
   previewFloor?: string;
-  previewFloorLayout?: FloorLayout;
   imageSettings?: ImageSettings;
   shopPositions?: ShopPositionSettings;
   shops?: Shop[];
@@ -74,7 +50,6 @@ interface GidoAppProps {
 const GidoApp: React.FC<GidoAppProps> = ({
   locationIconSettings,
   previewFloor,
-  previewFloorLayout,
   imageSettings,
   shopPositions,
   shops: previewShops,
@@ -85,10 +60,6 @@ const GidoApp: React.FC<GidoAppProps> = ({
 
   const [floor, setFloor] = useState<string>(
     previewFloor ?? APP_CONFIG.floor
-  );
-
-  const [floorLayout, setFloorLayout] = useState<FloorLayout>(
-    previewFloorLayout ?? DEFAULT_FLOOR_LAYOUT
   );
 
   useEffect(() => {
@@ -123,59 +94,14 @@ const GidoApp: React.FC<GidoAppProps> = ({
   }, [previewFloor]);
 
   useEffect(() => {
-    const api = window.electronAPI;
-    if (previewFloorLayout || !api) return;
-
-    let cancelled = false;
-
-    const init = async () => {
-      try {
-        const layout = await api.getFloorLayout();
-        if (!cancelled && layout) {
-          setFloorLayout(layout);
-        }
-      } catch (e) {
-        console.error("Failed to get floor layout from Electron", e);
-      }
-    };
-
-    init();
-
-    const unsubscribe = api.onFloorLayoutChanged((layout) => {
-      if (!cancelled) {
-        setFloorLayout(layout);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe && unsubscribe();
-    };
-  }, [previewFloorLayout]);
-
-  useEffect(() => {
     if (previewFloor !== undefined) {
       setFloor(previewFloor);
     }
   }, [previewFloor]);
 
-  useEffect(() => {
-    if (previewFloorLayout !== undefined) {
-      setFloorLayout(previewFloorLayout);
-    }
-  }, [previewFloorLayout]);
-
   const floorId = floor as FloorId;
   const customFloorMap = floorId ? imageSettings?.floorMaps?.[floorId] : undefined;
   const floorMap = customFloorMap || FLOOR_MAPS[floor] || floor1FMap;
-
-  // Video/List width calculations are no longer needed for fixed layouts
-  // We use flexbox to fill available space.
-
-  const currentLayout =
-    floorLayout[floor] ??
-    DEFAULT_FLOOR_LAYOUT[floor] ??
-    DEFAULT_FLOOR_LAYOUT["1F"];
 
   if (showOnlyMap) {
     return (
@@ -255,10 +181,6 @@ const GidoApp: React.FC<GidoAppProps> = ({
           <ShopList
             shops={shops}
             floor={floor}
-            columnCount={currentLayout.columns}
-            rowsPerColumn={currentLayout.rowsPerCol}
-            perColumnRows={currentLayout.perColumnRows}
-            perColumnPadding={currentLayout.perColumnPadding}
           />
         </div>
 
