@@ -4,7 +4,6 @@ export {};
 import type { LocationIconSettings, LocationIconSettingsPerFloor } from "./locationIcon";
 import type { ImageSettings } from "./imageSettings";
 import type { ShopPositionSettings } from "./shopPosition";
-import type { CurrentAsset, WspCurrentTimelineResponse, WspTimelineResponse } from "./wsp";
 
 type ColumnPadding = {
   top?: number;
@@ -98,13 +97,6 @@ interface LoggerApi {
   debug: (message: string, context?: Record<string, unknown>) => void;
 }
 
-interface WspApi {
-  getCurrentAsset: () => Promise<CurrentAsset | null>;
-  getCurrentTimeline: () => Promise<WspCurrentTimelineResponse | null>;
-  getTimeline: (hour?: number) => Promise<WspTimelineResponse | null>;
-  getRightTopVideoAsset: () => Promise<CurrentAsset | null>;
-}
-
 declare global {
   interface Window {
     __BWP_BASE_URL__?: string;
@@ -113,6 +105,5 @@ declare global {
     updater?: UpdaterAPI;
     appInfo?: AppInfoAPI;
     logger?: LoggerApi;
-    wspApi?: WspApi;
   }
 }

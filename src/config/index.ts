@@ -67,7 +67,7 @@ export async function getApiBaseUrl(): Promise<string> {
 export const API_BASE_URL: string = APP_CONFIG.defaultApiBaseUrl;
 
 // Data source switch (prepared for future extensions)
-export type DataSource = "bridge" | "api" | "cms" | "hybrid";
+export type DataSource = "bridge" | "api" | "hybrid";
 
 export const DATA_SOURCE: DataSource =
   (import.meta.env.VITE_DATA_SOURCE as DataSource) ?? "bridge";

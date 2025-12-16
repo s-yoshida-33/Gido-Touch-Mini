@@ -40,9 +40,6 @@ export async function fetchShops(): Promise<Shop[]> {
     // case "api":
     //   return fetchShopsFromApi();
 
-    // case "cms":
-    //   return fetchShopsFromCms();
-
     // case "hybrid":
     //   return fetchShopsHybrid();
 

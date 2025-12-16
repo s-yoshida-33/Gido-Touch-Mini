@@ -1,22 +1,13 @@
 import { getApiBaseUrl } from "../config";
 import { logInfo, logError } from "../logs/logging";
 
-type SSEEventType = "connected" | "heartbeat" | "update";
-
-interface SSEEventData {
-  type: SSEEventType;
-  message?: string;
-  timestamp?: string;
-  clients?: number;
-}
-
-type SSECallback = (data: SSEEventData) => void;
+type Listener = (data: any) => void;
 
 class SSEService {
   private eventSource: EventSource | null = null;
-  private listeners: Map<SSEEventType, Set<SSECallback>> = new Map();
-  private reconnectTimeout: number | null = null;
+  private listeners: Map<string, Set<Listener>> = new Map();
   private isDestroyed = false;
+  private retryTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.connect();
@@ -79,41 +70,42 @@ class SSEService {
 
   private reconnect() {
     if (this.isDestroyed) return;
+    
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
     }
 
-    if (this.reconnectTimeout) {
-      window.clearTimeout(this.reconnectTimeout);
-    }
+    if (this.retryTimeout) return;
 
-    // Exponential backoff or fixed delay? README suggests 5000ms
-    logInfo("sse", "Scheduling reconnection in 5000ms");
-    this.reconnectTimeout = window.setTimeout(() => {
+    logInfo("sse", "Scheduling reconnect in 5s...");
+    this.retryTimeout = setTimeout(() => {
+      this.retryTimeout = null;
       this.connect();
     }, 5000);
   }
 
-  public on(event: SSEEventType, callback: SSECallback) {
+  public on(event: string, callback: Listener): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
     this.listeners.get(event)!.add(callback);
 
-    // Return unsubscribe function
     return () => {
-      const callbacks = this.listeners.get(event);
-      if (callbacks) {
-        callbacks.delete(callback);
-      }
+      this.listeners.get(event)?.delete(callback);
     };
   }
 
-  private emit(event: SSEEventType, data: SSEEventData) {
+  private emit(event: string, data: any) {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
-      callbacks.forEach((cb) => cb(data));
+      callbacks.forEach((cb) => {
+        try {
+          cb(data);
+        } catch (e) {
+          logError("sse", "Error in event listener", { error: e });
+        }
+      });
     }
   }
 
@@ -123,14 +115,15 @@ class SSEService {
       this.eventSource.close();
       this.eventSource = null;
     }
-    if (this.reconnectTimeout) {
-      window.clearTimeout(this.reconnectTimeout);
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = null;
     }
+
     this.listeners.clear();
   }
 }
 
 // Singleton instance
 export const sseService = new SSEService();
-
 
