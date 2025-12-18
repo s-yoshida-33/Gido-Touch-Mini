@@ -4,6 +4,7 @@ export {};
 import type { LocationIconSettings, LocationIconSettingsPerFloor } from "./locationIcon";
 import type { ImageSettings } from "./imageSettings";
 import type { ShopPositionSettings } from "./shopPosition";
+import type { PictoSettings } from "./picto";
 
 interface ElectronAPI {
   getDebugSettingsStatus: () => Promise<any>;
@@ -31,6 +32,12 @@ interface ElectronAPI {
   getShopPositions: () => Promise<ShopPositionSettings>;
   saveShopPositions: (settings: ShopPositionSettings) => Promise<ShopPositionSettings>;
   onShopPositionsUpdated: (cb: (settings: ShopPositionSettings) => void) => () => void;
+
+  // Picto Settings
+  getPictoSettings: () => Promise<PictoSettings>;
+  savePictoSettings: (settings: PictoSettings) => Promise<PictoSettings>;
+  onPictoSettingsUpdated: (cb: (settings: PictoSettings) => void) => () => void;
+
   manualUpdateCheck: () => void;
   oneClickUpdate: () => void;
   quitApp: () => void;

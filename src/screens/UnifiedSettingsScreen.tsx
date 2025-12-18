@@ -12,10 +12,14 @@ import iconSvg from "../assets/icon.svg";
 import type { ImageSettings } from "../types/imageSettings";
 import type { ShopPositionSettings } from "../types/shopPosition";
 import type { Shop } from "../types/shop";
+import { PictoSettingsTab } from "../components/PictoSettingsTab";
+import type { PictoSettings } from "../types/picto";
+import { DEFAULT_PICTO_SETTINGS } from "../types/picto";
 
-type TabType = "image" | "shopPosition" | "floor";
+type TabType = "image" | "shopPosition" | "floor" | "picto";
 
-interface UnifiedSettingsScreenProps {
+// Export props interface to ensure visibility
+export interface UnifiedSettingsScreenProps {
   isOpen: boolean;
   onClose: () => void;
   floor: FloorId;
@@ -27,6 +31,8 @@ interface UnifiedSettingsScreenProps {
   shopPositions: ShopPositionSettings;
   onSaveShopPositions: (settings: ShopPositionSettings) => Promise<void> | void;
   shops: Shop[];
+  pictoSettings: PictoSettings;
+  onSavePictoSettings: (settings: PictoSettings) => Promise<void> | void;
 }
 
 const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
@@ -41,6 +47,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   shopPositions: initialShopPositions,
   onSaveShopPositions,
   shops,
+  pictoSettings: initialPictoSettings,
+  onSavePictoSettings,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>("image");
   const [saving, setSaving] = useState(false);
@@ -52,7 +60,9 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     useState<LocationIconSettingsPerFloor>(initialLocationIconSettings || DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR);
   const [imageSettings, setImageSettings] = useState<ImageSettings>(initialImageSettings);
   const [shopPositions, setShopPositions] = useState<ShopPositionSettings>(initialShopPositions);
+  const [pictoSettings, setPictoSettings] = useState<PictoSettings>(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
+  const [selectedPictoId, setSelectedPictoId] = useState<string | null>(null);
 
   // Transform wrapper ref for programmatic control
   const transformRef = useRef<{
@@ -116,6 +126,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       setLocationIconSettings(initialLocationIconSettings);
       setImageSettings(initialImageSettings);
       setShopPositions(initialShopPositions);
+      setPictoSettings(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
       setErrors({});
       
       // Reset transform when opening settings
@@ -142,6 +153,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     setLocationIconSettings(initialLocationIconSettings);
     setImageSettings(initialImageSettings);
     setShopPositions(initialShopPositions);
+    setPictoSettings(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
     setErrors({});
     // Reset transform - 現在のactiveTabに応じて適切な中央位置を計算
     if (transformRef.current && previewContainerRef.current) {
@@ -183,6 +195,9 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       
       console.log("Saving shop positions...", shopPositions);
       await onSaveShopPositions(shopPositions);
+
+      console.log("Saving picto settings...", pictoSettings);
+      await onSavePictoSettings(pictoSettings);
       
       console.log("Settings saved successfully");
       handleClose();
@@ -337,6 +352,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               { id: "floor" as TabType, label: "フロア設定" },
               { id: "image" as TabType, label: "画像" },
               { id: "shopPosition" as TabType, label: "座標設定" },
+              { id: "picto" as TabType, label: "ピクトグラム設定" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -420,15 +436,17 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                 ref={mapContentRef}
                 style={{ width: "100%", height: "100%", position: "relative" }}
               >
-              {activeTab === "shopPosition" && (
+              {(activeTab === "shopPosition" || activeTab === "picto") && (
                 <GidoApp
                   locationIconSettings={getLocationIconSettingsForFloor(locationIconSettings, floor)}
                   previewFloor={floor}
                   imageSettings={imageSettings}
-                  shopPositions={activeTab === "shopPosition" ? shopPositions : undefined}
-                  shops={activeTab === "shopPosition" ? shops : undefined}
+                  shopPositions={activeTab === "shopPosition" || activeTab === "picto" ? shopPositions : undefined}
+                  shops={activeTab === "shopPosition" || activeTab === "picto" ? shops : undefined}
                   selectedShopId={activeTab === "shopPosition" ? selectedShopId : undefined}
-                  showOnlyMap={activeTab === "shopPosition"}
+                  showOnlyMap={activeTab === "shopPosition" || activeTab === "picto"}
+                  pictoSettings={activeTab === "picto" ? pictoSettings : undefined}
+                  selectedPictoId={activeTab === "picto" ? selectedPictoId : undefined}
                 />
               )}
               </div>
@@ -538,6 +556,16 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               onSelectedShopIdChange={setSelectedShopId}
               locationIconSettings={locationIconSettings}
               onChangeLocationIconSettings={setLocationIconSettings}
+            />
+          )}
+          {activeTab === "picto" && (
+            <PictoSettingsTab
+              floor={floor}
+              onChangeFloor={setFloor}
+              pictoSettings={pictoSettings}
+              onSavePictoSettings={setPictoSettings}
+              selectedInstanceId={selectedPictoId}
+              onSelectedInstanceIdChange={setSelectedPictoId}
             />
           )}
         </div>

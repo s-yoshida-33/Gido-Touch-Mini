@@ -1,5 +1,6 @@
 // src/screens/GidoApp.tsx
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 
 import ShopList from "../components/ShopList";
 import type { Shop } from "../types/shop";
@@ -17,9 +18,15 @@ import { getLocationIconSettingsForFloor } from "../config";
 import type { ImageSettings } from "../types/imageSettings";
 import type { FloorId } from "../types/floorLayout";
 import type { ShopPositionSettings } from "../types/shopPosition";
+import type { PictoSettings } from "../types/picto";
 import { ShopPin } from "../components/ShopPin";
+import { PictoPin } from "../components/PictoPin";
 
 import { logInfo, logError } from "../logs/logging";
+
+// Load picto icons
+const pictoIcons = import.meta.glob('../assets/picto/*.svg', { eager: true, query: '?url' });
+
 
 const LIST_HEIGHT_VH = APP_CONFIG.listHeightVh;
 const TOP_HEIGHT_VH = 100 - LIST_HEIGHT_VH;
@@ -45,6 +52,8 @@ interface GidoAppProps {
   shops?: Shop[];
   selectedShopId?: string | null;
   showOnlyMap?: boolean;
+  pictoSettings?: PictoSettings;
+  selectedPictoId?: string | null;
 }
 
 const GidoApp: React.FC<GidoAppProps> = ({
@@ -55,6 +64,8 @@ const GidoApp: React.FC<GidoAppProps> = ({
   shops: previewShops,
   selectedShopId,
   showOnlyMap = false,
+  pictoSettings,
+  selectedPictoId,
 }) => {
   const shops = previewShops || [];
 
@@ -128,6 +139,8 @@ const GidoApp: React.FC<GidoAppProps> = ({
           shopPositions={shopPositions}
           shops={previewShops}
           selectedShopId={selectedShopId}
+          pictoSettings={pictoSettings}
+          selectedPictoId={selectedPictoId}
         />
       </div>
     );
@@ -160,6 +173,8 @@ const GidoApp: React.FC<GidoAppProps> = ({
           shopPositions={shopPositions}
           shops={previewShops}
           selectedShopId={selectedShopId}
+          pictoSettings={pictoSettings}
+          selectedPictoId={selectedPictoId}
         />
       </div>
 
@@ -266,6 +281,24 @@ function calculateImageRect(
   };
 }
 
+// Animation variants for PictoPins (same logic as map)
+const pictoVariants: Variants = {
+  enter: (direction: number) => ({
+    y: direction > 0 ? -200 : 200,
+    opacity: 0,
+  }),
+  center: {
+    zIndex: 1,
+    y: 0,
+    opacity: 1,
+  },
+  exit: (direction: number) => ({
+    zIndex: 0,
+    y: direction > 0 ? 200 : -200,
+    opacity: 0,
+  }),
+};
+
 /**
  * ShopPinsOverlay Component
  * Displays the floor map and overlays shop pins.
@@ -278,7 +311,9 @@ const ShopPinsOverlay: React.FC<{
   shopPositions?: ShopPositionSettings;
   shops?: Shop[];
   selectedShopId?: string | null;
-}> = ({ floor, floorMap, locationIconSettings, shopPositions, shops, selectedShopId }) => {
+  pictoSettings?: PictoSettings;
+  selectedPictoId?: string | null;
+}> = ({ floor, floorMap, locationIconSettings, shopPositions, shops, selectedShopId, pictoSettings, selectedPictoId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const [imageMetrics, setImageMetrics] = useState<{ 
@@ -441,6 +476,78 @@ const ShopPinsOverlay: React.FC<{
             />
           );
         })}
+
+      {/* Picto Pins */}
+      <AnimatePresence initial={false} custom={floor === "2F" ? 1 : -1} mode="popLayout"> 
+      {/* Note: In GidoApp context (settings/preview), we don't have direction state easily available. 
+          Assuming simple transition or just fade for preview is fine, but user asked for consistency. 
+          Since GidoApp is mostly static preview or controlled by settings, we might not need slide animation here,
+          OR we can implement it if previewFloor changes. 
+          However, ShopListScreen is the main usage. Let's apply basic Fade for GidoApp or try to mimic slide if possible.
+          For now, just wrapping in AnimatePresence without specific slide direction logic might just fade in/out which is better than nothing.
+          Actually, let's keep it simple in GidoApp (Preview) as it doesn't have floor navigation buttons in the same way.
+      */}
+      {pictoSettings && imageMetrics && Object.values(pictoSettings.instances)
+        .filter(instance => instance.floor === normalizedFloor)
+        .map(instance => {
+           // Find URL from pictoIcons based on filename match
+           const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
+           const iconUrl = entry ? (entry[1] as any).default : "";
+           
+           if (!iconUrl) return null;
+
+           // Calculate pixel position
+           const xPercent = instance.x / 100;
+           const yPercent = instance.y / 100;
+           
+           const pixelX = imageMetrics.offsetX + (xPercent * imageMetrics.displayWidth);
+           const pixelY = imageMetrics.offsetY + (yPercent * imageMetrics.displayHeight);
+
+           // Apply scale ratio for consistency with map zoom
+           // ShopPin logic: size * scaleRatio. PictoPin logic should match.
+           // instance.size is px (default 80).
+           // We also need to apply the map scaling factor (imageMetrics.displayWidth / REFERENCE_MAP_WIDTH)
+           // to keep it responsive.
+           const scaleRatio = imageMetrics.displayWidth / REFERENCE_MAP_WIDTH;
+           
+           // Create a modified instance with scaled size for rendering
+           const scaledInstance = {
+             ...instance,
+             size: (instance.size || 80) * scaleRatio
+           };
+
+           return (
+             <motion.div
+               key={instance.id}
+               variants={pictoVariants}
+               initial="enter"
+               animate="center"
+               exit="exit"
+               custom={floor === "2F" ? 1 : -1}
+               style={{
+                 position: "absolute",
+                 top: 0,
+                 left: 0,
+                 width: "100%",
+                 height: "100%",
+                 pointerEvents: "none",
+                 zIndex: 1
+               }}
+             >
+               <PictoPin
+                 instance={scaledInstance}
+                 iconUrl={iconUrl}
+                 usePixelPosition={true}
+                 pixelX={pixelX}
+                 pixelY={pixelY}
+                 // Add highlight logic if needed (e.g. matching selectedShopId equivalent for pictos)
+                 isSelected={instance.id === selectedPictoId} 
+               />
+             </motion.div>
+           );
+        })
+      }
+      </AnimatePresence>
     </div>
   );
 };

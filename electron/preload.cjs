@@ -133,6 +133,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('shop-positions-updated', listener);
     };
   },
+  getPictoSettings() {
+    return ipcRenderer.invoke('get-picto-settings');
+  },
+  savePictoSettings(settings) {
+    return ipcRenderer.invoke('save-picto-settings', settings);
+  },
+  onPictoSettingsUpdated(callback) {
+    const listener = (_event, updated) => callback(updated);
+    ipcRenderer.on('picto-settings-updated', listener);
+
+    return () => {
+      ipcRenderer.removeListener('picto-settings-updated', listener);
+    };
+  },
 });
 
 contextBridge.exposeInMainWorld('logger', {

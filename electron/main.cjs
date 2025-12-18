@@ -103,6 +103,8 @@ function getSettingsPath() {
   return path.join(app.getPath('userData'), 'settings.json');
 }
 
+// function getPictoSettingsPath() removed as we are merging into settings.json
+
 function loadDefaultShopPositions() {
   // ビルド時にデフォルトとして使用する店舗位置設定を読み込む
   // electron/default-shop-positions.json が存在する場合は、それをデフォルト値として使用
@@ -128,6 +130,32 @@ function loadDefaultShopPositions() {
   // デフォルトファイルが存在しない、または読み込みに失敗した場合は空のオブジェクトを返す
   return {
     positions: {},
+  };
+}
+
+function loadDefaultPictoSettings() {
+  // ビルド時にデフォルトとして使用するピクトグラム設定を読み込む
+  const defaultPictoSettingsPath = path.join(__dirname, 'default-picto-settings.json');
+  
+  try {
+    if (fs.existsSync(defaultPictoSettingsPath)) {
+      const raw = fs.readFileSync(defaultPictoSettingsPath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      
+      // 形式を確認
+      if (parsed && typeof parsed === 'object' && parsed.instances) {
+        logger.info('Loaded default picto settings from default-picto-settings.json');
+        return parsed;
+      }
+    }
+  } catch (error) {
+    logger.warn('Failed to load default picto settings, using empty defaults', {
+      error: error?.message,
+    });
+  }
+  
+  return {
+    instances: {},
   };
 }
 
@@ -164,11 +192,17 @@ const deepMerge = (target, source) => {
 
 function loadSettings() {
   const defaultShopPositions = loadDefaultShopPositions();
+  const defaultPictoSettings = loadDefaultPictoSettings();
   
   const base = {
     floor: '1F',
     locationIcons: createDefaultPerFloorSettings(),
     shopPositions: defaultShopPositions,
+    pictoSettings: defaultPictoSettings,
+    imageSettings: {
+      floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
+      openTimeImage: ""
+    },
   };
 
   try {
@@ -244,11 +278,28 @@ function loadSettings() {
        merged.shopPositions = { positions: {} };
     }
 
+    // Ensure pictoSettings has correct structure
+    if (!merged.pictoSettings) {
+      merged.pictoSettings = { instances: {} };
+    } else if (!merged.pictoSettings.instances) {
+      // If it exists but lacks instances, ensure instances exists (preserve other props if any)
+      merged.pictoSettings.instances = {};
+    }
+
+    // Ensure imageSettings has correct structure
+    if (!merged.imageSettings) {
+        merged.imageSettings = {
+            floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
+            openTimeImage: ""
+        };
+    }
+
     logger.debug('Settings loaded', {
       floor: merged.floor,
       hasAnimation: !!merged.locationIcons['1F']?.speechBubble?.animation,
       animationEnabled: merged.locationIcons['1F']?.speechBubble?.animation?.enabled,
       shopPositionsCount: Object.keys(merged.shopPositions?.positions || {}).length,
+      pictoInstancesCount: Object.keys(merged.pictoSettings?.instances || {}).length,
     });
 
     // DEBUG: Record internal state
@@ -282,7 +333,15 @@ function loadSettings() {
 
 function saveSettings(partial) {
   const current = loadSettings();
-  const next = deepMerge(current, partial);
+  
+  // Create next settings object
+  let next = deepMerge(current, partial);
+  
+  // Special handling for pictoSettings to allow deletion (overwrite instead of deep merge for instances)
+  // We can't just use deepMerge because it preserves keys in target that are missing in source.
+  if (partial.pictoSettings && partial.pictoSettings.instances) {
+     next.pictoSettings.instances = partial.pictoSettings.instances;
+  }
 
   try {
     const settingsPath = getSettingsPath();
@@ -292,6 +351,13 @@ function saveSettings(partial) {
     if (partial.shopPositions) {
        logger.info('Shop positions saved to disk', {
          count: Object.keys(next.shopPositions?.positions || {}).length
+       });
+    }
+    
+    // Log saving of picto settings specifically if present
+    if (partial.pictoSettings) {
+       logger.info('Picto settings saved to disk', {
+         count: Object.keys(next.pictoSettings?.instances || {}).length
        });
     }
 
@@ -670,6 +736,50 @@ ipcMain.handle('save-location-icon-settings', (_event, locationIcons) => {
   const settings = saveSettings({ locationIcons });
   broadcastLocationIconSettings(settings.locationIcons);
   return settings.locationIcons;
+});
+
+/**
+ * IPC handlers for Picto Settings (merged into settings.json)
+ */
+ipcMain.handle('get-picto-settings', () => {
+  logger.info('IPC get-picto-settings');
+  const settings = loadSettings();
+  return settings.pictoSettings || { instances: {} };
+});
+
+ipcMain.handle('save-picto-settings', (_event, pictoSettings) => {
+  logger.info('IPC save-picto-settings');
+  const settings = saveSettings({ pictoSettings });
+  
+  // Broadcast to main window if needed
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('picto-settings-updated', settings.pictoSettings);
+  }
+  
+  return settings.pictoSettings;
+});
+
+/**
+ * IPC handlers for Image Settings
+ */
+ipcMain.handle('get-image-settings', () => {
+  logger.info('IPC get-image-settings');
+  const settings = loadSettings();
+  return settings.imageSettings || {
+    floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
+    openTimeImage: ""
+  };
+});
+
+ipcMain.handle('save-image-settings', (_event, imageSettings) => {
+  logger.info('IPC save-image-settings');
+  const settings = saveSettings({ imageSettings });
+  
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('image-settings-updated', settings.imageSettings);
+  }
+  
+  return settings.imageSettings;
 });
 
 /**

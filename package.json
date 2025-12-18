@@ -1,7 +1,7 @@
 {
   "name": "gido-touch-mini",
   "private": true,
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.4",
   "type": "module",
   "description": "Floor guide display system",
   "author": "Toei Techno International Inc.",
@@ -13,7 +13,7 @@
     "electron:dev": "cross-env NODE_ENV=development concurrently \"npm:dev\" \"npm:electron:start\"",
     "electron:start": "wait-on http://localhost:5173 && electron .",
     "electron:build": "npm run build && electron-builder",
-    "export:shop-positions": "node electron/export-shop-positions.cjs",
+    "export:settings": "node electron/export-settings.cjs",
     "icon:gen": "magick -background none -density 1024 src/assets/icon.svg -define icon:auto-resize=256,128,64,48,32,16 -write src/assets/icon.ico build/icon.ico"
   },
   "main": "electron/main.cjs",

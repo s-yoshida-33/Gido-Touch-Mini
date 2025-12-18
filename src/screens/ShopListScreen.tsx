@@ -83,6 +83,7 @@ import buttonClose from "../assets/button-close.svg";
 import buttonCloseHighlight from "../assets/button-close-highlight.svg";
 import commingSoon from "../assets/comming-soon.svg";
 import type { Shop } from "../types/shop";
+import type { ShopNews } from "../types/shopNews";
 import { LanguageSelectModal } from "../components/LanguageSelectModal";
 import { ShopPin } from "../components/ShopPin";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
@@ -93,8 +94,13 @@ import { ShopLogoImage } from "../components/ShopLogoImage";
 import { buildImagePath, toFileUrl } from "../utils/imageUtils";
 import type { LocationIconSettingsPerFloor } from "../types/locationIcon";
 import type { FloorId } from "../types/floorLayout";
+import type { PictoSettings } from "../types/picto"; // Add import
 import { logInfo } from "../logs/logging";
 import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from "../config";
+import { PictoPin } from "../components/PictoPin"; // Add import
+
+// Load picto icons
+const pictoIcons = import.meta.glob('../assets/picto/*.svg', { eager: true, query: '?url' });
 
 // Idle timeout configuration (30 seconds)
 const IDLE_TIMEOUT_MS = 30000;
@@ -342,6 +348,9 @@ interface ShopListScreenProps {
   currentFloor?: string;
   shops: Shop[];
   shopPositions?: any;
+  shopNews?: ShopNews[];
+  eventNews?: ShopNews[];
+  pictoSettings?: PictoSettings; // Add prop
 }
 
 // 五十音行マッピング
@@ -397,9 +406,30 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   currentFloor = "1F",
   shops,
   shopPositions,
+  shopNews = [],
+  eventNews = [],
+  pictoSettings,
 }) => {
   // Map content ref for direct style manipulation (zoom scale)
   const mapContentRef = useRef<HTMLDivElement>(null);
+
+  // Animation variants for PictoPins (same logic as map)
+  const pictoVariants: Variants = {
+    enter: (direction: number) => ({
+      y: direction > 0 ? -200 : 200,
+      opacity: 0,
+    }),
+    center: {
+      zIndex: 1, // Will be overridden by PictoPin zIndex logic but useful for stacking context
+      y: 0,
+      opacity: 1,
+    },
+    exit: (direction: number) => ({
+      zIndex: 0,
+      y: direction > 0 ? 200 : -200,
+      opacity: 0,
+    }),
+  };
 
   // Map transform ref
   const transformComponentRef = useRef<ReactZoomPanPinchContentRef>(null);
@@ -732,6 +762,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           !selectedShopDetail && 
           !isKeyboardOpen &&
           !isLanguageModalOpen &&
+          !selectedFacility && // ピクトメニューが選択されていない
           Math.abs(currentScale - 1) < 0.01 && // Scale check: if zoomed, not default state
           normalizeFloor(selectedFloor || "1F") === normalizeFloor(currentFloor || "1F"); // Floor check
 
@@ -757,6 +788,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           setSelectedShopDetail(null);
           setIsKeyboardOpen(false);
           setIsLanguageModalOpen(false);
+          setSelectedFacility(null); // ピクトメニューリセット
+          
           // Also reset floor to current floor
           if (currentFloor) {
             setSelectedFloor(currentFloor);
@@ -806,6 +839,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     selectedShopDetail, 
     isKeyboardOpen,
     isLanguageModalOpen,
+    selectedFacility, // Add to dependency array
     currentScale, // Check zoom scale
     selectedFloor, // Check selected floor
     currentFloor // Check current floor
@@ -1240,7 +1274,29 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 </AnimatePresence>
 
                 {/* Current Location Icons Overlay */}
+                <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
                 {normalizeFloor(selectedFloor || "1F") === normalizeFloor(currentFloor) && (
+                    <motion.div
+                      key="location-icons-overlay"
+                      custom={floorDirection}
+                      variants={mapVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{
+                        y: { type: "tween", duration: 0.5, ease: "easeInOut" },
+                        opacity: { duration: 0.5 }
+                      }}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        pointerEvents: "none",
+                        zIndex: 20,
+                      }}
+                    >
                   <LocationIconsOverlay
                     settings={(() => {
                       const baseSettings = getLocationIconSettingsForFloor(locationIconSettings, (selectedFloor || "1F") as FloorId);
@@ -1258,7 +1314,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     })()}
                     mapMetrics={{ width: CURRENT_MAP_WIDTH, height: 1080 }}
                   />
+                    </motion.div>
                 )}
+                </AnimatePresence>
 
                 {/* Selected Shop Pin */}
                 <AnimatePresence>
@@ -1279,6 +1337,64 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       delay={pinDelay}
                     />
                   )}
+                </AnimatePresence>
+
+                {/* Picto Pins */}
+                <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
+                {pictoSettings && Object.values(pictoSettings.instances)
+                  .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
+                  .map(instance => {
+                    const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
+                    const iconUrl = entry ? (entry[1] as any).default : "";
+                    if (!iconUrl) return null;
+
+                    // Apply scale ratio and map transform scale
+                    // ShopListScreen uses a TransformWrapper where content is scaled.
+                    // However, we want the pin SIZE to stay relatively consistent or scale with map?
+                    // ShopPin logic uses `size * scaleRatio`.
+                    // And ShopPin is inside the zoomed container, so it scales with the map naturally.
+                    // The `scaleRatio` adjusts for the difference between Reference Width (1920) and Display Width (1460).
+                    
+                    const scaledInstance = {
+                      ...instance,
+                      size: (instance.size ?? 80) * scaleRatio
+                    };
+
+                    const isHighlighted = selectedFacility === instance.tag;
+
+                    return (
+                      <motion.div
+                        key={instance.id}
+                        custom={floorDirection}
+                        variants={pictoVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{
+                          y: { type: "tween", duration: 0.5, ease: "easeInOut" },
+                          opacity: { duration: 0.5 }
+                        }}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          pointerEvents: "none",
+                          zIndex: 10, // Ensure pictos are above map but below pins if needed
+                        }}
+                      >
+                      <PictoPin
+                        instance={scaledInstance}
+                        iconUrl={iconUrl}
+                        isSelected={isHighlighted}
+                        // ShopListScreen uses % positioning logic inside the map container naturally
+                        // provided by PictoPin's default style (left: x%, top: y%)
+                      />
+                      </motion.div>
+                    );
+                  })
+                }
                 </AnimatePresence>
               </div>
             </TransformComponent>
@@ -2617,6 +2733,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       <EventNewsModal
         isOpen={isEventNewsModalOpen}
         onClose={() => setIsEventNewsModalOpen(false)}
+        news={eventNews}
       />
 
       {/* Shop Event Modal */}
@@ -2624,6 +2741,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         isOpen={isShopEventModalOpen}
         onClose={() => setIsShopEventModalOpen(false)}
         shops={shops}
+        news={shopNews}
       />
 
       {/* White Fade Overlay for Refresh */}

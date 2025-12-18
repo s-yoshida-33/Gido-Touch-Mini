@@ -64,15 +64,22 @@ class SSEService {
         }
       });
 
-      this.eventSource.addEventListener("update", (e) => {
+      const handleUpdate = (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          logInfo("sse", "Received update event", data);
+          logInfo("sse", `Received ${e.type} event`, data);
           this.emit("update", data);
         } catch (error) {
-          logError("sse", "Failed to parse update event", { error });
+          logError("sse", `Failed to parse ${e.type} event`, { error });
         }
-      });
+      };
+
+      // Listen for specific event types sent by the server
+      this.eventSource.addEventListener("update", handleUpdate);
+      this.eventSource.addEventListener("shops", handleUpdate);
+      this.eventSource.addEventListener("shop_news", handleUpdate);
+      this.eventSource.addEventListener("event_news", handleUpdate);
+      this.eventSource.addEventListener("specials", handleUpdate);
 
       this.eventSource.onerror = (e) => {
         logError("sse", "SSE Error occurred", { event: e });

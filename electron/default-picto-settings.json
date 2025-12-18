@@ -1,0 +1,160 @@
+{
+  "instances": {
+    "a82af676-0f05-4ddd-b8c2-b27d6b928689": {
+      "id": "a82af676-0f05-4ddd-b8c2-b27d6b928689",
+      "tag": "info",
+      "iconName": "info.svg",
+      "floor": "1F",
+      "x": 49.76,
+      "y": 45.82,
+      "size": 27.9,
+      "rotation": 0,
+      "shadow": {
+        "enabled": false,
+        "offsetX": 4,
+        "offsetY": 4,
+        "blur": 4,
+        "opacity": 0.5
+      },
+      "animation": {
+        "enabled": true,
+        "type": "blink",
+        "duration": 2,
+        "amplitude": 20,
+        "rippleColor": "#E63B93",
+        "rippleSize": 3,
+        "rippleCenterSize": 0.8
+      }
+    },
+    "928f9ff0-6a5f-41b7-8885-155cb48cf67b": {
+      "id": "928f9ff0-6a5f-41b7-8885-155cb48cf67b",
+      "tag": "priority_restroom",
+      "iconName": "priorityRestroom.svg",
+      "floor": "2F",
+      "x": 68.53,
+      "y": 48.8,
+      "size": 28.2,
+      "rotation": 0,
+      "shadow": {
+        "enabled": false,
+        "offsetX": 4,
+        "offsetY": 4,
+        "blur": 4,
+        "opacity": 0.5
+      },
+      "animation": {
+        "enabled": true,
+        "type": "blink",
+        "duration": 2,
+        "amplitude": 20,
+        "rippleColor": "#E63B93",
+        "rippleSize": 3,
+        "rippleCenterSize": 0.8
+      }
+    },
+    "56a95bfb-400e-49f4-a015-da828e032a1a": {
+      "id": "56a95bfb-400e-49f4-a015-da828e032a1a",
+      "tag": "elevator",
+      "iconName": "elevator.svg",
+      "floor": "2F",
+      "x": 57,
+      "y": 44.5,
+      "size": 28.3,
+      "rotation": 0,
+      "shadow": {
+        "enabled": false,
+        "offsetX": 4,
+        "offsetY": 4,
+        "blur": 4,
+        "opacity": 0.5
+      },
+      "animation": {
+        "enabled": true,
+        "type": "blink",
+        "duration": 2,
+        "amplitude": 20,
+        "rippleColor": "#E63B93",
+        "rippleSize": 3,
+        "rippleCenterSize": 0.8
+      }
+    },
+    "de1cb079-a224-4832-bc71-42e78fd5e841": {
+      "id": "de1cb079-a224-4832-bc71-42e78fd5e841",
+      "tag": "elevator",
+      "iconName": "elevator.svg",
+      "floor": "2F",
+      "x": 36.46,
+      "y": 29.8,
+      "size": 28.3,
+      "rotation": 0,
+      "shadow": {
+        "enabled": false,
+        "offsetX": 4,
+        "offsetY": 4,
+        "blur": 4,
+        "opacity": 0.5
+      },
+      "animation": {
+        "enabled": true,
+        "type": "blink",
+        "duration": 2,
+        "amplitude": 20,
+        "rippleSize": 3,
+        "rippleCenterSize": 0.8,
+        "rippleColor": "#E63B93"
+      }
+    },
+    "e9fd571b-19d7-4afa-9c90-c96c2f56f666": {
+      "id": "e9fd571b-19d7-4afa-9c90-c96c2f56f666",
+      "tag": "restroom",
+      "iconName": "mensRestroom.svg",
+      "floor": "2F",
+      "x": 66.96,
+      "y": 48.8,
+      "size": 28.2,
+      "rotation": 0,
+      "shadow": {
+        "enabled": false,
+        "offsetX": 4,
+        "offsetY": 4,
+        "blur": 4,
+        "opacity": 0.5
+      },
+      "animation": {
+        "enabled": true,
+        "type": "blink",
+        "duration": 2,
+        "amplitude": 20,
+        "rippleColor": "#E63B93",
+        "rippleSize": 3,
+        "rippleCenterSize": 0.8
+      }
+    },
+    "6f3560f8-e671-4748-8fd5-f06511393bd2": {
+      "id": "6f3560f8-e671-4748-8fd5-f06511393bd2",
+      "tag": "restroom",
+      "iconName": "ladiesRestroom.svg",
+      "floor": "2F",
+      "x": 66.96,
+      "y": 46.56,
+      "size": 28.2,
+      "rotation": 0,
+      "shadow": {
+        "enabled": false,
+        "offsetX": 4,
+        "offsetY": 4,
+        "blur": 4,
+        "opacity": 0.5
+      },
+      "animation": {
+        "enabled": true,
+        "type": "blink",
+        "duration": 2,
+        "amplitude": 20,
+        "rippleColor": "#E63B93",
+        "rippleSize": 3,
+        "rippleCenterSize": 0.8
+      }
+    }
+  }
+}

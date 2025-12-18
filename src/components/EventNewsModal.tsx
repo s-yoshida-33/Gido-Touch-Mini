@@ -5,66 +5,55 @@ import buttonCloseHighlight from "../assets/button-close-highlight.svg";
 import iconDate from "../assets/icon_date.svg";
 import iconTime from "../assets/icon-time.svg";
 import iconLocation from "../assets/icon-location.svg";
-import { fetchShopNewsFromBridge } from "../api/bridgeClient";
+import { fetchShopNewsFromBridge } from "../api/bridgeClient"; // Remove if unused, but keep keeping simple
 import type { ShopNews } from "../types/shopNews";
 import { logError } from "../logs/logging";
 
 interface EventNewsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  news: ShopNews[];
 }
 
 export const EventNewsModal: React.FC<EventNewsModalProps> = ({
   isOpen,
   onClose,
+  news,
 }) => {
   const [isPressed, setIsPressed] = useState(false);
-  const [shopNews, setShopNews] = useState<ShopNews[]>([]);
   const [selectedNews, setSelectedNews] = useState<ShopNews | null>(null);
-  const [loading, setLoading] = useState(false);
+
+  // Sort news when props change
+  const sortedNews = React.useMemo(() => {
+    return [...news].sort((a, b) => {
+      const getTime = (item: ShopNews) => {
+        // Use startDate first for "Newest" sort, fallback to endDate, then createdAt
+        const dStr = item.startDate || item.endDate || item.createdAt;
+        if (!dStr) return 0; // No date treats as old
+        const t = new Date(dStr).getTime();
+        return isNaN(t) ? 0 : t;
+      };
+
+      const tA = getTime(a);
+      const tB = getTime(b);
+
+      // Descending order (Newest first)
+      return tB - tA;
+    });
+  }, [news]);
 
   useEffect(() => {
     if (isOpen) {
-      const loadNews = async () => {
-        setLoading(true);
-        try {
-          const news = await fetchShopNewsFromBridge();
-          // Sort: Closest endDate/startDate first, items with no period at the end
-          const sortedNews = news.sort((a, b) => {
-            const getTime = (item: ShopNews) => {
-              const dStr = item.endDate || item.startDate;
-              if (!dStr) return null;
-              const t = new Date(dStr).getTime();
-              return isNaN(t) ? null : t;
-            };
-
-            const tA = getTime(a);
-            const tB = getTime(b);
-
-            if (tA !== null && tB !== null) return tA - tB;
-            if (tA !== null && tB === null) return -1;
-            if (tA === null && tB !== null) return 1;
-            return 0;
-          });
-          setShopNews(sortedNews);
-          if (sortedNews.length > 0) {
-            setSelectedNews(sortedNews[0]);
-          } else {
-            setSelectedNews(null);
-          }
-        } catch (error) {
-          logError("EventNewsModal", "Failed to load shop news", { error });
-          // Fallback or empty state
-          setShopNews([]);
-          setSelectedNews(null);
-        } finally {
-          setLoading(false);
+        if (sortedNews.length > 0) {
+           // If we have news, default to first one if none selected or just always reset?
+           // Original logic reset on open.
+           setSelectedNews(sortedNews[0]);
+        } else {
+           setSelectedNews(null);
         }
-      };
-
-      loadNews();
     }
-  }, [isOpen]);
+  }, [isOpen, sortedNews]); // Also trigger when sortedNews updates while open
+
 
   // Helper to format date string to YYYY/MM/DD(Weekday)
   const formatDate = (dateString: string | undefined) => {
@@ -187,9 +176,7 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                       minHeight: 0,
                     }}
                   >
-                   {loading ? (
-                    <div style={{ textAlign: "center", marginTop: "20px", fontFamily: "'Rounded Mplus 1c', sans-serif" }}>読み込み中...</div>
-                   ) : selectedNews ? (
+                   {selectedNews ? (
                      <div style={{ fontFamily: "'Rounded Mplus 1c', sans-serif", width: "100%", paddingRight: "0px", display: "flex", flexDirection: "column", height: "100%" }}>
                         {/* News Title (Fixed) */}
                         <div style={{ 
@@ -349,7 +336,7 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                   `}
                 </style>
                 
-                {shopNews.map((news) => {
+                {sortedNews.map((news) => {
                   const isSelected = selectedNews?.id === news.id;
                   
                   return (

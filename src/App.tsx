@@ -19,8 +19,24 @@ import type { LocationIconSettings, LocationIconSettingsPerFloor } from "./types
 import type { ImageSettings } from "./types/imageSettings";
 import { DEFAULT_IMAGE_SETTINGS } from "./types/imageSettings";
 import type { ShopPositionSettings } from "./types/shopPosition";
+import type { PictoSettings } from "./types/picto";
+import { DEFAULT_PICTO_SETTINGS } from "./types/picto";
 import type { Shop } from "./types/shop";
 import { fetchShops, loadShopsFromCache, saveShopsToCache } from "./repositories/shopRepository";
+import { 
+  loadShopNewsFromCache, 
+  saveShopNewsToCache, 
+  loadEventNewsFromCache, 
+  saveEventNewsToCache 
+} from "./repositories/newsRepository";
+import { 
+  fetchShopNewsFromBridge, 
+  fetchShopNewsListFromBridge, 
+  parseShopsData, 
+  parseShopNewsData, 
+  parseEventNewsData 
+} from "./api/bridgeClient";
+import type { ShopNews } from "./types/shopNews";
 import { sseService } from "./services/SSEService";
 import type { SseConnectionStatus } from "./services/SSEService";
 import { logInfo, logError } from "./logs/logging";
@@ -67,46 +83,74 @@ const App: React.FC = () => {
     mergeWithDefaultImages(DEFAULT_IMAGE_SETTINGS)
   );
   const [shopPositions, setShopPositions] = useState<ShopPositionSettings>({ positions: {} });
+  const [pictoSettings, setPictoSettings] = useState<PictoSettings>(DEFAULT_PICTO_SETTINGS);
   const [shops, setShops] = useState<Shop[]>([]);
+  const [shopNews, setShopNews] = useState<ShopNews[]>([]);
+  const [eventNews, setEventNews] = useState<ShopNews[]>([]);
   
   // Settings screen open state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Load shops function
-  const loadShops = async (useCacheFirst = false) => {
+  // Load data function
+  const loadData = async (useCacheFirst = false) => {
     // 1. Try cache if requested (only on initial load)
     if (useCacheFirst) {
-      const cached = loadShopsFromCache();
-      if (cached && cached.length > 0) {
-        const cleaned = cached.map((s) => ({
+      // Load Shops Cache
+      const cachedShops = loadShopsFromCache();
+      if (cachedShops && cachedShops.length > 0) {
+        const cleaned = cachedShops.map((s) => ({
           ...s,
           name: s.name.replace(/【.*?】/g, "").trim(),
         }));
         setShops(cleaned);
         logInfo("app", "Shops loaded from cache", { count: cleaned.length });
       }
+
+      // Load Shop News Cache
+      const cachedShopNews = loadShopNewsFromCache();
+      if (cachedShopNews && cachedShopNews.length > 0) {
+        setShopNews(cachedShopNews);
+        logInfo("app", "Shop News loaded from cache", { count: cachedShopNews.length });
+      }
+
+      // Load Event News Cache
+      const cachedEventNews = loadEventNewsFromCache();
+      if (cachedEventNews && cachedEventNews.length > 0) {
+        setEventNews(cachedEventNews);
+        logInfo("app", "Event News loaded from cache", { count: cachedEventNews.length });
+      }
     }
 
     // 2. Fetch from API
     try {
+      // Load Shops
       const shopData = await fetchShops();
-      
-      // Clean shop names
-      const cleaned = shopData.map((s) => ({
+      const cleanedShops = shopData.map((s) => ({
         ...s,
         name: s.name.replace(/【.*?】/g, "").trim(),
       }));
-      
-      setShops(cleaned);
-      
-      // Update cache with raw data
+      setShops(cleanedShops);
       saveShopsToCache(shopData);
       
-      logInfo("app", "Shops loaded from API and cached", { count: cleaned.length });
+      // Load News
+      const sNews = await fetchShopNewsListFromBridge();
+      setShopNews(sNews);
+      saveShopNewsToCache(sNews);
+      
+      const eNews = await fetchShopNewsFromBridge();
+      setEventNews(eNews);
+      saveEventNewsToCache(eNews);
+      
+      logInfo("app", "Data loaded from API", { 
+        shops: cleanedShops.length, 
+        shopNews: sNews.length, 
+        eventNews: eNews.length 
+      });
     } catch (e) {
-      logError("app", "Failed to load shops from API", { error: e });
+      logError("app", "Failed to load data from API", { error: e });
     }
   };
+
 
   // SSE Status Subscription
   useEffect(() => {
@@ -161,13 +205,50 @@ const App: React.FC = () => {
   // Initial load and SSE subscription
   useEffect(() => {
     // Initial fetch with cache
-    loadShops(true);
+    loadData(true);
 
     // Subscribe to SSE updates
-    const unsubscribe = sseService.on("update", (data) => {
-      logInfo("app", "Received update event from SSE, reloading shops...", data as unknown as Record<string, unknown>);
-      // Force refresh from API, ignore cache
-      loadShops(false);
+    const unsubscribe = sseService.on("update", (payload: any) => {
+      logInfo("app", "Received update event from SSE", { type: payload.type });
+
+      switch (payload.type) {
+        case "shops":
+          if (payload.data) {
+             const newShops = parseShopsData(payload.data, "1F"); // Default floor fallback
+             // Clean shop names logic
+             const cleaned = newShops.map((s) => ({
+                ...s,
+                name: s.name.replace(/【.*?】/g, "").trim(),
+             }));
+             setShops(cleaned);
+             saveShopsToCache(newShops);
+             logInfo("app", "Updated shops from SSE", { count: cleaned.length });
+          }
+          break;
+          
+        case "shop_news":
+          if (payload.data) {
+             const news = parseShopNewsData(payload.data);
+             setShopNews(news);
+             saveShopNewsToCache(news);
+             logInfo("app", "Updated shop news from SSE", { count: news.length });
+          }
+          break;
+            
+        case "event_news":
+           if (payload.data) {
+             const news = parseEventNewsData(payload.data);
+             setEventNews(news);
+             saveEventNewsToCache(news);
+             logInfo("app", "Updated event news from SSE", { count: news.length });
+          }
+          break;
+          
+        default:
+          logInfo("app", "Unknown or unhandled SSE event type", { type: payload.type });
+          // If unsure, reload all data (fallback behavior, optional)
+          // loadData(false);
+      }
     });
 
     return () => {
@@ -340,6 +421,19 @@ const App: React.FC = () => {
           addDebug(`Failed to load shop positions: ${e}`);
         }
       }
+
+      // Load picto settings
+      if (api.getPictoSettings) {
+        try {
+          const saved = await api.getPictoSettings();
+          if (saved) {
+            setPictoSettings(saved);
+            addDebug(`Picto settings loaded: ${Object.keys(saved.instances).length} items`);
+          }
+        } catch (e) {
+          addDebug(`Failed to load picto settings: ${e}`);
+        }
+      }
       
       // Load API URLs
       if (api.getBridgeBaseUrl) {
@@ -449,6 +543,12 @@ const App: React.FC = () => {
           setShopPositions(updated);
         });
       }
+
+      if (api.onPictoSettingsUpdated) {
+        api.onPictoSettingsUpdated((updated) => {
+          setPictoSettings(updated);
+        });
+      }
     }
 
     return () => {
@@ -525,6 +625,26 @@ const App: React.FC = () => {
     } catch (e) {
       logError("app", "Failed to save shop positions", { error: e });
       console.error("Failed to save shop positions", e);
+    }
+  };
+
+  const handleSavePictoSettings = async (settings: PictoSettings) => {
+    const api = window.electronAPI;
+    // Electron環境でない場合のフォールバック（開発用）
+    if (!api) {
+        setPictoSettings(settings);
+        return;
+    }
+
+    try {
+      const saved = await api.savePictoSettings(settings);
+      if (saved) {
+        setPictoSettings(saved);
+        logInfo("app", "Picto settings saved successfully");
+      }
+    } catch (e) {
+      logError("app", "Failed to save picto settings", { error: e });
+      console.error("Failed to save picto settings", e);
     }
   };
 
@@ -629,6 +749,9 @@ const App: React.FC = () => {
       currentFloor={floor}
       shops={mergedShops}
       shopPositions={shopPositions}
+      shopNews={shopNews}
+      eventNews={eventNews}
+      pictoSettings={pictoSettings}
     />
     <UnifiedSettingsScreen
         isOpen={isSettingsOpen}
@@ -642,6 +765,9 @@ const App: React.FC = () => {
         shopPositions={shopPositions}
         onSaveShopPositions={handleSaveShopPositions}
         shops={mergedShops}
+        // Picto settings
+        pictoSettings={pictoSettings}
+        onSavePictoSettings={handleSavePictoSettings}
       />
       <VersionInfoScreen onClose={() => {}} />
     </>
