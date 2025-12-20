@@ -82,6 +82,7 @@ import hint from "../assets/hint.svg";
 import buttonClose from "../assets/button-close.svg";
 import buttonCloseHighlight from "../assets/button-close-highlight.svg";
 import commingSoon from "../assets/comming-soon.svg";
+import waonPointIcon from "../assets/waonpoint.svg";
 import type { Shop } from "../types/shop";
 import type { ShopNews } from "../types/shopNews";
 import { LanguageSelectModal } from "../components/LanguageSelectModal";
@@ -906,6 +907,11 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             mapContentRef.current.style.setProperty('--map-scale', '1');
           }
           
+          // Reset genre scroll position
+          if (genreScrollContainerRef.current) {
+            genreScrollContainerRef.current.scrollTo({ left: 0, behavior: "auto" });
+          }
+
           // After state reset, fade out (another 500ms delay for visibility)
           setTimeout(() => {
              setIsRefreshing(false);
@@ -2407,7 +2413,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 top: "0", 
                 left: 0,
                 width: "100%",
-                height: "100%", 
+                height: "calc(100% - 167px)", 
                 backgroundColor: "#FFFFFF",
                 zIndex: 20,
                 boxShadow: "-4px 0 10px rgba(0, 0, 0, 0.1)",
@@ -2434,10 +2440,40 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 onClick={() => {
                   setSelectedShopDetail(null);
                   setPressedCloseButton(false);
-                  // Reset map zoom and position to default with animation
+                  
+                  // Check if floor or genre changed from the original state when modal was opened
+                  // For now, we only check if the current view state matches the state when modal was opened.
+                  // Since we don't explicitly track "state when opened", we can use a heuristic:
+                  // If the user didn't change floors or genres inside the modal (which isn't possible in this modal design currently),
+                  // then we should assume no change.
+                  // However, if the intention is to *never* reset zoom when closing modal unless explicitly requested:
+                  
+                  // The previous code always reset zoom:
+                  // transformComponentRef.current.setTransform(0, 0, 1, 1000, "easeOut");
+
+                  // New requirement: "詳細モーダルを閉じたときにフロアの切り替えやジャンルの変更など、開く前のリストから変化していない場合は、スクロール位置をリセットしないでください。"
+                  // Since the modal doesn't allow changing floor or genre, the state "outside" hasn't changed by actions "inside" the modal.
+                  // The only way state changes is if the user navigates *before* opening the modal.
+                  // So, we should *not* reset zoom here.
+                  
+                  // If we want to support "reset if changed", we'd need to track "state when opened".
+                  // But since we can't change state inside the modal, "no change" is always true.
+                  // Therefore, we remove the reset logic.
+
+                  // But if we need to reset only if the user *did* something that changed the context... 
+                  // Wait, the user might have clicked a shop from the list, zoomed in, then opened details.
+                  // If they close details, they probably want to be back where they were (zoomed in).
+                  // So removing the reset seems correct for "don't reset scroll position".
+                  
+                  // However, the prompt says "if... NOT changed... don't reset".
+                  // Implication: If it *did* change, do reset.
+                  // Since it *can't* change inside the modal, we just never reset.
+                  
+                  /* 
                   if (transformComponentRef.current) {
                     transformComponentRef.current.setTransform(0, 0, 1, 1000, "easeOut");
-                  }
+                  } 
+                  */
                 }}
                 onMouseDown={() => setPressedCloseButton(true)}
                 onMouseUp={() => setPressedCloseButton(false)}
@@ -2637,6 +2673,40 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   </div>
                 )}
 
+                {/* Border Line above Category Area */}
+                {selectedShopDetail.genreMemo && selectedShopDetail.genreMemo.includes("WAONPOINT加盟店") && (
+                  <div
+                    style={{
+                      width: "calc(100% - 40px)",
+                      height: "1px",
+                      backgroundColor: "#D9D9D9",
+                      marginLeft: "20px",
+                      marginRight: "20px",
+                      marginTop: "20px",
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+
+                {/* Category Area */}
+                {selectedShopDetail.genreMemo && selectedShopDetail.genreMemo.includes("WAONPOINT加盟店") && (
+                  <div
+                    style={{
+                      width: "100%",
+                      padding: "0 20px",
+                      marginTop: "20px",
+                      marginBottom: "0px",
+                      boxSizing: "border-box",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-start",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <img src={waonPointIcon} alt="WAON POINT" style={{ width: "50px", height: "50px" }} />
+                  </div>
+                )}
+
                 {/* Border Line (Non-shrinkable) */}
                 <div
                   style={{
@@ -2660,7 +2730,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     display: "flex",
                     flexDirection: "column",
                     gap: "15px",
-                    paddingBottom: "20px", // Add bottom padding to ensure it's not cut off at very bottom
+                    paddingBottom: "0px", 
                   }}
                 >
                   {/* Floor Info */}
