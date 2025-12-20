@@ -536,8 +536,131 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       setSearchQuery(query);
   };
 
+  // Floor filter state
+  const [selectedFloor, setSelectedFloorState] = useState<string | null>(currentFloor);
+  
+  // Sync selectedFloor with currentFloor prop
+  useEffect(() => {
+    // Only update if currentFloor is a valid string
+    if (currentFloor) {
+      setSelectedFloorState(currentFloor);
+    }
+  }, [currentFloor]);
+
   // Selected facility state (for map overlay)
   const [selectedFacility, setSelectedFacility] = useState<string | null>(null);
+
+  // Floor switch direction (1: up, -1: down)
+  const [floorDirection, setFloorDirection] = useState(0);
+
+  // Map zoom scale state
+  const [currentScale, setCurrentScale] = useState(1);
+
+  // Pin animation delay state
+  const [pinDelay, setPinDelay] = useState(0);
+
+  // Wrapper for setting selected floor with direction calculation
+  // Use useCallback to make it stable for useEffect dependencies
+  const setSelectedFloor = useCallback((newFloor: string | null) => {
+    // Note: We need to access the current state value here.
+    // Since we can't easily access the latest state inside a closure without adding it to deps (which might cause loops),
+    // we'll rely on the functional update pattern or a ref if strictly necessary.
+    // However, for the direction logic, we need the "previous" floor.
+    
+    setSelectedFloorState((prevFloor) => {
+      if (newFloor === prevFloor) return prevFloor;
+
+      const getFloorNum = (f: string | null) => parseInt(f?.replace("F", "") || "1");
+      const current = getFloorNum(prevFloor || "1F");
+      const next = getFloorNum(newFloor);
+
+      if (next > current) {
+        setFloorDirection(1); // Moving up (e.g. 1F -> 2F)
+      } else if (next < current) {
+        setFloorDirection(-1); // Moving down (e.g. 2F -> 1F)
+      } else {
+        setFloorDirection(0);
+      }
+      
+      // Reset zoom on floor change
+      if (transformComponentRef.current) {
+        transformComponentRef.current.resetTransform();
+      }
+
+      return newFloor;
+    });
+  }, []);
+
+  // ピクトアイコン選択時の自動フロア切り替え
+  // selectedFacilityが変更されたときのみ実行（依存配列からselectedFloorを外す）
+  useEffect(() => {
+    if (!selectedFacility || !pictoSettings) return;
+
+    // 現在のstateではなく、最新の値を参照するために副作用内で取得するのが望ましいが、
+    // ここでは「選択した瞬間」の判定として現在のselectedFloorを使用する。
+    // ただし、依存配列にselectedFloorを含めると、ユーザーがフロアを切り替えたときに
+    // 再度この効果が走り、強制的に戻されてしまう可能性がある。
+    // したがって、selectedFacilityが変わったタイミングのみ実行する。
+
+    // 選択されたタグを持つピクトインスタンスを全フロアから検索
+    const instances = Object.values(pictoSettings.instances).filter(
+      (inst) => inst.tag === selectedFacility
+    );
+
+    if (instances.length === 0) return;
+
+    // 以下のロジックは「選択した瞬間」に現在のフロアに存在するかどうかをチェックする。
+    // ただし、useEffect内でselectedFloorを参照すると、selectedFloorが古い可能性があるため、
+    // セット関数内やRefを使う手もあるが、ここではシンプルに
+    // 「選択された施設が存在するフロアリスト」を作成し、
+    // 現在表示中のフロアが含まれていなければ移動する、というロジックにする。
+    // ここで `selectedFloor` を依存配列に含めないことで、
+    // ユーザーが手動でフロアを変えたときには反応しないようにする。
+
+    const currentFloorNormalized = normalizeFloor(selectedFloor || "1F");
+    
+    // 現在のフロアに存在するか
+    const existsOnCurrentFloor = instances.some(
+      (inst) => normalizeFloor(inst.floor) === currentFloorNormalized
+    );
+
+    // 現在のフロアにない場合、他フロアへ移動
+    if (!existsOnCurrentFloor) {
+      // 優先順位:
+      // 1. カレントフロア（現在地）から最も近いフロア（フロア差の絶対値が小さい順）
+      // 2. 上階優先 (同じ距離なら上の階)
+
+      // フロア番号を取得するヘルパー
+      const getFloorNum = (f: string) => parseInt(f.replace("F", "") || "0");
+      
+      // 現在地のフロア番号
+      const currentLocFloorNum = getFloorNum(currentFloor || "1F");
+      
+      const availableFloors = Array.from(new Set(instances.map(inst => normalizeFloor(inst.floor))));
+
+      // 優先順位に従ってソート
+      availableFloors.sort((a, b) => {
+        const floorA = getFloorNum(a);
+        const floorB = getFloorNum(b);
+        
+        const distA = Math.abs(floorA - currentLocFloorNum);
+        const distB = Math.abs(floorB - currentLocFloorNum);
+
+        // 距離が違う場合は近い順
+        if (distA !== distB) {
+            return distA - distB;
+        }
+
+        // 距離が同じ場合は上階優先 (数値が大きい方が優先 -> 昇順ソートだと後になるので b - a)
+        return floorB - floorA;
+      });
+
+      if (availableFloors.length > 0) {
+        setSelectedFloor(availableFloors[0]);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFacility, pictoSettings]); // selectedFloor, setSelectedFloor を除外して手動変更を許可する
   
   // Active news button state (null if none selected) -> Changed to track pressed state only
   const [pressedNewsButton, setPressedNewsButton] = useState<"event" | "shop" | "openTime" | null>(null);
@@ -601,58 +724,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   useEffect(() => {
     shopsRef.current = shops;
   }, [shops]);
-
-  // Floor filter state
-  const [selectedFloor, setSelectedFloorState] = useState<string | null>(currentFloor);
-  
-  // Sync selectedFloor with currentFloor prop
-  useEffect(() => {
-    // Only update if currentFloor is a valid string
-    if (currentFloor) {
-      setSelectedFloorState(currentFloor);
-    }
-  }, [currentFloor]);
-  
-  // Floor switch direction (1: up, -1: down)
-  const [floorDirection, setFloorDirection] = useState(0);
-
-  // Map zoom scale state
-  const [currentScale, setCurrentScale] = useState(1);
-
-  // Pin animation delay state
-  const [pinDelay, setPinDelay] = useState(0);
-
-  // Wrapper for setting selected floor with direction calculation
-  // Use useCallback to make it stable for useEffect dependencies
-  const setSelectedFloor = useCallback((newFloor: string | null) => {
-    // Note: We need to access the current state value here.
-    // Since we can't easily access the latest state inside a closure without adding it to deps (which might cause loops),
-    // we'll rely on the functional update pattern or a ref if strictly necessary.
-    // However, for the direction logic, we need the "previous" floor.
-    
-    setSelectedFloorState((prevFloor) => {
-      if (newFloor === prevFloor) return prevFloor;
-
-      const getFloorNum = (f: string | null) => parseInt(f?.replace("F", "") || "1");
-      const current = getFloorNum(prevFloor || "1F");
-      const next = getFloorNum(newFloor);
-
-      if (next > current) {
-        setFloorDirection(1); // Moving up (e.g. 1F -> 2F)
-      } else if (next < current) {
-        setFloorDirection(-1); // Moving down (e.g. 2F -> 1F)
-      } else {
-        setFloorDirection(0);
-      }
-      
-      // Reset zoom on floor change
-      if (transformComponentRef.current) {
-        transformComponentRef.current.resetTransform();
-      }
-
-      return newFloor;
-    });
-  }, []);
   
   // Selected shop for side modal (Slide-in)
   const [selectedShopDetail, setSelectedShopDetail] = useState<Shop | null>(null);

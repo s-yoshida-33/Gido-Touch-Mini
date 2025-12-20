@@ -518,8 +518,9 @@ const ShopPinsOverlay: React.FC<{
            const xPercent = instance.x / 100;
            const yPercent = instance.y / 100;
            
-           const pixelX = imageMetrics.offsetX + (xPercent * imageMetrics.displayWidth);
-           const pixelY = imageMetrics.offsetY + (yPercent * imageMetrics.displayHeight);
+           // Round pixel coordinates to prevent sub-pixel rendering artifacts (jitter/blur)
+           const pixelX = Math.round(imageMetrics.offsetX + (xPercent * imageMetrics.displayWidth));
+           const pixelY = Math.round(imageMetrics.offsetY + (yPercent * imageMetrics.displayHeight));
 
            // Apply scale ratio for consistency with map zoom
            // ShopPin logic: size * scaleRatio. PictoPin logic should match.

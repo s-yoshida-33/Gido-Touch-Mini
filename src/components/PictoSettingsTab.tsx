@@ -26,7 +26,10 @@ function generateUUID() {
   });
 }
 
-const clampPercent = (value: number) => Math.min(100, Math.max(0, Number.isNaN(value) ? 0 : value));
+const clampPercent = (value: number) => {
+    const v = Math.min(100, Math.max(0, Number.isNaN(value) ? 0 : value));
+    return Math.round(v * 100) / 100; // Round to 2 decimal places
+};
 const clampRotation = (value: number) => {
   const v = Number.isNaN(value) ? 0 : value;
   if (v < 0) return 0;
@@ -306,7 +309,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
                             type="range" 
                             min={0} 
                             max={100} 
-                            step={0.1} 
+                            step={0.01} 
                             value={selectedInstance.x} 
                             onChange={(e) => updateInstance({ x: clampPercent(Number(e.target.value)) })} 
                             style={{ flex: 1, accentColor: "#007aff" }} 
@@ -315,7 +318,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
                             type="number" 
                             value={selectedInstance.x} 
                             onChange={(e) => updateInstance({ x: clampPercent(Number(e.target.value)) })} 
-                            step={0.1} 
+                            step={0.01} 
                             min={0} 
                             max={100} 
                             style={{ width: 70, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} 
@@ -330,7 +333,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
                             type="range" 
                             min={0} 
                             max={100} 
-                            step={0.1} 
+                            step={0.01} 
                             value={selectedInstance.y} 
                             onChange={(e) => updateInstance({ y: clampPercent(Number(e.target.value)) })} 
                             style={{ flex: 1, accentColor: "#007aff" }} 
@@ -339,7 +342,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
                             type="number" 
                             value={selectedInstance.y} 
                             onChange={(e) => updateInstance({ y: clampPercent(Number(e.target.value)) })} 
-                            step={0.1} 
+                            step={0.01} 
                             min={0} 
                             max={100} 
                             style={{ width: 70, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} 
