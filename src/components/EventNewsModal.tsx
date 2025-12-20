@@ -5,10 +5,7 @@ import buttonCloseHighlight from "../assets/button-close-highlight.svg";
 import iconDate from "../assets/icon_date.svg";
 import iconTime from "../assets/icon-time.svg";
 import iconLocation from "../assets/icon-location.svg";
-import { fetchShopNewsFromBridge } from "../api/bridgeClient"; // Remove if unused, but keep keeping simple
 import type { ShopNews } from "../types/shopNews";
-import { logError } from "../logs/logging";
-
 interface EventNewsModalProps {
   isOpen: boolean;
   onClose: () => void;

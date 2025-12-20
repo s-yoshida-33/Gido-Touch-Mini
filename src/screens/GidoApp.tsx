@@ -283,20 +283,38 @@ function calculateImageRect(
 
 // Animation variants for PictoPins (same logic as map)
 const pictoVariants: Variants = {
-  enter: (direction: number) => ({
-    y: direction > 0 ? -200 : 200,
-    opacity: 0,
-  }),
+  enter: (direction: number) => {
+      // If direction is 0 (initial load), don't slide
+      if (direction === 0) {
+        return {
+          y: 0,
+          opacity: 0,
+        };
+      }
+      return {
+        y: direction > 0 ? -200 : 200,
+        opacity: 0,
+      };
+    },
   center: {
     zIndex: 1,
     y: 0,
     opacity: 1,
   },
-  exit: (direction: number) => ({
-    zIndex: 0,
-    y: direction > 0 ? 200 : -200,
-    opacity: 0,
-  }),
+  exit: (direction: number) => {
+       // If direction is 0, just fade out
+       if (direction === 0) {
+        return {
+          zIndex: 0,
+          opacity: 0,
+        };
+      }
+      return {
+        zIndex: 0,
+        y: direction > 0 ? 200 : -200,
+        opacity: 0,
+      };
+    },
 };
 
 /**

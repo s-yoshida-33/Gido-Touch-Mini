@@ -42,20 +42,6 @@ const ConfigGroup: React.FC<{ title: string; children: React.ReactNode }> = ({ t
   </fieldset>
 );
 
-const NumberInput: React.FC<{ label: string; value: number; onChange: (val: number) => void; min?: number; max?: number; step?: number }> = ({ label, value, onChange, min, max, step }) => (
-  <div style={{ marginBottom: 10 }}>
-    <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{label}</div>
-    <input
-      type="number"
-      value={value}
-      min={min}
-      max={max}
-      step={step}
-      onChange={(e) => onChange(Number(e.target.value))}
-      style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }}
-    />
-  </div>
-);
 
 export interface PictoSettingsTabProps {
   floor: FloorId;
@@ -312,25 +298,87 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
                   </select>
                 </div>
 
-                <div style={{ display: "flex", gap: 12 }}>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>X位置 (%)</div>
-                        <input type="number" value={selectedInstance.x} onChange={(e) => updateInstance({ x: clampPercent(Number(e.target.value)) })} step={0.01} min={0} max={100} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                {/* Position Settings with Sliders */}
+                <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>X位置 (%)</div>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <input 
+                            type="range" 
+                            min={0} 
+                            max={100} 
+                            step={0.1} 
+                            value={selectedInstance.x} 
+                            onChange={(e) => updateInstance({ x: clampPercent(Number(e.target.value)) })} 
+                            style={{ flex: 1, accentColor: "#007aff" }} 
+                        />
+                        <input 
+                            type="number" 
+                            value={selectedInstance.x} 
+                            onChange={(e) => updateInstance({ x: clampPercent(Number(e.target.value)) })} 
+                            step={0.1} 
+                            min={0} 
+                            max={100} 
+                            style={{ width: 70, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} 
+                        />
                     </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>Y位置 (%)</div>
-                        <input type="number" value={selectedInstance.y} onChange={(e) => updateInstance({ y: clampPercent(Number(e.target.value)) })} step={0.01} min={0} max={100} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>Y位置 (%)</div>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <input 
+                            type="range" 
+                            min={0} 
+                            max={100} 
+                            step={0.1} 
+                            value={selectedInstance.y} 
+                            onChange={(e) => updateInstance({ y: clampPercent(Number(e.target.value)) })} 
+                            style={{ flex: 1, accentColor: "#007aff" }} 
+                        />
+                        <input 
+                            type="number" 
+                            value={selectedInstance.y} 
+                            onChange={(e) => updateInstance({ y: clampPercent(Number(e.target.value)) })} 
+                            step={0.1} 
+                            min={0} 
+                            max={100} 
+                            style={{ width: 70, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} 
+                        />
                     </div>
                 </div>
                 
-                <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-                    <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
+                    <div style={{ minWidth: 120 }}>
                         <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>サイズ (px)</div>
-                        <input type="number" value={selectedInstance.size} onChange={(e) => updateInstance({ size: Math.max(1, Number(e.target.value)) })} min={1} step={0.1} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                        <input 
+                            type="number" 
+                            value={selectedInstance.size} 
+                            onChange={(e) => updateInstance({ size: Math.max(1, Number(e.target.value)) })} 
+                            min={1} 
+                            step={0.1} 
+                            style={{ width: 100, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} 
+                        />
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 180 }}>
                         <div style={{ fontSize: 12, marginBottom: 6, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>回転 (°)</div>
-                        <input type="number" value={selectedInstance.rotation} onChange={(e) => updateInstance({ rotation: clampRotation(Number(e.target.value)) })} min={0} max={360} style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} />
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                            <input 
+                                type="range" 
+                                min={0} 
+                                max={360} 
+                                value={selectedInstance.rotation} 
+                                onChange={(e) => updateInstance({ rotation: clampRotation(Number(e.target.value)) })} 
+                                style={{ flex: 1, accentColor: "#007aff" }} 
+                            />
+                            <input 
+                                type="number" 
+                                value={selectedInstance.rotation} 
+                                onChange={(e) => updateInstance({ rotation: clampRotation(Number(e.target.value)) })} 
+                                min={0} 
+                                max={360} 
+                                style={{ width: 70, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "6px 8px", color: "#ffffff", fontSize: 13 }} 
+                            />
+                        </div>
                     </div>
                 </div>
                 

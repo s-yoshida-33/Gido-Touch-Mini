@@ -415,20 +415,38 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
   // Animation variants for PictoPins (same logic as map)
   const pictoVariants: Variants = {
-    enter: (direction: number) => ({
-      y: direction > 0 ? -200 : 200,
-      opacity: 0,
-    }),
+    enter: (direction: number) => {
+      // If direction is 0 (initial load), don't slide
+      if (direction === 0) {
+        return {
+          y: 0,
+          opacity: 0,
+        };
+      }
+      return {
+        y: direction > 0 ? -200 : 200,
+        opacity: 0,
+      };
+    },
     center: {
       zIndex: 1, // Will be overridden by PictoPin zIndex logic but useful for stacking context
       y: 0,
       opacity: 1,
     },
-    exit: (direction: number) => ({
-      zIndex: 0,
-      y: direction > 0 ? 200 : -200,
-      opacity: 0,
-    }),
+    exit: (direction: number) => {
+       // If direction is 0, just fade out
+       if (direction === 0) {
+        return {
+          zIndex: 0,
+          opacity: 0,
+        };
+      }
+      return {
+        zIndex: 0,
+        y: direction > 0 ? 200 : -200,
+        opacity: 0,
+      };
+    },
   };
 
   // Map transform ref
@@ -638,6 +656,18 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   
   // Selected shop for side modal (Slide-in)
   const [selectedShopDetail, setSelectedShopDetail] = useState<Shop | null>(null);
+  
+  // Flag to ignore closing the modal when floor changes programmatically
+  const ignoreFloorChangeRef = useRef(false);
+
+  // Close shop detail modal when floor changes
+  useEffect(() => {
+    if (ignoreFloorChangeRef.current) {
+      ignoreFloorChangeRef.current = false;
+      return;
+    }
+    setSelectedShopDetail(null);
+  }, [selectedFloor]);
 
   const lastActivityTimeRef = useRef<number>(Date.now());
 
@@ -2169,6 +2199,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       const current = normalizeFloor(selectedFloor || "");
                       
                       if (shopFloor !== current) {
+                        ignoreFloorChangeRef.current = true;
                         setPinDelay(0.6); // Wait for map transition (approx 0.5-0.6s)
                         setSelectedFloor(shopFloor);
                       } else {
