@@ -23,19 +23,44 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
   // Sort news when props change
   const sortedNews = React.useMemo(() => {
     return [...news].sort((a, b) => {
-      const getTime = (item: ShopNews) => {
-        // Use startDate first for "Newest" sort, fallback to endDate, then createdAt
-        const dStr = item.startDate || item.endDate || item.createdAt;
-        if (!dStr) return 0; // No date treats as old
+      // Helper to determine sort date (EndDate is priority, fallback to StartDate)
+      // null means no date
+      const getSortDate = (item: ShopNews) => {
+        const dStr = item.endDate || item.startDate;
+        if (!dStr) return null;
         const t = new Date(dStr).getTime();
-        return isNaN(t) ? 0 : t;
+        return isNaN(t) ? null : t;
       };
 
-      const tA = getTime(a);
-      const tB = getTime(b);
+      const tA = getSortDate(a);
+      const tB = getSortDate(b);
 
-      // Descending order (Newest first)
-      return tB - tA;
+      // 1. If both have no date, keep original order (or sort by ID/Title if needed)
+      if (tA === null && tB === null) return 0;
+      // 2. If A has no date, put it last
+      if (tA === null) return 1;
+      // 3. If B has no date, put it last
+      if (tB === null) return -1;
+
+      // Both have dates
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const today = now.getTime();
+
+      const isFutureA = tA >= today;
+      const isFutureB = tB >= today;
+
+      // 4. Future/Present (Priority) vs Past
+      if (isFutureA && !isFutureB) return -1; // A is Future, B is Past -> A first
+      if (!isFutureA && isFutureB) return 1;  // B is Future, A is Past -> B first
+
+      if (isFutureA && isFutureB) {
+        // Both Future/Present: Sort by date ASC (Ending soonest first)
+        return tA - tB;
+      } else {
+        // Both Past: Sort by date DESC (Ended most recently first) - Optional preference
+        return tB - tA;
+      }
     });
   }, [news]);
 
@@ -206,7 +231,7 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                                   height: "100%", 
                                   borderRadius: "20px", 
                                   objectFit: "contain",
-                                  border: "2px solid #D9D9D9",
+                                  border: "1px solid #D9D9D9",
                                   boxSizing: "border-box"
                                 }} 
                               />

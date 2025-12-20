@@ -14,6 +14,7 @@ interface ShopEventModalProps {
   onClose: () => void;
   shops?: Shop[];
   news: ShopNews[];
+  language?: "ja" | "en";
 }
 
 export const ShopEventModal: React.FC<ShopEventModalProps> = ({
@@ -21,6 +22,7 @@ export const ShopEventModal: React.FC<ShopEventModalProps> = ({
   onClose,
   shops = [],
   news,
+  language = "ja",
 }) => {
   const [isPressed, setIsPressed] = useState(false);
   const [selectedNews, setSelectedNews] = useState<ShopNews | null>(null);
@@ -28,19 +30,44 @@ export const ShopEventModal: React.FC<ShopEventModalProps> = ({
   // Sort news when props change
   const sortedNews = React.useMemo(() => {
     return [...news].sort((a, b) => {
-      const getTime = (item: ShopNews) => {
-        // Use startDate first for "Newest" sort, fallback to endDate, then createdAt
-        const dStr = item.startDate || item.endDate || item.createdAt;
-        if (!dStr) return 0; // No date treats as old
+      // Helper to determine sort date (EndDate is priority, fallback to StartDate)
+      // null means no date
+      const getSortDate = (item: ShopNews) => {
+        const dStr = item.endDate || item.startDate;
+        if (!dStr) return null;
         const t = new Date(dStr).getTime();
-        return isNaN(t) ? 0 : t;
+        return isNaN(t) ? null : t;
       };
 
-      const tA = getTime(a);
-      const tB = getTime(b);
+      const tA = getSortDate(a);
+      const tB = getSortDate(b);
 
-      // Descending order (Newest first)
-      return tB - tA;
+      // 1. If both have no date, keep original order
+      if (tA === null && tB === null) return 0;
+      // 2. If A has no date, put it last
+      if (tA === null) return 1;
+      // 3. If B has no date, put it last
+      if (tB === null) return -1;
+
+      // Both have dates
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const today = now.getTime();
+
+      const isFutureA = tA >= today;
+      const isFutureB = tB >= today;
+
+      // 4. Future/Present (Priority) vs Past
+      if (isFutureA && !isFutureB) return -1; // A is Future, B is Past -> A first
+      if (!isFutureA && isFutureB) return 1;  // B is Future, A is Past -> B first
+
+      if (isFutureA && isFutureB) {
+        // Both Future/Present: Sort by date ASC (Ending soonest first)
+        return tA - tB;
+      } else {
+        // Both Past: Sort by date DESC (Ended most recently first)
+        return tB - tA;
+      }
     });
   }, [news]);
 
@@ -215,7 +242,7 @@ export const ShopEventModal: React.FC<ShopEventModalProps> = ({
                                   height: "100%", 
                                   borderRadius: "20px", 
                                   objectFit: "contain",
-                                  border: "2px solid #D9D9D9",
+                                  border: "1px solid #D9D9D9",
                                   boxSizing: "border-box"
                                 }} 
                               />
@@ -257,7 +284,7 @@ export const ShopEventModal: React.FC<ShopEventModalProps> = ({
                                     {selectedShop.genre && ` ／ ${selectedShop.genre}`}
                                   </div>
                                   <div style={{ fontSize: "14px", fontWeight: "bold", color: "#333" }}>
-                                    {selectedShop.name}
+                                    {language === "en" && selectedShop.nameEn ? selectedShop.nameEn : selectedShop.name}
                                   </div>
                                 </div>
                               </div>
@@ -465,70 +492,27 @@ export const ShopEventModal: React.FC<ShopEventModalProps> = ({
                             if (shop) {
                               const floor = shop.floors && shop.floors.length > 0 ? shop.floors[0] : "";
                               const number = shop.number ? `[${shop.number}]` : "";
-                              return `${floor}  ${number} ${shop.name}`;
+                              const shopName = language === "en" && shop.nameEn ? shop.nameEn : shop.name;
+                              return `${floor}  ${number} ${shopName}`;
                             }
                             return news.title; // Fallback to title if shop not found (though title is news title)
                           })()}
                         </div>
                         
                         {/* Date */}
-                        <div style={{ fontSize: "12px", color: "#333", marginBottom: "4px" }}>
+                        <div style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}>
                            {formatDate(news.startDate)}
                            {news.endDate ? ` 〜 ${formatDate(news.endDate)}` : ""}
                         </div>
 
-                        {/* Body (truncated) - Using news title as "body" summary or actual body? Request says "Main text (omitted)" but in card typically it's title or body snippet. 
-                           The user request says "Store Name", "Period", "Body (omitted)". 
-                           Usually the card shows the News Title as the main bold text.
-                           But the request says "Store Name: 2F [217] Muji".
-                           Wait, usually News Title is different from Shop Name.
-                           If the user wants Shop Name INSTEAD of News Title in the first line?
-                           "Store Name: 2F [217] Muji"
-                           "Period: ..."
-                           "Body (omitted)" -> implies the 3rd line is the body/content.
-                           
-                           Let's look at current implementation:
-                           Line 1: News Title (bold)
-                           Line 2: Date
-                           Line 3: Body snippet
-                           
-                           User request:
-                           Line 1: Shop Name (with floor/number)
-                           Line 2: Date
-                           Line 3: Body snippet (or News Title?)
-                           
-                           "本文（省略）" usually means the description text.
-                           However, what about the News Title? "Winter Sale" etc.
-                           If we replace News Title with Shop Name, we lose the News Title in the card.
-                           Maybe the "Body" part should be the News Title + Body? or just Body?
-                           
-                           Let's assume:
-                           1. Shop Name Line (New)
-                           2. Date Line
-                           3. Body/Content Line (truncated) - effectively replacing the News Title slot with Shop Name?
-                           
-                           Actually, standard practice for "Shop News" lists often highlights the SHOP.
-                           But the event itself has a title.
-                           
-                           Let's strictly follow:
-                           ・店舗名：2F [217] 無印良品
-                           ・期間：...
-                           ・本文（省略）
-                           
-                           So Line 1 is Shop Info.
-                           Line 2 is Date.
-                           Line 3 is Body.
-                           
-                           What happens to News Title? It might be part of "Body" or ignored in card.
-                           Let's use Body for the 3rd line as requested.
-                        */}
+                        {/* Body (truncated) */}
                         <div
                           style={{
-                            fontSize: "12px", 
+                            fontSize: "16px",
                             color: "#666",
                             fontFamily: "'Rounded Mplus 1c', sans-serif",
                             lineHeight: "1.4",
-                            height: "34px", // Fixed height for 2 lines? or 1 line?
+                            height: "44px", // Fixed height for 2 lines
                             overflow: "hidden",
                             display: "-webkit-box",
                             WebkitLineClamp: 2,

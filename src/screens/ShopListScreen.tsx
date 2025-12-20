@@ -1449,13 +1449,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     const iconUrl = entry ? (entry[1] as any).default : "";
                     if (!iconUrl) return null;
 
-                    // Apply scale ratio and map transform scale
-                    // ShopListScreen uses a TransformWrapper where content is scaled.
-                    // However, we want the pin SIZE to stay relatively consistent or scale with map?
-                    // ShopPin logic uses `size * scaleRatio`.
-                    // And ShopPin is inside the zoomed container, so it scales with the map naturally.
-                    // The `scaleRatio` adjusts for the difference between Reference Width (1920) and Display Width (1460).
-                    
                     const scaledInstance = {
                       ...instance,
                       size: (instance.size ?? 80) * scaleRatio
@@ -1465,7 +1458,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
                     return (
                       <motion.div
-                        key={instance.id}
+                        key={`${instance.id}-ripple`}
                         custom={floorDirection}
                         variants={pictoVariants}
                         initial="enter"
@@ -1482,15 +1475,63 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                           width: "100%",
                           height: "100%",
                           pointerEvents: "none",
-                          zIndex: 10, // Ensure pictos are above map but below pins if needed
+                          zIndex: 5, // Ripple layer - lower z-index
                         }}
                       >
                       <PictoPin
                         instance={scaledInstance}
                         iconUrl={iconUrl}
                         isSelected={isHighlighted}
-                        // ShopListScreen uses % positioning logic inside the map container naturally
-                        // provided by PictoPin's default style (left: x%, top: y%)
+                        renderMode="ripple"
+                      />
+                      </motion.div>
+                    );
+                  })
+                }
+                </AnimatePresence>
+
+                <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
+                {pictoSettings && Object.values(pictoSettings.instances)
+                  .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
+                  .map(instance => {
+                    const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
+                    const iconUrl = entry ? (entry[1] as any).default : "";
+                    if (!iconUrl) return null;
+
+                    const scaledInstance = {
+                      ...instance,
+                      size: (instance.size ?? 80) * scaleRatio
+                    };
+
+                    const isHighlighted = selectedFacility === instance.tag;
+
+                    return (
+                      <motion.div
+                        key={`${instance.id}-icon`}
+                        custom={floorDirection}
+                        variants={pictoVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{
+                          y: { type: "tween", duration: 0.5, ease: "easeInOut" },
+                          opacity: { duration: 0.5 }
+                        }}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          pointerEvents: "none",
+                          zIndex: 15, // Icon layer - higher z-index (above ripple, below user interaction layers)
+                        }}
+                      >
+                      <PictoPin
+                        instance={scaledInstance}
+                        iconUrl={iconUrl}
+                        isSelected={isHighlighted}
+                        renderMode="icon"
                       />
                       </motion.div>
                     );
@@ -2344,7 +2385,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     </div>
                     {/* Shop Name */}
                     <span style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Rounded Mplus 1c', sans-serif", color: "#333" }}>
-                      {shop.name}
+                      {selectedLanguage === "en" && shop.nameEn ? shop.nameEn : shop.name}
                     </span>
                   </div>
                 </div>
@@ -2471,7 +2512,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     width: "100px",
                     height: "100px",
                     borderRadius: "10px",
-                    border: "2px solid #D9D9D9",
+                    border: "1px solid #D9D9D9",
                     boxSizing: "border-box",
                     display: "flex",
                     alignItems: "center",
@@ -2502,7 +2543,11 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     alignItems: "center",
                   }}
                 >
-                   <ShopNameDisplay name={selectedShopDetail.name} />
+                   <ShopNameDisplay name={
+                     selectedLanguage === "en" && selectedShopDetail.nameEn 
+                       ? selectedShopDetail.nameEn 
+                       : selectedShopDetail.name
+                   } />
                 </div>
               </div>
 
@@ -2629,12 +2674,18 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                         <span>{selectedShopDetail.genre}</span>
                       </>
                     )}
-                    {selectedShopDetail.genreMemo && (
+                    {/* Genre Memo (switches to English if available) */}
+                    {(selectedLanguage === "en" && selectedShopDetail.genreMemoEn) || selectedShopDetail.genreMemo ? (
                       <>
                         <span>/</span>
-                        <span>{selectedShopDetail.genreMemo.split(/[|]+/).map(s => s.trim()).filter(s => s.length > 0)[0]}</span>
+                        <span>
+                          {selectedLanguage === "en" && selectedShopDetail.genreMemoEn
+                            ? selectedShopDetail.genreMemoEn.split(/[|]+/).map(s => s.trim()).filter(s => s.length > 0)[0]
+                            : selectedShopDetail.genreMemo.split(/[|]+/).map(s => s.trim()).filter(s => s.length > 0)[0]
+                          }
+                        </span>
                       </>
-                    )}
+                    ) : null}
                   </div>
                   
                   {/* Open Time */}
@@ -2844,6 +2895,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         onClose={() => setIsShopEventModalOpen(false)}
         shops={shops}
         news={shopNews}
+        language={selectedLanguage}
       />
 
       {/* White Fade Overlay for Refresh */}

@@ -213,6 +213,16 @@ export function parseEventNewsData(json: any): ShopNews[] {
       });
     }
 
+    // Helper to find first matching value from keys
+    const getValue = (obj: any, keys: string[]) => {
+      for (const key of keys) {
+        if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
+          return obj[key];
+        }
+      }
+      return undefined;
+    };
+
     const news: ShopNews[] = rawList.map((item) => {
       // Prioritize local paths if available
       const imageUrl = item.photo1LocalPath || item.photo1_local_path || item.photo1_remote_url || item.image_url || item.imageUrl;
@@ -220,22 +230,28 @@ export function parseEventNewsData(json: any): ShopNews[] {
       // Handle ID: Try shop_news_id, then id, then event_id, then fallback to index or unique property
       const id = String(item.shop_news_id || item.id || item.event_id || item.news_id || Math.random().toString(36).substr(2, 9));
 
+      const startDate = getValue(item, ['dateStart', 'startDate', 'start_date', 'date_start', 'started_at', 'startedAt']);
+      const endDate = getValue(item, ['dateEnd', 'endDate', 'end_date', 'date_end', 'ended_at', 'endedAt']);
+      const createdAt = getValue(item, ['createdAt', 'created_at', 'publishedAt', 'published_at', 'date', 'updatedAt', 'update_date']);
+
       return {
         id,
         shopId: String(item.shop_id || item.shopId || ""),
         title: item.title,
         body: item.body || item.content || "",
         imageUrl,
-        startDate: item.start_date || item.startDate || item.date_start,
-        endDate: item.end_date || item.endDate || item.date_end,
+        startDate,
+        endDate,
         time: item.time || "", // Map potential time field
         place: item.place || item.location || item.venues || "", // Map potential place/location field
+        createdAt: createdAt || "",
         updatedAt: item.update_date || item.updatedAt || "",
       };
     });
 
     logInfo("shopNews", "Shop news (Event News) normalized", {
       count: news.length,
+      sample: news.length > 0 ? news[0] : null,
     });
 
     return news;
@@ -289,6 +305,16 @@ export function parseShopNewsData(json: any): ShopNews[] {
       });
     }
 
+    // Helper to find first matching value from keys
+    const getValue = (obj: any, keys: string[]) => {
+      for (const key of keys) {
+        if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
+          return obj[key];
+        }
+      }
+      return undefined;
+    };
+
     const news: ShopNews[] = rawList.map((item) => {
       // Prioritize local paths if available
       const imageUrl = item.photo1LocalPath || item.photo1_local_path || item.photo1_remote_url || item.image_url || item.imageUrl;
@@ -296,22 +322,28 @@ export function parseShopNewsData(json: any): ShopNews[] {
       // Handle ID
       const id = String(item.shop_news_id || item.id || item.news_id || Math.random().toString(36).substr(2, 9));
 
+      const startDate = getValue(item, ['dateStart', 'startDate', 'start_date', 'date_start', 'started_at', 'startedAt']);
+      const endDate = getValue(item, ['dateEnd', 'endDate', 'end_date', 'date_end', 'ended_at', 'endedAt']);
+      const createdAt = getValue(item, ['createdAt', 'created_at', 'publishedAt', 'published_at', 'date', 'updatedAt', 'update_date']);
+
       return {
         id,
         shopId: String(item.shop_id || item.shopId || ""),
         title: item.title,
         body: item.body || item.content || "",
         imageUrl,
-        startDate: item.date_start || item.start_date || item.startDate,
-        endDate: item.date_end || item.end_date || item.endDate,
+        startDate,
+        endDate,
         time: item.time || "",
         place: item.place || item.location || "",
+        createdAt: createdAt || "",
         updatedAt: item.update_date || item.updatedAt || "",
       };
     });
 
     logInfo("shopNewsList", "Shop news list normalized", {
       count: news.length,
+      sample: news.length > 0 ? news[0] : null,
     });
 
     return news;

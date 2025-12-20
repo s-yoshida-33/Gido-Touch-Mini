@@ -497,14 +497,7 @@ const ShopPinsOverlay: React.FC<{
 
       {/* Picto Pins */}
       <AnimatePresence initial={false} custom={floor === "2F" ? 1 : -1} mode="popLayout"> 
-      {/* Note: In GidoApp context (settings/preview), we don't have direction state easily available. 
-          Assuming simple transition or just fade for preview is fine, but user asked for consistency. 
-          Since GidoApp is mostly static preview or controlled by settings, we might not need slide animation here,
-          OR we can implement it if previewFloor changes. 
-          However, ShopListScreen is the main usage. Let's apply basic Fade for GidoApp or try to mimic slide if possible.
-          For now, just wrapping in AnimatePresence without specific slide direction logic might just fade in/out which is better than nothing.
-          Actually, let's keep it simple in GidoApp (Preview) as it doesn't have floor navigation buttons in the same way.
-      */}
+      {/* Ripple Layer */}
       {pictoSettings && imageMetrics && Object.values(pictoSettings.instances)
         .filter(instance => instance.floor === normalizedFloor)
         .map(instance => {
@@ -523,10 +516,6 @@ const ShopPinsOverlay: React.FC<{
            const pixelY = Math.round(imageMetrics.offsetY + (yPercent * imageMetrics.displayHeight));
 
            // Apply scale ratio for consistency with map zoom
-           // ShopPin logic: size * scaleRatio. PictoPin logic should match.
-           // instance.size is px (default 80).
-           // We also need to apply the map scaling factor (imageMetrics.displayWidth / REFERENCE_MAP_WIDTH)
-           // to keep it responsive.
            const scaleRatio = imageMetrics.displayWidth / REFERENCE_MAP_WIDTH;
            
            // Create a modified instance with scaled size for rendering
@@ -537,7 +526,7 @@ const ShopPinsOverlay: React.FC<{
 
            return (
              <motion.div
-               key={instance.id}
+               key={`${instance.id}-ripple`}
                variants={pictoVariants}
                initial="enter"
                animate="center"
@@ -550,7 +539,7 @@ const ShopPinsOverlay: React.FC<{
                  width: "100%",
                  height: "100%",
                  pointerEvents: "none",
-                 zIndex: 1
+                 zIndex: 1 // Ripple layer - low z-index
                }}
              >
                <PictoPin
@@ -561,6 +550,56 @@ const ShopPinsOverlay: React.FC<{
                  pixelY={pixelY}
                  // Add highlight logic if needed (e.g. matching selectedShopId equivalent for pictos)
                  isSelected={instance.id === selectedPictoId} 
+                 renderMode="ripple"
+               />
+             </motion.div>
+           );
+        })
+      }
+      </AnimatePresence>
+
+      <AnimatePresence initial={false} custom={floor === "2F" ? 1 : -1} mode="popLayout">
+      {/* Icon Layer */}
+      {pictoSettings && imageMetrics && Object.values(pictoSettings.instances)
+        .filter(instance => instance.floor === normalizedFloor)
+        .map(instance => {
+           const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
+           const iconUrl = entry ? (entry[1] as any).default : "";
+           if (!iconUrl) return null;
+
+           const xPercent = instance.x / 100;
+           const yPercent = instance.y / 100;
+           const pixelX = Math.round(imageMetrics.offsetX + (xPercent * imageMetrics.displayWidth));
+           const pixelY = Math.round(imageMetrics.offsetY + (yPercent * imageMetrics.displayHeight));
+           const scaleRatio = imageMetrics.displayWidth / REFERENCE_MAP_WIDTH;
+           const scaledInstance = { ...instance, size: (instance.size || 80) * scaleRatio };
+
+           return (
+             <motion.div
+               key={`${instance.id}-icon`}
+               variants={pictoVariants}
+               initial="enter"
+               animate="center"
+               exit="exit"
+               custom={floor === "2F" ? 1 : -1}
+               style={{
+                 position: "absolute",
+                 top: 0,
+                 left: 0,
+                 width: "100%",
+                 height: "100%",
+                 pointerEvents: "none",
+                 zIndex: 5 // Icon layer - higher z-index
+               }}
+             >
+               <PictoPin
+                 instance={scaledInstance}
+                 iconUrl={iconUrl}
+                 usePixelPosition={true}
+                 pixelX={pixelX}
+                 pixelY={pixelY}
+                 isSelected={instance.id === selectedPictoId} 
+                 renderMode="icon"
                />
              </motion.div>
            );

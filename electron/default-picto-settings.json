@@ -784,7 +784,7 @@
       "iconName": "mensRestroom.svg",
       "floor": "2F",
       "x": 42.96,
-      "y": 40.91,
+      "y": 40.98,
       "size": 23.2,
       "rotation": 0,
       "shadow": {
@@ -1556,32 +1556,6 @@
         "rippleCenterSize": 0.8
       }
     },
-    "ecd56efd-d766-4b84-8e64-026411b302f6": {
-      "id": "ecd56efd-d766-4b84-8e64-026411b302f6",
-      "tag": "atm",
-      "iconName": "waonAtm.svg",
-      "floor": "2F",
-      "x": 51.34,
-      "y": 34.34,
-      "size": 26,
-      "rotation": 0,
-      "shadow": {
-        "enabled": false,
-        "offsetX": 4,
-        "offsetY": 4,
-        "blur": 4,
-        "opacity": 0.5
-      },
-      "animation": {
-        "enabled": true,
-        "type": "blink",
-        "duration": 2,
-        "amplitude": 20,
-        "rippleSize": 3,
-        "rippleCenterSize": 0.8,
-        "rippleColor": "#E63B93"
-      }
-    },
     "dee5ec06-7de8-411d-a0dc-d0ded25622f0": {
       "id": "dee5ec06-7de8-411d-a0dc-d0ded25622f0",
       "tag": "atm",
@@ -1668,6 +1642,58 @@
       "x": 41.22,
       "y": 39.43,
       "size": 25.6,
+      "rotation": 0,
+      "shadow": {
+        "enabled": false,
+        "offsetX": 4,
+        "offsetY": 4,
+        "blur": 4,
+        "opacity": 0.5
+      },
+      "animation": {
+        "enabled": true,
+        "type": "blink",
+        "duration": 2,
+        "amplitude": 20,
+        "rippleColor": "#E63B93",
+        "rippleSize": 3,
+        "rippleCenterSize": 0.8
+      }
+    },
+    "31eef5a6-6a69-47c2-823e-03753247aa93": {
+      "id": "31eef5a6-6a69-47c2-823e-03753247aa93",
+      "tag": "atm",
+      "iconName": "aeonAtm.svg",
+      "floor": "2F",
+      "x": 51.33,
+      "y": 34.31,
+      "size": 26,
+      "rotation": 0,
+      "shadow": {
+        "enabled": false,
+        "offsetX": 4,
+        "offsetY": 4,
+        "blur": 4,
+        "opacity": 0.5
+      },
+      "animation": {
+        "enabled": true,
+        "type": "blink",
+        "duration": 2,
+        "amplitude": 20,
+        "rippleSize": 3,
+        "rippleCenterSize": 0.8,
+        "rippleColor": "#E63B93"
+      }
+    },
+    "fbdd4241-a3bc-444f-8ca2-0f1ddd1bdf40": {
+      "id": "fbdd4241-a3bc-444f-8ca2-0f1ddd1bdf40",
+      "tag": "atm",
+      "iconName": "atm.svg",
+      "floor": "1F",
+      "x": 48.41,
+      "y": 20.71,
+      "size": 26.8,
       "rotation": 0,
       "shadow": {
         "enabled": false,

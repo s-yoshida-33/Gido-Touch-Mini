@@ -10,6 +10,7 @@ interface PictoPinProps {
   usePixelPosition?: boolean;
   pixelX?: number;
   pixelY?: number;
+  renderMode?: 'default' | 'ripple' | 'icon'; // Add renderMode
 }
 
 function buildShadowStyle(shadow: PictoInstance['shadow']): React.CSSProperties {
@@ -21,6 +22,7 @@ function buildShadowStyle(shadow: PictoInstance['shadow']): React.CSSProperties 
   };
 }
 
+// Helper function to build animation props
 function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig) {
   if (!animation || !animation.enabled || animation.type === "none") {
     return {
@@ -93,6 +95,7 @@ export const PictoPin: React.FC<PictoPinProps> = ({
   usePixelPosition = false,
   pixelX,
   pixelY,
+  renderMode = 'default',
 }) => {
   const size = instance.size || 80;
   const rotation = instance.rotation || 0;
@@ -110,15 +113,11 @@ export const PictoPin: React.FC<PictoPinProps> = ({
     top,
     zIndex: isSelected ? 1000 : 90, // ShopPinより少し下、選択時は上
     pointerEvents: "none",
-    ...buildShadowStyle(shadow),
+    // Only apply shadow if we are rendering the icon (or default mode)
+    ...(renderMode !== 'ripple' ? buildShadowStyle(shadow) : {}),
   };
 
-  if (isSelected) {
-    // 青いハイライト（ドロップシャドウ）を削除
-    // positionStyle.filter = positionStyle.filter 
-    //   ? `${positionStyle.filter} drop-shadow(0 0 8px rgba(0, 122, 255, 0.8))`
-    //   : "drop-shadow(0 0 8px rgba(0, 122, 255, 0.8))";
-  }
+  // ... existing code ...
 
   const imageStyle: React.CSSProperties = {
     width: `${size}px`,
@@ -134,7 +133,8 @@ export const PictoPin: React.FC<PictoPinProps> = ({
 
   const renderContent = () => (
     <div style={{ position: "relative", width: `${size}px`, height: `${size}px`, display: "flex", justifyContent: "center", alignItems: "center" }}>
-      {isBlinkAnimation && (
+      {/* Ripple Layer */}
+      {(renderMode === 'default' || renderMode === 'ripple') && isBlinkAnimation && (
         <>
           <style>{`
             @keyframes ripple-animation-${instance.id} {
@@ -173,12 +173,15 @@ export const PictoPin: React.FC<PictoPinProps> = ({
         </>
       )}
       
-      <img
-        src={iconUrl}
-        alt={instance.tag}
-        draggable={false}
-        style={imageStyle}
-      />
+      {/* Icon Layer */}
+      {(renderMode === 'default' || renderMode === 'icon') && (
+        <img
+          src={iconUrl}
+          alt={instance.tag}
+          draggable={false}
+          style={imageStyle}
+        />
+      )}
     </div>
   );
 
