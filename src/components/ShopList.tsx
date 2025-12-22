@@ -1,5 +1,5 @@
 // src/components/ShopList.tsx
-import React from "react";
+import React, { useMemo } from "react";
 import type { Shop } from "../types/shop";
 import {
   APP_CONFIG,
@@ -72,397 +72,409 @@ function compareShopNumberAsc(a: Shop, b: Shop): number {
   });
 }
 
+// ----- Memoized Sub-components -----------------------------------------------
+
+const GenreHeader = React.memo(({ genre }: { genre: string }) => {
+  const isFashion = genre === "ファッション";
+  const isFashionGoods = genre === "ファッション雑貨";
+  const isGoods = genre === "雑貨";
+  const isFood = genre === "飲食店・食品";
+  const isService = genre === "サービス";
+
+  const headerClassNames = [
+    (isFashion ||
+      isFashionGoods ||
+      isGoods ||
+      isFood ||
+      isService) && "shoplist-genre-header",
+    isFashion && "shoplist-genre-header--fashion",
+    isFashionGoods && "shoplist-genre-header--fashion-goods",
+    isGoods && "shoplist-genre-header--goods",
+    isFood && "shoplist-genre-header--food",
+    isService && "shoplist-genre-header--service",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div
+      className={headerClassNames}
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-end",
+        fontSize: "1.2em",
+        fontWeight: 700,
+        marginBottom: "8px",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span>{genre}</span>
+      <span style={{ fontSize: "0.7em" }}>
+        {GENRE_ENGLISH[genre] ?? ""}
+      </span>
+    </div>
+  );
+});
+
+const ShopRow = React.memo(({ shop, genre, index }: { shop: Shop; genre: string; index: number }) => {
+  const isFashion = genre === "ファッション";
+  const isFashionGoods = genre === "ファッション雑貨";
+  const isGoods = genre === "雑貨";
+  const isFood = genre === "飲食店・食品";
+  const isService = genre === "サービス";
+
+  const rowClassNames = [
+    (isFashion ||
+      isFashionGoods ||
+      isGoods ||
+      isFood ||
+      isService) && "shoplist-row",
+    (isFashion ||
+      isFashionGoods ||
+      isGoods ||
+      isFood ||
+      isService) &&
+      index === 0 &&
+      "shoplist-row-first",
+    isFashion && index % 2 === 0 && "shoplist-row--fashion-striped",
+    isFashionGoods && index % 2 === 0 && "shoplist-row--fashion-goods-striped",
+    isGoods && index % 2 === 0 && "shoplist-row--goods-striped",
+    isFood && index % 2 === 0 && "shoplist-row--food-striped",
+    isService && index % 2 === 0 && "shoplist-row--service-striped",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div
+      className={rowClassNames}
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        whiteSpace: "nowrap",
+        width: "100%",
+      }}
+    >
+      <span
+        style={{
+          marginLeft: "0.5em",
+          display: "inline-flex",
+          alignItems: "center",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-block",
+            width: "4em",
+            textAlign: "left",
+          }}
+        >
+          {shop.number}
+        </span>
+
+        {shop.genreMemo && (
+          <span
+            style={{
+              marginLeft: "0.5em",
+              fontFamily: "Rounded Mplus 1c, sans-serif",
+              fontWeight: 400,
+              fontSize: "0.7em",
+            }}
+          >
+            {`[${shop.genreMemo}]`}
+          </span>
+        )}
+      </span>
+
+      <span
+        style={{
+          marginLeft: "12px",
+          marginRight: "0.5em",
+        }}
+      >
+        {shop.name}
+      </span>
+    </div>
+  );
+});
+
 // ----- Main Component --------------------------------------------------------
 const ShopList: React.FC<ShopListProps> = ({
   shops,
   floor,
 }) => {
-  const normalizedFloor = normalizeFloor(floor);
+  const normalizedFloor = useMemo(() => normalizeFloor(floor), [floor]);
 
   // ---------------------------------------------------------------------------
   // Floor filtering (supports floors: FloorId[] + legacy floor/floors string)
   // ---------------------------------------------------------------------------
-  const floorShops = shops.filter((s) => {
-    const tokens: string[] = [];
+  const floorShops = useMemo(() => {
+    return shops.filter((s) => {
+      const tokens: string[] = [];
 
-    // 1) Official field: floors: FloorId[]
-    if (Array.isArray(s.floors)) {
-      s.floors.forEach((value) => {
-        String(value)
-          .split(/[、,・/]/)
-          .forEach((raw) => {
-            const v = raw.trim();
-            if (v.length > 0) tokens.push(v);
-          });
-      });
-    }
-
-    // 2) Legacy compatibility: floor or floors as a string
-    if (tokens.length === 0) {
-      const legacy: unknown = (s as any).floors ?? (s as any).floor;
-      if (typeof legacy === "string" && legacy.trim().length > 0) {
-        legacy
-          .split(/[、,・/]/)
-          .map((v) => v.trim())
-          .filter((v) => v.length > 0)
-          .forEach((v) => tokens.push(v));
+      // 1) Official field: floors: FloorId[]
+      if (Array.isArray(s.floors)) {
+        s.floors.forEach((value) => {
+          String(value)
+            .split(/[、,・/]/)
+            .forEach((raw) => {
+              const v = raw.trim();
+              if (v.length > 0) tokens.push(v);
+            });
+        });
       }
-    }
 
-    if (tokens.length === 0) return false;
+      // 2) Legacy compatibility: floor or floors as a string
+      if (tokens.length === 0) {
+        const legacy: unknown = (s as any).floors ?? (s as any).floor;
+        if (typeof legacy === "string" && legacy.trim().length > 0) {
+          legacy
+            .split(/[、,・/]/)
+            .map((v) => v.trim())
+            .filter((v) => v.length > 0)
+            .forEach((v) => tokens.push(v));
+        }
+      }
 
-    const normalizedTokens = tokens.map((v) => normalizeFloor(v));
-    return normalizedTokens.includes(normalizedFloor);
-  });
+      if (tokens.length === 0) return false;
+
+      const normalizedTokens = tokens.map((v) => normalizeFloor(v));
+      return normalizedTokens.includes(normalizedFloor);
+    });
+  }, [shops, normalizedFloor]);
 
   // ---------------------------------------------------------------------------
   // Normal layout rendering (wrapped in try/catch for fallback safety)
   // ---------------------------------------------------------------------------
-  const renderNormalLayout = () => {
-    // Build list of ordered lines (genre headers + shop rows)
-    const lines: Line[] = [];
+  const renderedContent = useMemo(() => {
+    const renderNormalLayout = () => {
+      // Build list of ordered lines (genre headers + shop rows)
+      const lines: Line[] = [];
 
-    for (const genre of GENRE_ORDER) {
-      const list = floorShops
-        .filter((s) => s.genre === genre)
-        .sort(compareShopNumberAsc);
+      for (const genre of GENRE_ORDER) {
+        const list = floorShops
+          .filter((s) => s.genre === genre)
+          .sort(compareShopNumberAsc);
 
-      if (list.length === 0) continue;
+        if (list.length === 0) continue;
 
-      lines.push({ kind: "header", genre });
+        lines.push({ kind: "header", genre });
 
-      for (const shop of list) {
-        lines.push({ kind: "shop", genre, shop });
-      }
-    }
-
-    // Add genres not included in predefined GENRE_ORDER
-    const knownSet = new Set(GENRE_ORDER);
-    const otherGenres = Array.from(
-      new Set(
-        floorShops
-          .map((s) => s.genre)
-          .filter((g) => g && !knownSet.has(g))
-      )
-    );
-
-    for (const genre of otherGenres) {
-      const list = floorShops
-        .filter((s) => s.genre === genre)
-        .sort(compareShopNumberAsc);
-
-      if (list.length === 0) continue;
-
-      lines.push({ kind: "header", genre });
-
-      for (const shop of list) {
-        lines.push({ kind: "shop", genre, shop });
-      }
-    }
-
-    const totalLines = lines.length;
-
-    // Determine effective column count
-    const maxColumns = APP_CONFIG.maxColumns;
-    const defaultColumns = FLOOR_COLUMN_COUNT[normalizedFloor] ?? 1;
-    const defaultRowsPerCol = FLOOR_ROWS_PER_COL[normalizedFloor];
-
-    const effectiveColumns = (() => {
-      const base = defaultColumns;
-      const safe = base > 0 ? base : 1;
-      return Math.min(maxColumns, safe);
-    })();
-
-    // Determine base rows per column
-    const baseRowsPerCol = (() => {
-      if (defaultRowsPerCol && defaultRowsPerCol > 0) return defaultRowsPerCol;
-      const auto = Math.ceil(totalLines / effectiveColumns);
-      return auto > 0 ? auto : 1;
-    })();
-
-    // Build row capacities for each column
-    const capacities: number[] = Array.from(
-      { length: effectiveColumns },
-      () => baseRowsPerCol
-    );
-
-    // Split lines into columns with capacity constraints
-    const columns: Line[][] = Array.from(
-      { length: effectiveColumns },
-      () => []
-    );
-    let currentColIndex = 0;
-    let currentRows = 0;
-
-    const startNewColumn = () => {
-      if (currentColIndex >= effectiveColumns - 1) return;
-      currentColIndex += 1;
-      currentRows = 0;
-    };
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const capacity = capacities[currentColIndex];
-
-      if (line.kind === "header") {
-        const next = lines[i + 1];
-        const needsTwoRows =
-          next && next.kind === "shop" && next.genre === line.genre;
-        const required = needsTwoRows ? 2 : 1;
-
-        if (currentRows > 0 && currentRows + required > capacity) {
-          startNewColumn();
-        }
-      } else {
-        if (currentRows > 0 && currentRows + 1 > capacity) {
-          startNewColumn();
+        for (const shop of list) {
+          lines.push({ kind: "shop", genre, shop });
         }
       }
 
-      columns[currentColIndex].push(line);
-      currentRows += 1;
-    }
+      // Add genres not included in predefined GENRE_ORDER
+      const knownSet = new Set(GENRE_ORDER);
+      const otherGenres = Array.from(
+        new Set(
+          floorShops
+            .map((s) => s.genre)
+            .filter((g) => g && !knownSet.has(g))
+        )
+      );
 
-    const nonEmptyColumns = columns.filter((col) => col.length > 0);
+      for (const genre of otherGenres) {
+        const list = floorShops
+          .filter((s) => s.genre === genre)
+          .sort(compareShopNumberAsc);
 
-    // Logging
-    if (floorShops.length > 0) {
-      logInfo("shopList", "ShopList rendered", {
-        floor: normalizedFloor,
-        floorShopsCount: floorShops.length,
-        totalLines,
-        columnCount: effectiveColumns,
-        baseRowsPerCol,
-        capacities,
-        nonEmptyColumnCount: nonEmptyColumns.length,
-      });
-    }
+        if (list.length === 0) continue;
 
-    // Render columns
-    return (
-      <div
-        style={{
-          display: "flex",
-          gap: "20px",
-          alignItems: "flex-start",
-          height: "100%",
-          backgroundColor: "#ffffff",
-        }}
-      >
-        {nonEmptyColumns.map((colLines, colIdx) => {
-          const sections = buildSectionsForColumn(colLines);
+        lines.push({ kind: "header", genre });
 
-          return (
-            <div
-              key={colIdx}
-              style={{
-                flex: 1,
-                minWidth: 0,
-              }}
-            >
-              {sections.map((section) => (
-                <section
-                  key={`${colIdx}-${section.genre}-${section.showHeader ? "h" : "c"}`}
-                  style={{ marginBottom: "10px" }}
-                >
-                  {/* Genre Header */}
-                  {section.showHeader &&
-                    (() => {
-                      const isFashion = section.genre === "ファッション";
-                      const isFashionGoods = section.genre === "ファッション雑貨";
-                      const isGoods = section.genre === "雑貨";
-                      const isFood = section.genre === "飲食店・食品";
-                      const isService = section.genre === "サービス";
+        for (const shop of list) {
+          lines.push({ kind: "shop", genre, shop });
+        }
+      }
 
-                      const headerClassNames = [
-                        (isFashion ||
-                          isFashionGoods ||
-                          isGoods ||
-                          isFood ||
-                          isService) && "shoplist-genre-header",
-                        isFashion && "shoplist-genre-header--fashion",
-                        isFashionGoods && "shoplist-genre-header--fashion-goods",
-                        isGoods && "shoplist-genre-header--goods",
-                        isFood && "shoplist-genre-header--food",
-                        isService && "shoplist-genre-header--service",
-                      ]
-                        .filter(Boolean)
-                        .join(" ");
+      const totalLines = lines.length;
 
-                      return (
-                        <div
-                          className={headerClassNames}
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "flex-end",
-                            fontSize: "1.2em",
-                            fontWeight: 700,
-                            marginBottom: "8px",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          <span>{section.genre}</span>
-                          <span style={{ fontSize: "0.7em" }}>
-                            {GENRE_ENGLISH[section.genre] ?? ""}
-                          </span>
-                        </div>
-                      );
-                    })()}
+      // Determine effective column count
+      const maxColumns = APP_CONFIG.maxColumns;
+      const defaultColumns = FLOOR_COLUMN_COUNT[normalizedFloor] ?? 1;
+      const defaultRowsPerCol = FLOOR_ROWS_PER_COL[normalizedFloor];
 
-                  {/* Shop rows */}
-                  {section.shops.map((s, idx) => {
-                    const isFashion = section.genre === "ファッション";
-                    const isFashionGoods = section.genre === "ファッション雑貨";
-                    const isGoods = section.genre === "雑貨";
-                    const isFood = section.genre === "飲食店・食品";
-                    const isService = section.genre === "サービス";
+      const effectiveColumns = (() => {
+        const base = defaultColumns;
+        const safe = base > 0 ? base : 1;
+        return Math.min(maxColumns, safe);
+      })();
 
-                    const rowClassNames = [
-                      (isFashion ||
-                        isFashionGoods ||
-                        isGoods ||
-                        isFood ||
-                        isService) && "shoplist-row",
-                      (isFashion ||
-                        isFashionGoods ||
-                        isGoods ||
-                        isFood ||
-                        isService) &&
-                        idx === 0 &&
-                        "shoplist-row-first",
-                      isFashion && idx % 2 === 0 && "shoplist-row--fashion-striped",
-                      isFashionGoods && idx % 2 === 0 && "shoplist-row--fashion-goods-striped",
-                      isGoods && idx % 2 === 0 && "shoplist-row--goods-striped",
-                      isFood && idx % 2 === 0 && "shoplist-row--food-striped",
-                      isService && idx % 2 === 0 && "shoplist-row--service-striped",
-                    ]
-                      .filter(Boolean)
-                      .join(" ");
+      // Determine base rows per column
+      const baseRowsPerCol = (() => {
+        if (defaultRowsPerCol && defaultRowsPerCol > 0) return defaultRowsPerCol;
+        const auto = Math.ceil(totalLines / effectiveColumns);
+        return auto > 0 ? auto : 1;
+      })();
 
-                    return (
-                      <div
-                        key={`${s.number}-${s.name}`}
-                        className={rowClassNames}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          whiteSpace: "nowrap",
-                          width: "100%",
-                        }}
-                      >
-                        <span
-                          style={{
-                            marginLeft: "0.5em",
-                            display: "inline-flex",
-                            alignItems: "center",
-                          }}
-                        >
-                          <span
-                            style={{
-                              display: "inline-block",
-                              width: "4em",
-                              textAlign: "left",
-                            }}
-                          >
-                            {s.number}
-                          </span>
+      // Build row capacities for each column
+      const capacities: number[] = Array.from(
+        { length: effectiveColumns },
+        () => baseRowsPerCol
+      );
 
-                          {s.genreMemo && (
-                            <span
-                              style={{
-                                marginLeft: "0.5em",
-                                fontFamily: "Rounded Mplus 1c, sans-serif",
-                                fontWeight: 400,
-                                fontSize: "0.7em",
-                              }}
-                            >
-                              {`[${s.genreMemo}]`}
-                            </span>
-                          )}
-                        </span>
+      // Split lines into columns with capacity constraints
+      const columns: Line[][] = Array.from(
+        { length: effectiveColumns },
+        () => []
+      );
+      let currentColIndex = 0;
+      let currentRows = 0;
 
-                        <span
-                          style={{
-                            marginLeft: "12px",
-                            marginRight: "0.5em",
-                          }}
-                        >
-                          {s.name}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </section>
-              ))}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
+      const startNewColumn = () => {
+        if (currentColIndex >= effectiveColumns - 1) return;
+        currentColIndex += 1;
+        currentRows = 0;
+      };
 
-  // ---------------------------------------------------------------------------
-  // Fallback rendering (shown if any unexpected error occurs above)
-  // ---------------------------------------------------------------------------
-  let content: React.ReactNode;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const capacity = capacities[currentColIndex];
 
-  try {
-    content = renderNormalLayout();
-  } catch (error) {
-    logError("shopList", "ShopList render failed, using fallback layout", {
-      floor: normalizedFloor,
-      error: String(error),
-    });
+        if (line.kind === "header") {
+          const next = lines[i + 1];
+          const needsTwoRows =
+            next && next.kind === "shop" && next.genre === line.genre;
+          const required = needsTwoRows ? 2 : 1;
 
-    content = (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
-          height: "100%",
-          overflow: "hidden",
-        }}
-      >
-        {floorShops.map((s) => (
-          <div
-            key={`${s.number}-${s.name}`}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <span>
-              <span
+          if (currentRows > 0 && currentRows + required > capacity) {
+            startNewColumn();
+          }
+        } else {
+          if (currentRows > 0 && currentRows + 1 > capacity) {
+            startNewColumn();
+          }
+        }
+
+        columns[currentColIndex].push(line);
+        currentRows += 1;
+      }
+
+      const nonEmptyColumns = columns.filter((col) => col.length > 0);
+
+      // Logging
+      if (floorShops.length > 0) {
+        logInfo("shopList", "ShopList rendered", {
+          floor: normalizedFloor,
+          floorShopsCount: floorShops.length,
+          totalLines,
+          columnCount: effectiveColumns,
+          baseRowsPerCol,
+          capacities,
+          nonEmptyColumnCount: nonEmptyColumns.length,
+        });
+      }
+
+      // Render columns
+      return (
+        <div
+          style={{
+            display: "flex",
+            gap: "20px",
+            alignItems: "flex-start",
+            height: "100%",
+            backgroundColor: "#ffffff",
+          }}
+        >
+          {nonEmptyColumns.map((colLines, colIdx) => {
+            const sections = buildSectionsForColumn(colLines);
+
+            return (
+              <div
+                key={colIdx}
                 style={{
-                  display: "inline-block",
-                  width: "4em",
-                  textAlign: "left",
+                  flex: 1,
+                  minWidth: 0,
                 }}
               >
-                {s.number}
-              </span>
-              {s.genreMemo && (
+                {sections.map((section) => (
+                  <section
+                    key={`${colIdx}-${section.genre}-${section.showHeader ? "h" : "c"}`}
+                    style={{ marginBottom: "10px" }}
+                  >
+                    {/* Genre Header */}
+                    {section.showHeader && (
+                      <GenreHeader genre={section.genre} />
+                    )}
+
+                    {/* Shop rows */}
+                    {section.shops.map((s, idx) => (
+                      <ShopRow
+                        key={`${s.number}-${s.name}`}
+                        shop={s}
+                        genre={section.genre}
+                        index={idx}
+                      />
+                    ))}
+                  </section>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+    try {
+      return renderNormalLayout();
+    } catch (error) {
+      logError("shopList", "ShopList render failed, using fallback layout", {
+        floor: normalizedFloor,
+        error: String(error),
+      });
+
+      return (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            height: "100%",
+            overflow: "hidden",
+          }}
+        >
+          {floorShops.map((s) => (
+            <div
+              key={`${s.number}-${s.name}`}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span>
                 <span
                   style={{
-                    marginLeft: "0.5em",
-                    fontFamily: "Rounded Mplus 1c, sans-serif",
-                    fontWeight: 400,
-                    fontSize: "0.7em",
+                    display: "inline-block",
+                    width: "4em",
+                    textAlign: "left",
                   }}
                 >
-                  {`[${s.genreMemo}]`}
+                  {s.number}
                 </span>
-              )}
-            </span>
-            <span>{s.name}</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
+                {s.genreMemo && (
+                  <span
+                    style={{
+                      marginLeft: "0.5em",
+                      fontFamily: "Rounded Mplus 1c, sans-serif",
+                      fontWeight: 400,
+                      fontSize: "0.7em",
+                    }}
+                  >
+                    {`[${s.genreMemo}]`}
+                  </span>
+                )}
+              </span>
+              <span>{s.name}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+  }, [floorShops, normalizedFloor]);
 
   // ---------------------------------------------------------------------------
   // Outer layout wrapper
@@ -481,7 +493,7 @@ const ShopList: React.FC<ShopListProps> = ({
         backgroundColor: "#ffffff",
       }}
     >
-      {content}
+      {renderedContent}
     </div>
   );
 };

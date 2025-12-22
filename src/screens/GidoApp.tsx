@@ -1,5 +1,5 @@
 // src/screens/GidoApp.tsx
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 
 import ShopList from "../components/ShopList";
@@ -67,7 +67,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
   pictoSettings,
   selectedPictoId,
 }) => {
-  const shops = previewShops || [];
+  const shops = useMemo(() => previewShops || [], [previewShops]);
 
   const [floor, setFloor] = useState<string>(
     previewFloor ?? APP_CONFIG.floor
@@ -114,6 +114,13 @@ const GidoApp: React.FC<GidoAppProps> = ({
   const customFloorMap = floorId ? imageSettings?.floorMaps?.[floorId] : undefined;
   const floorMap = customFloorMap || FLOOR_MAPS[floor] || floor1FMap;
 
+  // Memoize locationIconSettings resolution
+  const resolvedLocationIconSettings = useMemo(() => {
+    return '1F' in locationIconSettings || '2F' in locationIconSettings
+      ? getLocationIconSettingsForFloor(locationIconSettings as LocationIconSettingsPerFloor, floor as FloorId)
+      : locationIconSettings as LocationIconSettings;
+  }, [locationIconSettings, floor]);
+
   if (showOnlyMap) {
     return (
       <div
@@ -131,13 +138,9 @@ const GidoApp: React.FC<GidoAppProps> = ({
         <ShopPinsOverlay
           floor={floor}
           floorMap={floorMap}
-          locationIconSettings={
-            '1F' in locationIconSettings || '2F' in locationIconSettings
-              ? getLocationIconSettingsForFloor(locationIconSettings as LocationIconSettingsPerFloor, floor as FloorId)
-              : locationIconSettings as LocationIconSettings
-          }
+          locationIconSettings={resolvedLocationIconSettings}
           shopPositions={shopPositions}
-          shops={previewShops}
+          shops={shops}
           selectedShopId={selectedShopId}
           pictoSettings={pictoSettings}
           selectedPictoId={selectedPictoId}
@@ -165,13 +168,9 @@ const GidoApp: React.FC<GidoAppProps> = ({
         <ShopPinsOverlay
           floor={floor}
           floorMap={floorMap}
-          locationIconSettings={
-            '1F' in locationIconSettings || '2F' in locationIconSettings
-              ? getLocationIconSettingsForFloor(locationIconSettings as LocationIconSettingsPerFloor, floor as FloorId)
-              : locationIconSettings as LocationIconSettings
-          }
+          locationIconSettings={resolvedLocationIconSettings}
           shopPositions={shopPositions}
-          shops={previewShops}
+          shops={shops}
           selectedShopId={selectedShopId}
           pictoSettings={pictoSettings}
           selectedPictoId={selectedPictoId}
@@ -353,7 +352,7 @@ const ShopPinsOverlay: React.FC<{
     return "1F";
   };
 
-  const normalizedFloor = normalizeFloor(floor);
+  const normalizedFloor = useMemo(() => normalizeFloor(floor), [floor]);
 
   // Update image metrics on resize or load
   const updateMetrics = useCallback(() => {
@@ -371,6 +370,17 @@ const ShopPinsOverlay: React.FC<{
     setImageMetrics(metrics);
   }, []);
 
+  // Request Animation Frame ref for resize optimization
+  const rafId = useRef<number | null>(null);
+
+  const handleResize = useCallback(() => {
+    if (rafId.current) return;
+    rafId.current = requestAnimationFrame(() => {
+      updateMetrics();
+      rafId.current = null;
+    });
+  }, [updateMetrics]);
+
   useEffect(() => {
     const img = imageRef.current;
     if (img) {
@@ -378,18 +388,121 @@ const ShopPinsOverlay: React.FC<{
       else img.addEventListener('load', updateMetrics);
     }
     
-    const resizeObserver = new ResizeObserver(updateMetrics);
+    const resizeObserver = new ResizeObserver(handleResize);
     if (containerRef.current) resizeObserver.observe(containerRef.current);
 
     return () => {
       img?.removeEventListener('load', updateMetrics);
       resizeObserver.disconnect();
+      if (rafId.current) cancelAnimationFrame(rafId.current);
     };
-  }, [floorMap, updateMetrics]);
+  }, [floorMap, updateMetrics, handleResize]);
 
   const safeShopPositions = shopPositions || { positions: {} };
   const safeShops = shops || [];
   const positions = safeShopPositions.positions || {};
+
+  // Memoize rendered shop pins
+  const shopPins = useMemo(() => {
+    if (!shopPositions || !imageMetrics) return null;
+
+    return Object.entries(positions)
+      .filter(([shopId]) => {
+        if (selectedShopId) return shopId === selectedShopId;
+        return false;
+      })
+      .map(([shopId, position]) => {
+        if (!position || !position.floor || position.floor !== normalizedFloor) return null;
+        const shop = safeShops.find((s) => (s.shopId || s.number) === shopId);
+        if (!shop || !shop.name) return null;
+        
+        const normalizedPosition = {
+          ...position,
+          x: position.x <= 1 ? position.x * 100 : position.x,
+          y: position.y <= 1 ? position.y * 100 : position.y,
+        };
+
+        // --- Consistent Scaling Logic ---
+        // Scale pin size based on the map width ratio (Current / 1920)
+        const scaleRatio = imageMetrics.displayWidth / REFERENCE_MAP_WIDTH;
+        const basePinSize = normalizedPosition.size ?? DEFAULT_PIN_SIZE;
+        const scaledPinSize = basePinSize * scaleRatio;
+        
+        // Apply scaled size to the render position
+        const renderPosition = {
+          ...normalizedPosition,
+          size: scaledPinSize
+        };
+
+        // Calculate Pixel Coordinates directly mapped to image dimensions.
+        const xPercent = renderPosition.x / 100;
+        const yPercent = renderPosition.y / 100;
+
+        const pixelX = Math.round(imageMetrics.offsetX + (xPercent * imageMetrics.displayWidth));
+        const pixelY = Math.round(imageMetrics.offsetY + (yPercent * imageMetrics.displayHeight));
+
+        return (
+          <ShopPin
+            key={shopId}
+            position={renderPosition}
+            usePixelPosition={true}
+            pixelX={pixelX}
+            pixelY={pixelY}
+            shopName={shop.name}
+            isSelected={selectedShopId === shopId}
+            shopLogo={shop.shopLogo}
+            shopId={shop.shopId || shop.number}
+          />
+        );
+      });
+  }, [shopPositions, imageMetrics, positions, selectedShopId, normalizedFloor, safeShops]);
+
+  // Common logic for processing picto instances
+  const processPictoInstances = useCallback((instances: PictoSettings['instances']) => {
+    if (!imageMetrics) return [];
+    
+    return Object.values(instances)
+      .filter(instance => instance.floor === normalizedFloor)
+      .map(instance => {
+         // Find URL from pictoIcons based on filename match
+         const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
+         const iconUrl = entry ? (entry[1] as any).default : "";
+         
+         if (!iconUrl) return null;
+
+         // Calculate pixel position
+         const xPercent = instance.x / 100;
+         const yPercent = instance.y / 100;
+         
+         // Round pixel coordinates to prevent sub-pixel rendering artifacts (jitter/blur)
+         const pixelX = Math.round(imageMetrics.offsetX + (xPercent * imageMetrics.displayWidth));
+         const pixelY = Math.round(imageMetrics.offsetY + (yPercent * imageMetrics.displayHeight));
+
+         // Apply scale ratio for consistency with map zoom
+         const scaleRatio = imageMetrics.displayWidth / REFERENCE_MAP_WIDTH;
+         
+         // Create a modified instance with scaled size for rendering
+         const scaledInstance = {
+           ...instance,
+           size: (instance.size || 80) * scaleRatio
+         };
+
+         return {
+            instance,
+            scaledInstance,
+            iconUrl,
+            pixelX,
+            pixelY
+         };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+  }, [imageMetrics, normalizedFloor]);
+
+  // Memoize picto data to avoid recalculation on every render
+  const pictoData = useMemo(() => {
+    if (!pictoSettings || !imageMetrics) return [];
+    return processPictoInstances(pictoSettings.instances);
+  }, [pictoSettings, imageMetrics, processPictoInstances]);
 
   return (
     <div
@@ -443,88 +556,12 @@ const ShopPinsOverlay: React.FC<{
         />
       )}
 
-      {shopPositions && imageMetrics && Object.entries(positions)
-        .filter(([shopId]) => {
-          if (selectedShopId) return shopId === selectedShopId;
-          return false;
-        })
-        .map(([shopId, position]) => {
-          if (!position || !position.floor || position.floor !== normalizedFloor) return null;
-          const shop = safeShops.find((s) => (s.shopId || s.number) === shopId);
-          if (!shop || !shop.name) return null;
-          
-          const normalizedPosition = {
-            ...position,
-            x: position.x <= 1 ? position.x * 100 : position.x,
-            y: position.y <= 1 ? position.y * 100 : position.y,
-          };
-
-          // --- Consistent Scaling Logic ---
-          // Scale pin size based on the map width ratio (Current / 1920)
-          const scaleRatio = imageMetrics.displayWidth / REFERENCE_MAP_WIDTH;
-          const basePinSize = normalizedPosition.size ?? DEFAULT_PIN_SIZE;
-          const scaledPinSize = basePinSize * scaleRatio;
-          
-          // Apply scaled size to the render position
-          const renderPosition = {
-            ...normalizedPosition,
-            size: scaledPinSize
-          };
-
-          // Calculate Pixel Coordinates directly mapped to image dimensions.
-          // Removed the containment logic that shifted pins inward.
-          // Now: 0% = Image Left Edge, 100% = Image Right Edge.
-          const xPercent = renderPosition.x / 100;
-          const yPercent = renderPosition.y / 100;
-
-          const pixelX = Math.round(imageMetrics.offsetX + (xPercent * imageMetrics.displayWidth));
-          const pixelY = Math.round(imageMetrics.offsetY + (yPercent * imageMetrics.displayHeight));
-
-          return (
-            <ShopPin
-              key={shopId}
-              position={renderPosition}
-              usePixelPosition={true}
-              pixelX={pixelX}
-              pixelY={pixelY}
-              shopName={shop.name}
-              isSelected={selectedShopId === shopId}
-              shopLogo={shop.shopLogo}
-              shopId={shop.shopId || shop.number}
-            />
-          );
-        })}
+      {shopPins}
 
       {/* Picto Pins */}
       <AnimatePresence initial={false} custom={floor === "2F" ? 1 : -1} mode="popLayout"> 
       {/* Ripple Layer */}
-      {pictoSettings && imageMetrics && Object.values(pictoSettings.instances)
-        .filter(instance => instance.floor === normalizedFloor)
-        .map(instance => {
-           // Find URL from pictoIcons based on filename match
-           const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
-           const iconUrl = entry ? (entry[1] as any).default : "";
-           
-           if (!iconUrl) return null;
-
-           // Calculate pixel position
-           const xPercent = instance.x / 100;
-           const yPercent = instance.y / 100;
-           
-           // Round pixel coordinates to prevent sub-pixel rendering artifacts (jitter/blur)
-           const pixelX = Math.round(imageMetrics.offsetX + (xPercent * imageMetrics.displayWidth));
-           const pixelY = Math.round(imageMetrics.offsetY + (yPercent * imageMetrics.displayHeight));
-
-           // Apply scale ratio for consistency with map zoom
-           const scaleRatio = imageMetrics.displayWidth / REFERENCE_MAP_WIDTH;
-           
-           // Create a modified instance with scaled size for rendering
-           const scaledInstance = {
-             ...instance,
-             size: (instance.size || 80) * scaleRatio
-           };
-
-           return (
+      {pictoData.map(({ instance, scaledInstance, iconUrl, pixelX, pixelY }) => (
              <motion.div
                key={`${instance.id}-ripple`}
                variants={pictoVariants}
@@ -553,28 +590,13 @@ const ShopPinsOverlay: React.FC<{
                  renderMode="ripple"
                />
              </motion.div>
-           );
-        })
+           ))
       }
       </AnimatePresence>
 
       <AnimatePresence initial={false} custom={floor === "2F" ? 1 : -1} mode="popLayout">
       {/* Icon Layer */}
-      {pictoSettings && imageMetrics && Object.values(pictoSettings.instances)
-        .filter(instance => instance.floor === normalizedFloor)
-        .map(instance => {
-           const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
-           const iconUrl = entry ? (entry[1] as any).default : "";
-           if (!iconUrl) return null;
-
-           const xPercent = instance.x / 100;
-           const yPercent = instance.y / 100;
-           const pixelX = Math.round(imageMetrics.offsetX + (xPercent * imageMetrics.displayWidth));
-           const pixelY = Math.round(imageMetrics.offsetY + (yPercent * imageMetrics.displayHeight));
-           const scaleRatio = imageMetrics.displayWidth / REFERENCE_MAP_WIDTH;
-           const scaledInstance = { ...instance, size: (instance.size || 80) * scaleRatio };
-
-           return (
+      {pictoData.map(({ instance, scaledInstance, iconUrl, pixelX, pixelY }) => (
              <motion.div
                key={`${instance.id}-icon`}
                variants={pictoVariants}
@@ -602,8 +624,7 @@ const ShopPinsOverlay: React.FC<{
                  renderMode="icon"
                />
              </motion.div>
-           );
-        })
+           ))
       }
       </AnimatePresence>
     </div>

@@ -77,6 +77,15 @@ const createDefaultPerFloorSettings = () => ({
 
 // Prevent multiple instances from starting with a single-instance lock
 const gotTheLock = app.requestSingleInstanceLock();
+
+// Optimize for low-end hardware (Atom processor)
+// Enable GPU rasterization to reduce CPU load
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+// Enable zero-copy to reduce memory usage during composition
+app.commandLine.appendSwitch('enable-zero-copy');
+// Ensure GPU is used even if recognized as old/unsupported
+app.commandLine.appendSwitch('ignore-gpu-blacklist');
+
 if (!gotTheLock) {
   app.quit();
   return;
