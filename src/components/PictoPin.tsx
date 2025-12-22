@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import type { PictoInstance } from "../types/picto";
 import type { AnimationConfig } from "../types/locationIcon";
+import "../styles/location-icons.css"; // Ensure CSS is imported
 
 interface PictoPinProps {
   instance: PictoInstance;
@@ -115,9 +116,8 @@ export const PictoPin: React.FC<PictoPinProps> = ({
     pointerEvents: "none",
     // Only apply shadow if we are rendering the icon (or default mode)
     ...(renderMode !== 'ripple' ? buildShadowStyle(shadow) : {}),
+    willChange: "transform, opacity", // Optimize for composition
   };
-
-  // ... existing code ...
 
   const imageStyle: React.CSSProperties = {
     width: `${size}px`,
@@ -136,39 +136,27 @@ export const PictoPin: React.FC<PictoPinProps> = ({
       {/* Ripple Layer */}
       {(renderMode === 'default' || renderMode === 'ripple') && isBlinkAnimation && (
         <>
-          <style>{`
-            @keyframes ripple-animation-${instance.id} {
-              0% { transform: translate(-50%, -50%) scale(${rippleCenterSize}); opacity: 1; }
-              90% { opacity: 0.1; }
-              100% { transform: translate(-50%, -50%) scale(${rippleSize * 1.2}); opacity: 0; }
-            }
-            .ripple-${instance.id} {
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              border-radius: 50%;
-              background-color: ${rippleColor};
-              pointer-events: none;
-              z-index: 0;
-              opacity: 0;
-            }
-          `}</style>
           <div
-            className={`ripple-${instance.id}`}
+            className="ripple-effect"
             style={{
               width: `${size}px`,
               height: `${size}px`,
-              animation: `ripple-animation-${instance.id} ${animation!.duration}s ease-out infinite`,
-            }}
+              backgroundColor: rippleColor,
+              "--ripple-center-size": rippleCenterSize,
+              "--ripple-size": rippleSize,
+              "--ripple-duration": `${animation!.duration}s`,
+            } as React.CSSProperties}
           />
           <div
-            className={`ripple-${instance.id}`}
+            className="ripple-effect ripple-effect-delay"
             style={{
               width: `${size}px`,
               height: `${size}px`,
-              animation: `ripple-animation-${instance.id} ${animation!.duration}s ease-out ${animation!.duration / 2}s infinite`,
-            }}
+              backgroundColor: rippleColor,
+              "--ripple-center-size": rippleCenterSize,
+              "--ripple-size": rippleSize,
+              "--ripple-duration": `${animation!.duration}s`,
+            } as React.CSSProperties}
           />
         </>
       )}
@@ -180,6 +168,7 @@ export const PictoPin: React.FC<PictoPinProps> = ({
           alt={instance.tag}
           draggable={false}
           style={imageStyle}
+          decoding="async"
         />
       )}
     </div>
@@ -223,7 +212,3 @@ export const PictoPin: React.FC<PictoPinProps> = ({
     </div>
   );
 };
-
-
-
-

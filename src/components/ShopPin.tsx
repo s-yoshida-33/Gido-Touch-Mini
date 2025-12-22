@@ -1,9 +1,9 @@
-// src/components/ShopPin.tsx
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import type { ShopPosition } from "../types/shop";
 import type { AnimationConfig } from "../types/locationIcon";
 import speechBubbleIcon from "../assets/shop-location.svg";
+import "../styles/location-icons.css"; // Ensure CSS is imported
 
 interface ShopPinProps {
   position: ShopPosition;
@@ -59,7 +59,6 @@ function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig
         initial: { scale: 1, y: 0 },
         animate: {
           scale: [1, 1.1, 1],
-          y: 0,
         },
         transition: {
           duration,
@@ -238,6 +237,7 @@ export const ShopPin: React.FC<ShopPinProps> = ({
     pointerEvents: "none",
     ...buildShadowStyle(shadow),
     ...style,
+    willChange: "transform, opacity", // Optimize for composition
   };
 
   if (isSelected) {
@@ -283,39 +283,29 @@ export const ShopPin: React.FC<ShopPinProps> = ({
     <div style={{ position: "relative", width: `${size}px`, height: `${size}px`, display: "flex", justifyContent: "center", alignItems: "center" }}>
       {isBlinkAnimation && (
         <>
-          <style>{`
-            @keyframes ripple-animation-${shopId} {
-              0% { transform: translate(-50%, -50%) scale(${rippleCenterSize}); opacity: 1; }
-              90% { opacity: 0.1; }
-              100% { transform: translate(-50%, -50%) scale(${rippleSize * 1.2}); opacity: 0; }
-            }
-            .ripple-${shopId} {
-              position: absolute;
-              top: 43%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              border-radius: 50%;
-              background-color: ${rippleColor};
-              pointer-events: none;
-              z-index: 0;
-              opacity: 0;
-            }
-          `}</style>
           <div
-            className={`ripple-${shopId}`}
+            className="ripple-effect"
             style={{
               width: `${size}px`,
               height: `${size}px`,
-              animation: `ripple-animation-${shopId} ${animation.duration}s ease-out infinite`,
-            }}
+              top: "43%", // Override center position for ShopPin
+              backgroundColor: rippleColor,
+              "--ripple-center-size": rippleCenterSize,
+              "--ripple-size": rippleSize,
+              "--ripple-duration": `${animation.duration}s`,
+            } as React.CSSProperties}
           />
           <div
-            className={`ripple-${shopId}`}
+            className="ripple-effect ripple-effect-delay"
             style={{
               width: `${size}px`,
               height: `${size}px`,
-              animation: `ripple-animation-${shopId} ${animation.duration}s ease-out ${animation.duration / 2}s infinite`,
-            }}
+              top: "43%", // Override center position for ShopPin
+              backgroundColor: rippleColor,
+              "--ripple-center-size": rippleCenterSize,
+              "--ripple-size": rippleSize,
+              "--ripple-duration": `${animation.duration}s`,
+            } as React.CSSProperties}
           />
         </>
       )}
@@ -326,6 +316,7 @@ export const ShopPin: React.FC<ShopPinProps> = ({
         draggable={false}
         style={pinImageStyle}
         onError={(e) => console.error("Pin icon failed to load", e)}
+        decoding="async"
       />
       
       {logoUrl && !logoLoading && (
@@ -337,6 +328,7 @@ export const ShopPin: React.FC<ShopPinProps> = ({
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = "none";
           }}
+          decoding="async"
         />
       )}
     </div>

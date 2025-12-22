@@ -388,6 +388,8 @@ const ShopList: React.FC<ShopListProps> = ({
                 style={{
                   flex: 1,
                   minWidth: 0,
+                  contentVisibility: "auto",
+                  containIntrinsicSize: "1px 1000px",
                 }}
               >
                 {sections.map((section) => (
