@@ -452,6 +452,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
   // Map transform ref
   const transformComponentRef = useRef<ReactZoomPanPinchContentRef>(null);
+  
+  // Ref to track drag start position for click vs drag detection
+  const dragStartPosRef = useRef<{ x: number, y: number } | null>(null);
 
   // Genre scroll container ref
   const genreScrollContainerRef = useRef<HTMLDivElement>(null);
@@ -1112,8 +1115,23 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Calculate scale ratio for consistent pin sizing
   const scaleRatio = CURRENT_MAP_WIDTH / REFERENCE_MAP_WIDTH;
 
+  // Map pointer down handler to capture start position
+  const handleMapPointerDown = (e: React.PointerEvent) => {
+    dragStartPosRef.current = { x: e.clientX, y: e.clientY };
+  };
+
   // Map click handler
   const handleMapClick = (e: React.MouseEvent) => {
+    // Check if it was a drag or a click based on distance
+    if (dragStartPosRef.current) {
+      const dx = e.clientX - dragStartPosRef.current.x;
+      const dy = e.clientY - dragStartPosRef.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // If moved more than 10px, treat as drag and ignore click
+      if (distance > 10) return;
+    }
+
     // If shop positions aren't available, we can't find nearest shop
     if (!shopPositions || !shopPositions.positions) return;
 
@@ -1320,6 +1338,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               setShowHint(false);
               setShowFloorLabel(false);
             }}
+            onPanningStop={() => {
+              // No-op
+            }}
             onZoomStart={() => {
               setShowHint(false);
               setShowFloorLabel(false);
@@ -1353,6 +1374,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               <div 
                 ref={mapContentRef}
                 style={{ width: "100%", height: "100%", position: "relative" }}
+                onPointerDown={handleMapPointerDown}
                 onClick={handleMapClick}
               >
                 <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
@@ -1619,7 +1641,16 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             return (
               <div 
                 key={facility.id}
-                onClick={() => setSelectedFacility(prev => prev === facility.id ? null : facility.id)}
+                onClick={() => {
+                  // ピクト選択時にショップ選択（フォーカス）を解除
+                  if (selectedShopDetail) {
+                    setSelectedShopDetail(null);
+                    if (transformComponentRef.current) {
+                      transformComponentRef.current.setTransform(0, 0, 1, 1000, "easeOut");
+                    }
+                  }
+                  setSelectedFacility(prev => prev === facility.id ? null : facility.id)
+                }}
                 style={{ 
                   position: "relative", 
                   height: "80px", // Fit within 100px container
@@ -2441,39 +2472,10 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   setSelectedShopDetail(null);
                   setPressedCloseButton(false);
                   
-                  // Check if floor or genre changed from the original state when modal was opened
-                  // For now, we only check if the current view state matches the state when modal was opened.
-                  // Since we don't explicitly track "state when opened", we can use a heuristic:
-                  // If the user didn't change floors or genres inside the modal (which isn't possible in this modal design currently),
-                  // then we should assume no change.
-                  // However, if the intention is to *never* reset zoom when closing modal unless explicitly requested:
-                  
-                  // The previous code always reset zoom:
-                  // transformComponentRef.current.setTransform(0, 0, 1, 1000, "easeOut");
-
-                  // New requirement: "詳細モーダルを閉じたときにフロアの切り替えやジャンルの変更など、開く前のリストから変化していない場合は、スクロール位置をリセットしないでください。"
-                  // Since the modal doesn't allow changing floor or genre, the state "outside" hasn't changed by actions "inside" the modal.
-                  // The only way state changes is if the user navigates *before* opening the modal.
-                  // So, we should *not* reset zoom here.
-                  
-                  // If we want to support "reset if changed", we'd need to track "state when opened".
-                  // But since we can't change state inside the modal, "no change" is always true.
-                  // Therefore, we remove the reset logic.
-
-                  // But if we need to reset only if the user *did* something that changed the context... 
-                  // Wait, the user might have clicked a shop from the list, zoomed in, then opened details.
-                  // If they close details, they probably want to be back where they were (zoomed in).
-                  // So removing the reset seems correct for "don't reset scroll position".
-                  
-                  // However, the prompt says "if... NOT changed... don't reset".
-                  // Implication: If it *did* change, do reset.
-                  // Since it *can't* change inside the modal, we just never reset.
-                  
-                  /* 
+                  // ショップへのフォーカス（ズーム）を解除
                   if (transformComponentRef.current) {
                     transformComponentRef.current.setTransform(0, 0, 1, 1000, "easeOut");
-                  } 
-                  */
+                  }
                 }}
                 onMouseDown={() => setPressedCloseButton(true)}
                 onMouseUp={() => setPressedCloseButton(false)}
