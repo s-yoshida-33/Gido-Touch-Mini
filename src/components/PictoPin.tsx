@@ -116,7 +116,7 @@ export const PictoPin: React.FC<PictoPinProps> = ({
     pointerEvents: "none",
     // Only apply shadow if we are rendering the icon (or default mode)
     ...(renderMode !== 'ripple' ? buildShadowStyle(shadow) : {}),
-    willChange: "transform, opacity", // Optimize for composition
+    // willChange removed to prevent blurriness on high DPI screens
   };
 
   const imageStyle: React.CSSProperties = {

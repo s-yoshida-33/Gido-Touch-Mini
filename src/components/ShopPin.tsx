@@ -237,7 +237,7 @@ export const ShopPin: React.FC<ShopPinProps> = ({
     pointerEvents: "none",
     ...buildShadowStyle(shadow),
     ...style,
-    willChange: "transform, opacity", // Optimize for composition
+    // willChange removed to prevent blurriness on high DPI screens
   };
 
   if (isSelected) {
