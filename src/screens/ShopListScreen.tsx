@@ -1,5 +1,5 @@
 // src/screens/ShopListScreen.tsx
-import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, useTransition } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchContentRef } from "react-zoom-pan-pinch";
 import button1F from "../assets/button-1F.svg";
@@ -554,8 +554,14 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Selected facility state (for map overlay)
   const [selectedFacility, setSelectedFacility] = useState<string | null>(null);
 
-  // Floor switch direction (1: up, -1: down)
-  const [floorDirection, setFloorDirection] = useState(0);
+  // Previous floor ref to track direction changes
+  // Use ref to avoid re-renders and ensure we always have the previous value
+  const prevFloorRef = useRef<string | null>(selectedFloor);
+
+  // Track floor change timing for rapid switching detection
+  const floorChangeTimestampsRef = useRef<number[]>([]);
+  const RAPID_SWITCH_THRESHOLD_MS = 300; // If floor changes within 300ms, consider it rapid
+  const MAX_TRACKED_CHANGES = 5;
 
   // Map zoom scale state
   const [currentScale, setCurrentScale] = useState(1);
@@ -563,37 +569,83 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Pin animation delay state
   const [pinDelay, setPinDelay] = useState(0);
 
-  // Wrapper for setting selected floor with direction calculation
-  // Use useCallback to make it stable for useEffect dependencies
-  const setSelectedFloor = useCallback((newFloor: string | null) => {
-    // Note: We need to access the current state value here.
-    // Since we can't easily access the latest state inside a closure without adding it to deps (which might cause loops),
-    // we'll rely on the functional update pattern or a ref if strictly necessary.
-    // However, for the direction logic, we need the "previous" floor.
+  // Use transition for floor changes to prioritize updates
+  const [isPending, startTransition] = useTransition();
+
+  // Detect rapid floor switching
+  const isRapidSwitch = useMemo(() => {
+    const timestamps = floorChangeTimestampsRef.current;
+    if (timestamps.length < 2) return false;
     
-    setSelectedFloorState((prevFloor) => {
-      if (newFloor === prevFloor) return prevFloor;
+    const recentChanges = timestamps.slice(-3); // Check last 3 changes
+    const timeSpan = recentChanges[recentChanges.length - 1] - recentChanges[0];
+    return timeSpan < RAPID_SWITCH_THRESHOLD_MS * 2; // If 3 changes within 600ms, it's rapid
+  }, [selectedFloor]);
 
-      const getFloorNum = (f: string | null) => parseInt(f?.replace("F", "") || "1");
-      const current = getFloorNum(prevFloor || "1F");
-      const next = getFloorNum(newFloor);
+  // Calculate floor direction from selectedFloor and previous floor
+  // This ensures direction is always correct even during rapid floor switching
+  // Use useMemo to calculate synchronously during render
+  // Update prevFloorRef inside useMemo to ensure we always use the correct previous value
+  const floorDirection = useMemo(() => {
+    const getFloorNum = (f: string | null) => parseInt(f?.replace("F", "") || "1");
+    
+    // Read the previous floor before calculation
+    const prevFloor = prevFloorRef.current;
+    const current = getFloorNum(prevFloor || "1F");
+    const next = getFloorNum(selectedFloor || "1F");
 
-      if (next > current) {
-        setFloorDirection(1); // Moving up (e.g. 1F -> 2F)
-      } else if (next < current) {
-        setFloorDirection(-1); // Moving down (e.g. 2F -> 1F)
-      } else {
-        setFloorDirection(0);
-      }
-      
-      // Reset zoom on floor change
-      if (transformComponentRef.current) {
-        transformComponentRef.current.resetTransform();
-      }
+    // Track floor change timestamp
+    const now = Date.now();
+    floorChangeTimestampsRef.current.push(now);
+    if (floorChangeTimestampsRef.current.length > MAX_TRACKED_CHANGES) {
+      floorChangeTimestampsRef.current.shift();
+    }
 
-      return newFloor;
+    // Update prevFloorRef for next calculation (after reading current value)
+    // This ensures the next render will use the correct previous floor
+    prevFloorRef.current = selectedFloor;
+
+    if (next === current) return 0;
+
+    // Special handling for edge floors (1F and 4F)
+    // 1F (lowest floor): Always comes from below (direction = -1, y: 200 from bottom)
+    // 4F (highest floor): Always comes from above (direction = 1, y: -200 from top)
+    // Note: In mapVariants, direction > 0 means enter from top (y: -200), direction < 0 means enter from bottom (y: 200)
+    if (next === 1) {
+      // Moving to 1F: always from below (direction = -1, y: 200)
+      return -1;
+    } else if (next === 4) {
+      // Moving to 4F: always from above (direction = 1, y: -200)
+      return 1;
+    } else if (next > current) {
+      // Moving up (e.g. 1F -> 2F, 2F -> 3F)
+      return 1;
+    } else {
+      // Moving down (e.g. 3F -> 2F, 2F -> 1F)
+      return -1;
+    }
+  }, [selectedFloor]);
+
+  // Calculate animation duration based on rapid switching
+  const animationDuration = isRapidSwitch ? 0.2 : 0.5;
+
+  // Wrapper for setting selected floor
+  // Use useCallback to make it stable for useEffect dependencies
+  // Use startTransition to prioritize floor changes
+  const setSelectedFloor = useCallback((newFloor: string | null) => {
+    startTransition(() => {
+      setSelectedFloorState((prevFloor) => {
+        if (newFloor === prevFloor) return prevFloor;
+        
+        // Reset zoom on floor change
+        if (transformComponentRef.current) {
+          transformComponentRef.current.resetTransform();
+        }
+
+        return newFloor;
+      });
     });
-  }, []);
+  }, [startTransition]);
 
   // ピクトアイコン選択時の自動フロア切り替え
   // selectedFacilityが変更されたときのみ実行（依存配列からselectedFloorを外す）
@@ -743,6 +795,24 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     }
     setSelectedShopDetail(null);
   }, [selectedFloor]);
+
+  // Reset hint and floor label visibility when floor changes
+  // This ensures they are displayed even during rapid floor switching
+  useEffect(() => {
+    // Check if we're in default state (no zoom, no pan)
+    const isDefault = Math.abs(currentScale - 1) < 0.01;
+    
+    if (isDefault) {
+      // Use a small delay to ensure the floor change animation has started
+      // This prevents race conditions during rapid floor switching
+      const timeoutId = setTimeout(() => {
+        setShowHint(true);
+        setShowFloorLabel(true);
+      }, 50);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedFloor, currentScale]);
 
   const lastActivityTimeRef = useRef<number>(Date.now());
 
@@ -1377,9 +1447,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 onPointerDown={handleMapPointerDown}
                 onClick={handleMapClick}
               >
-                <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
+                <AnimatePresence initial={false} custom={floorDirection} mode={isRapidSwitch ? "sync" : "popLayout"}>
                   <motion.img
-                    key={selectedFloor || "1F"}
+                    key={`${selectedFloor || "1F"}-${floorDirection}`}
                     src={selectedFloor === "2F" ? floor2FMap : selectedFloor === "3F" ? floor3FMap : selectedFloor === "4F" ? floor4FMap : floor1FMap}
                     alt={`${selectedFloor || "1F"} Map`}
                     custom={floorDirection}
@@ -1388,8 +1458,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     animate="center"
                     exit="exit"
                     transition={{
-                      y: { type: "tween", duration: 0.5, ease: "easeInOut" },
-                      opacity: { duration: 0.5 }
+                      y: { type: "tween", duration: animationDuration, ease: "easeInOut" },
+                      opacity: { duration: animationDuration }
                     }}
                     style={{
                       width: "100%",
@@ -1403,18 +1473,18 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 </AnimatePresence>
 
                 {/* Current Location Icons Overlay */}
-                <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
+                <AnimatePresence initial={false} custom={floorDirection} mode={isRapidSwitch ? "sync" : "popLayout"}>
                 {normalizeFloor(selectedFloor || "1F") === normalizeFloor(currentFloor) && (
                     <motion.div
-                      key="location-icons-overlay"
+                      key={`location-icons-overlay-${selectedFloor || "1F"}-${floorDirection}`}
                       custom={floorDirection}
                       variants={mapVariants}
                       initial="enter"
                       animate="center"
                       exit="exit"
                       transition={{
-                        y: { type: "tween", duration: 0.5, ease: "easeInOut" },
-                        opacity: { duration: 0.5 }
+                        y: { type: "tween", duration: animationDuration, ease: "easeInOut" },
+                        opacity: { duration: animationDuration }
                       }}
                       style={{
                         position: "absolute",
@@ -1469,7 +1539,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 </AnimatePresence>
 
                 {/* Picto Pins */}
-                <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
+                <AnimatePresence initial={false} custom={floorDirection} mode={isRapidSwitch ? "sync" : "popLayout"}>
                 {pictoSettings && Object.values(pictoSettings.instances)
                   .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
                   .map(instance => {
@@ -1493,8 +1563,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                         animate="center"
                         exit="exit"
                         transition={{
-                          y: { type: "tween", duration: 0.5, ease: "easeInOut" },
-                          opacity: { duration: 0.5 }
+                          y: { type: "tween", duration: animationDuration, ease: "easeInOut" },
+                          opacity: { duration: animationDuration }
                         }}
                         style={{
                           position: "absolute",
@@ -1542,8 +1612,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                         animate="center"
                         exit="exit"
                         transition={{
-                          y: { type: "tween", duration: 0.5, ease: "easeInOut" },
-                          opacity: { duration: 0.5 }
+                          y: { type: "tween", duration: animationDuration, ease: "easeInOut" },
+                          opacity: { duration: animationDuration }
                         }}
                         style={{
                           position: "absolute",
@@ -1572,9 +1642,10 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         </div>
 
         {/* Hint Image */}
-        <AnimatePresence>
+        <AnimatePresence mode="sync">
           {showHint && (
             <motion.img
+              key={`hint-${selectedFloor || "1F"}`}
               src={hint}
               alt="Hint"
               initial={{ opacity: 0 }}
@@ -1594,7 +1665,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         </AnimatePresence>
 
         {/* Floor Label */}
-        <AnimatePresence>
+        <AnimatePresence mode="sync">
           {showFloorLabel && (
             <motion.img
               key={selectedFloor || "1F"}

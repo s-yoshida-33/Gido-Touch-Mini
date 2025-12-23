@@ -135,7 +135,6 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
             position: "absolute",
             top: "50%",
             left: "50%",
-            transform: `translate(-50%, -50%) scale(${rippleCenterSize})`,
             width: `${size}px`,
             height: `${size}px`,
             borderRadius: "50%",
@@ -143,6 +142,8 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
             pointerEvents: "none",
             zIndex: -1,
             opacity: 0,
+            transform: `translate(-50%, -50%) scale(${rippleCenterSize})`,
+            transformOrigin: "center center",
           }}
         />
         <div
@@ -151,7 +152,6 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
             position: "absolute",
             top: "50%",
             left: "50%",
-            transform: `translate(-50%, -50%) scale(${rippleCenterSize})`,
             width: `${size}px`,
             height: `${size}px`,
             borderRadius: "50%",
@@ -159,6 +159,8 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
             pointerEvents: "none",
             zIndex: -1,
             opacity: 0,
+            transform: `translate(-50%, -50%) scale(${rippleCenterSize})`,
+            transformOrigin: "center center",
           }}
         />
       </>
@@ -168,7 +170,14 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
   const renderIconContent = (config: IconPositionConfig, iconSrc: string, alt: string, uniqueId: string) => {
     const animation = config.animation;
     let animClass = "";
-    let animStyle: React.CSSProperties = { display: "flex", justifyContent: "center", alignItems: "center" };
+    let animStyle: React.CSSProperties = { 
+      display: "flex", 
+      justifyContent: "center", 
+      alignItems: "center",
+      position: "relative",
+      width: "100%",
+      height: "100%"
+    };
 
     if (isReady && animation && animation.enabled && animation.type !== "none" && animation.type !== "blink") {
       animClass = getAnimationClass(animation.type);
