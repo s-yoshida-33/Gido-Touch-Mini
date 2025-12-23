@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import type { ShopPosition } from "../types/shop";
-import type { AnimationConfig } from "../types/locationIcon";
 import speechBubbleIcon from "../assets/shop-location.svg";
 import "../styles/location-icons.css"; // Ensure CSS is imported
 
@@ -30,70 +29,13 @@ function buildShadowStyle(shadow?: ShopPosition['shadow']): React.CSSProperties 
   };
 }
 
-function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig) {
-  if (!animation || !animation.enabled || animation.type === "none") {
-    return {
-      initial: { scale: 1, y: 0 },
-      animate: { scale: 1, y: 0 },
-    };
-  }
-
-  const duration = animation.duration;
-
-  switch (animation.type) {
-    case "floating":
-      return {
-        // Always reset to 0 to avoid sticking at an offset when switching animations
-        initial: { y: 0 },
-        animate: {
-          y: [0, -fixedAmplitude, 0],
-        },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeInOut" as const,
-          times: [0, 0.5, 1]
-        },
-      };
-    case "pulse":
-      return {
-        initial: { scale: 1, y: 0 },
-        animate: {
-          scale: [1, 1.1, 1],
-        },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeInOut" as const,
-        },
-      };
-    case "bounce":
-      return {
-        initial: { y: 0 },
-        animate: {
-          y: [0, -fixedAmplitude, 0],
-        },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeOut" as const,
-        },
-      };
-    case "blink":
-      return {
-        initial: { scale: 1, y: 0 },
-        animate: { scale: 1, y: 0 },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeInOut" as const,
-        },
-      };
-    default:
-      return {
-        initial: { scale: 1, y: 0 },
-        animate: { scale: 1, y: 0 },
-      };
+function getAnimationClass(type: string): string {
+  switch (type) {
+    case "floating": return "anim-floating";
+    case "pulse": return "anim-pulse";
+    case "bounce": return "anim-bounce";
+    case "blink": return ""; // handled by ripple overlay
+    default: return "";
   }
 }
 
@@ -364,18 +306,17 @@ export const ShopPin: React.FC<ShopPinProps> = ({
     if (!isReady) return null;
 
     if (animation?.enabled && animation.type !== "none") {
+      const animClass = getAnimationClass(animation.type);
+      const style = {
+        ...innerContainerStyle,
+        "--anim-duration": `${animation.duration}s`,
+        "--anim-amplitude": `-${fixedAmplitude}px`,
+      } as React.CSSProperties;
+
       return (
-        <motion.div
-          key={animation.type}
-          style={{ ...innerContainerStyle, width: '100%', height: '100%' }}
-          initial={buildAnimationProps(fixedAmplitude, animation).initial}
-          animate={buildAnimationProps(fixedAmplitude, animation).animate}
-          transition={buildAnimationProps(fixedAmplitude, animation).transition}
-        >
-          <div style={innerContainerStyle}>
-            {renderContent()}
-          </div>
-        </motion.div>
+        <div className={animClass} style={style}>
+          {renderContent()}
+        </div>
       );
     }
     return (

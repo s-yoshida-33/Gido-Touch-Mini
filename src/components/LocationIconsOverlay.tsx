@@ -1,10 +1,10 @@
 // src/components/LocationIconsOverlay.tsx
-import React from "react";
-import { motion } from "framer-motion";
-import type { LocationIconSettings, IconPositionConfig, AnimationConfig } from "../types/locationIcon";
+import React, { useEffect, useState } from "react";
+import type { LocationIconSettings, IconPositionConfig } from "../types/locationIcon";
 
 import SpeechBubbleSvg from "../assets/user-locaition.svg";
 import LocationSvg from "../assets/location.svg";
+import "../styles/location-icons.css"; // Ensure CSS is imported
 
 interface Props {
   settings: LocationIconSettings;
@@ -39,74 +39,27 @@ function buildShadowStyle(shadow: IconPositionConfig['shadow']): React.CSSProper
   };
 }
 
-function buildAnimationProps(animation?: AnimationConfig): {
-  initial: any;
-  animate: any;
-  transition?: any;
-} {
-  if (!animation || !animation.enabled || animation.type === "none") {
-    return {
-      initial: { x: 0, y: 0, scale: 1 },
-      animate: { x: 0, y: 0, scale: 1 },
-    };
-  }
-
-  const duration = animation.duration;
-  const amplitude = animation.amplitude;
-
-  switch (animation.type) {
-    case "floating":
-      return {
-        initial: { x: 0, y: 0 },
-        animate: {
-          y: [0, -amplitude, 0],
-        },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeInOut" as const,
-        },
-      };
-    case "pulse":
-      return {
-        initial: { scale: 1 },
-        animate: {
-          scale: [1, 1.1, 1],
-        },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeInOut" as const,
-        },
-      };
-    case "bounce":
-      return {
-        initial: { x: 0, y: 0 },
-        animate: {
-          y: [0, -amplitude, 0],
-        },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeOut" as const,
-        },
-      };
-    case "blink":
-      // blink は波紋アニメーションとして実装されるため、ここでは何もしない
-      return {
-        initial: { x: 0, y: 0, scale: 1 },
-        animate: { x: 0, y: 0, scale: 1 },
-      };
-    default:
-      return {
-        initial: { x: 0, y: 0, scale: 1 },
-        animate: { x: 0, y: 0, scale: 1 },
-      };
+function getAnimationClass(type: string): string {
+  switch (type) {
+    case "floating": return "anim-floating";
+    case "pulse": return "anim-pulse";
+    case "bounce": return "anim-bounce";
+    case "blink": return ""; // handled by ripple overlay
+    default: return "";
   }
 }
 
 export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) => {
   const { speechBubble, location } = settings;
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Delay animation start slightly to allow layout to settle and prevent initial freeze
+    const timer = requestAnimationFrame(() => {
+      setIsReady(true);
+    });
+    return () => cancelAnimationFrame(timer);
+  }, []);
 
   // Calculate fixed pixel offset for speech bubble relative to location if location is enabled
   // Default map size to 1460x1080 if not provided
@@ -124,15 +77,6 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
   const speechBubbleOffsetY = location.enabled 
     ? ((speechBubble.yPercent - location.yPercent) / 100) * mapHeight 
     : 0;
-
-  // Create keys based on animation settings to force re-mount when settings change
-  const speechBubbleAnimationKey = speechBubble.animation
-    ? `${speechBubble.animation.enabled}-${speechBubble.animation.type}-${speechBubble.animation.duration}-${speechBubble.animation.amplitude}-${speechBubble.animation.rippleColor || ""}-${speechBubble.animation.rippleSize || ""}`
-    : "no-animation";
-
-  const locationAnimationKey = location.animation
-    ? `${location.animation.enabled}-${location.animation.type}-${location.animation.duration}-${location.animation.amplitude}-${location.animation.rippleColor || ""}-${location.animation.rippleSize || ""}`
-    : "no-animation";
 
   // Use the anchor's position for the outer wrapper
   const speechBubbleWrapperStyle = {
@@ -221,6 +165,32 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
     );
   };
 
+  const renderIconContent = (config: IconPositionConfig, iconSrc: string, alt: string, uniqueId: string) => {
+    const animation = config.animation;
+    let animClass = "";
+    let animStyle: React.CSSProperties = { display: "flex", justifyContent: "center", alignItems: "center" };
+
+    if (isReady && animation && animation.enabled && animation.type !== "none" && animation.type !== "blink") {
+      animClass = getAnimationClass(animation.type);
+      animStyle = {
+        ...animStyle,
+        "--anim-duration": `${animation.duration}s`,
+        "--anim-amplitude": `-${animation.amplitude}px`,
+      } as React.CSSProperties;
+    }
+
+    return (
+      <div className={animClass} style={animStyle}>
+        {renderRippleAnimation(config, uniqueId)}
+        <img
+          src={iconSrc}
+          alt={alt}
+          style={buildImageStyle(config)}
+        />
+      </div>
+    );
+  };
+
   return (
     <>
       {speechBubble.enabled && (
@@ -233,18 +203,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
               transformOrigin: 'center center' 
             }}
           >
-            <motion.div
-              key={speechBubbleAnimationKey}
-              style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
-              {...buildAnimationProps(speechBubble.animation)}
-            >
-              {renderRippleAnimation(speechBubble, "speech-bubble")}
-              <img
-                src={SpeechBubbleSvg}
-                alt="Current location speech bubble"
-                style={buildImageStyle(speechBubble)}
-              />
-            </motion.div>
+            {renderIconContent(speechBubble, SpeechBubbleSvg, "Current location speech bubble", "speech-bubble")}
           </div>
         </div>
       )}
@@ -258,18 +217,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
               transformOrigin: 'center center' 
             }}
           >
-            <motion.div
-              key={locationAnimationKey}
-              style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
-              {...buildAnimationProps(location.animation)}
-            >
-              {renderRippleAnimation(location, "location")}
-              <img
-                src={LocationSvg}
-                alt="Current location pin"
-                style={buildImageStyle(location)}
-              />
-            </motion.div>
+            {renderIconContent(location, LocationSvg, "Current location pin", "location")}
           </div>
         </div>
       )}

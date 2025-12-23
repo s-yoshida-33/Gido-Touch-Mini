@@ -1,7 +1,5 @@
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
 import type { PictoInstance } from "../types/picto";
-import type { AnimationConfig } from "../types/locationIcon";
 import "../styles/location-icons.css"; // Ensure CSS is imported
 
 interface PictoPinProps {
@@ -23,70 +21,13 @@ function buildShadowStyle(shadow: PictoInstance['shadow']): React.CSSProperties 
   };
 }
 
-// Helper function to build animation props
-function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig) {
-  if (!animation || !animation.enabled || animation.type === "none") {
-    return {
-      initial: { scale: 1, y: 0 },
-      animate: { scale: 1, y: 0 },
-    };
-  }
-
-  const duration = animation.duration;
-
-  switch (animation.type) {
-    case "floating":
-      return {
-        initial: { y: 0 },
-        animate: {
-          y: [0, -fixedAmplitude, 0],
-        },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeInOut" as const, // Explicitly cast to const or valid Easing type
-          times: [0, 0.5, 1]
-        },
-      };
-    case "pulse":
-      return {
-        initial: { scale: 1, y: 0 },
-        animate: {
-          scale: [1, 1.1, 1],
-        },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeInOut" as const,
-        },
-      };
-    case "bounce":
-      return {
-        initial: { y: 0 },
-        animate: {
-          y: [0, -fixedAmplitude, 0],
-        },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeOut" as const,
-        },
-      };
-    case "blink":
-      return {
-        initial: { scale: 1, y: 0 },
-        animate: { scale: 1, y: 0 },
-        transition: {
-          duration,
-          repeat: Infinity,
-          ease: "easeInOut" as const,
-        },
-      };
-    default:
-      return {
-        initial: { scale: 1, y: 0 },
-        animate: { scale: 1, y: 0 },
-      };
+function getAnimationClass(type: string): string {
+  switch (type) {
+    case "floating": return "anim-floating";
+    case "pulse": return "anim-pulse";
+    case "bounce": return "anim-bounce";
+    case "blink": return ""; // handled by ripple overlay
+    default: return "";
   }
 }
 
@@ -197,17 +138,17 @@ export const PictoPin: React.FC<PictoPinProps> = ({
     if (!isReady) return null;
 
     if (isSelected && animation?.enabled && animation.type !== "none") {
-       const animProps = buildAnimationProps(fixedAmplitude, animation);
+       const animClass = getAnimationClass(animation.type);
+       const style = {
+         ...innerContainerStyle,
+         "--anim-duration": `${animation.duration}s`,
+         "--anim-amplitude": `-${fixedAmplitude}px`,
+       } as React.CSSProperties;
+
       return (
-        <motion.div
-          key={animation.type}
-          style={innerContainerStyle}
-          initial={animProps.initial}
-          animate={animProps.animate}
-          transition={animProps.transition}
-        >
+        <div className={animClass} style={style}>
           {renderContent()}
-        </motion.div>
+        </div>
       );
     }
     return (
