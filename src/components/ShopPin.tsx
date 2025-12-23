@@ -51,7 +51,8 @@ function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig
         transition: {
           duration,
           repeat: Infinity,
-          ease: "easeInOut" as const,
+          ease: "easeInOut",
+          times: [0, 0.5, 1] // Explicit timing to prevent drift/freeze
         },
       };
     case "pulse":

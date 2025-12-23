@@ -780,9 +780,73 @@ ipcMain.handle('get-image-settings', () => {
   };
 });
 
+/**
+ * Helper to save Data URL to file in userData/images
+ */
+function saveImageFromDataUrl(dataUrl, fileName) {
+  try {
+    // Check if it's a data URL
+    if (!dataUrl || !dataUrl.startsWith('data:')) {
+      return null;
+    }
+
+    const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      logger.warn('Invalid data URL format', { fileName });
+      return null;
+    }
+    
+    const buffer = Buffer.from(matches[2], 'base64');
+    const imagesDir = path.join(app.getPath('userData'), 'images');
+    
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+    
+    const filePath = path.join(imagesDir, fileName);
+    fs.writeFileSync(filePath, buffer);
+    
+    logger.info('Image saved to file', { filePath });
+    return filePath;
+  } catch (error) {
+    logger.error('Failed to save image file', { error: error.message, fileName });
+    return null;
+  }
+}
+
 ipcMain.handle('save-image-settings', (_event, imageSettings) => {
   logger.info('IPC save-image-settings');
-  const settings = saveSettings({ imageSettings });
+  
+  // Process floor maps
+  const processedFloorMaps = { ...imageSettings.floorMaps };
+  Object.keys(processedFloorMaps).forEach(floorId => {
+    const dataUrl = processedFloorMaps[floorId];
+    if (dataUrl && dataUrl.startsWith('data:')) {
+      const fileName = `floor-${floorId}.svg`; // Assume SVG for now based on UI constraint
+      const filePath = saveImageFromDataUrl(dataUrl, fileName);
+      if (filePath) {
+        processedFloorMaps[floorId] = toFileUrl(filePath);
+      }
+    }
+  });
+  
+  // Process open time image
+  let processedOpenTimeImage = imageSettings.openTimeImage;
+  if (processedOpenTimeImage && processedOpenTimeImage.startsWith('data:')) {
+    const fileName = 'opentime.svg';
+    const filePath = saveImageFromDataUrl(processedOpenTimeImage, fileName);
+    if (filePath) {
+      processedOpenTimeImage = toFileUrl(filePath);
+    }
+  }
+  
+  const nextSettings = {
+    ...imageSettings,
+    floorMaps: processedFloorMaps,
+    openTimeImage: processedOpenTimeImage
+  };
+
+  const settings = saveSettings({ imageSettings: nextSettings });
   
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('image-settings-updated', settings.imageSettings);

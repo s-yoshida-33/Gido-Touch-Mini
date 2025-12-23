@@ -436,7 +436,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                 ref={mapContentRef}
                 style={{ width: "100%", height: "100%", position: "relative" }}
               >
-              {(activeTab === "shopPosition" || activeTab === "picto") && (
+              {(activeTab === "shopPosition" || activeTab === "picto" || activeTab === "image") && (
                 <GidoApp
                   locationIconSettings={getLocationIconSettingsForFloor(locationIconSettings, floor)}
                   previewFloor={floor}
@@ -444,7 +444,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                   shopPositions={activeTab === "shopPosition" || activeTab === "picto" ? shopPositions : undefined}
                   shops={activeTab === "shopPosition" || activeTab === "picto" ? shops : undefined}
                   selectedShopId={activeTab === "shopPosition" ? selectedShopId : undefined}
-                  showOnlyMap={activeTab === "shopPosition" || activeTab === "picto"}
+                  showOnlyMap={activeTab === "shopPosition" || activeTab === "picto" || activeTab === "image"}
                   pictoSettings={activeTab === "picto" ? pictoSettings : undefined}
                   selectedPictoId={activeTab === "picto" ? selectedPictoId : undefined}
                 />
