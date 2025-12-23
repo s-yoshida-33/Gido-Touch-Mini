@@ -44,8 +44,8 @@ function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig
         transition: {
           duration,
           repeat: Infinity,
-          ease: "easeInOut",
-          times: [0, 0.5, 1] // Explicit timing
+          ease: "easeInOut" as const, // Explicitly cast to const or valid Easing type
+          times: [0, 0.5, 1]
         },
       };
     case "pulse":
@@ -183,7 +183,19 @@ export const PictoPin: React.FC<PictoPinProps> = ({
     height: "100%",
   };
 
+  const [isReady, setIsReady] = useState(false);
+
+  React.useEffect(() => {
+    // Delay animation start slightly to allow layout to settle and prevent initial freeze
+    const timer = requestAnimationFrame(() => {
+      setIsReady(true);
+    });
+    return () => cancelAnimationFrame(timer);
+  }, []);
+
   const renderInnerContent = () => {
+    if (!isReady) return null;
+
     if (isSelected && animation?.enabled && animation.type !== "none") {
        const animProps = buildAnimationProps(fixedAmplitude, animation);
       return (

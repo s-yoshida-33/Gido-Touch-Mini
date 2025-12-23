@@ -51,8 +51,8 @@ function buildAnimationProps(fixedAmplitude: number, animation?: AnimationConfig
         transition: {
           duration,
           repeat: Infinity,
-          ease: "easeInOut",
-          times: [0, 0.5, 1] // Explicit timing to prevent drift/freeze
+          ease: "easeInOut" as const,
+          times: [0, 0.5, 1]
         },
       };
     case "pulse":
@@ -350,7 +350,19 @@ export const ShopPin: React.FC<ShopPinProps> = ({
     }
   };
 
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Delay animation start slightly to allow layout to settle and prevent initial freeze
+    const timer = requestAnimationFrame(() => {
+      setIsReady(true);
+    });
+    return () => cancelAnimationFrame(timer);
+  }, []);
+
   const renderInnerContent = () => {
+    if (!isReady) return null;
+
     if (animation?.enabled && animation.type !== "none") {
       return (
         <motion.div
