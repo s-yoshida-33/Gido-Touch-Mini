@@ -1,5 +1,5 @@
 // src/screens/ShopListScreen.tsx
-import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, useTransition } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchContentRef } from "react-zoom-pan-pinch";
 import button1F from "../assets/button-1F.svg";
@@ -414,42 +414,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Map content ref for direct style manipulation (zoom scale)
   const mapContentRef = useRef<HTMLDivElement>(null);
 
-  // Animation variants for PictoPins (same logic as map)
-  const pictoVariants: Variants = {
-    enter: (direction: number) => {
-      // If direction is 0 (initial load), don't slide
-      if (direction === 0) {
-        return {
-          y: 0,
-          opacity: 0,
-        };
-      }
-      return {
-        y: direction > 0 ? -200 : 200,
-        opacity: 0,
-      };
-    },
-    center: {
-      zIndex: 1, // Will be overridden by PictoPin zIndex logic but useful for stacking context
-      y: 0,
-      opacity: 1,
-    },
-    exit: (direction: number) => {
-       // If direction is 0, just fade out
-       if (direction === 0) {
-        return {
-          zIndex: 0,
-          opacity: 0,
-        };
-      }
-      return {
-        zIndex: 0,
-        y: direction > 0 ? 200 : -200,
-        opacity: 0,
-      };
-    },
-  };
-
   // Map transform ref
   const transformComponentRef = useRef<ReactZoomPanPinchContentRef>(null);
   
@@ -569,8 +533,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Pin animation delay state
   const [pinDelay, setPinDelay] = useState(0);
 
-  // Use transition for floor changes to prioritize updates
-  const [isPending, startTransition] = useTransition();
+  // Removed useTransition to ensure synchronous state updates
+  // This prevents floor display and map from getting out of sync during rapid switching
 
   // Detect rapid floor switching
   const isRapidSwitch = useMemo(() => {
@@ -631,21 +595,19 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
   // Wrapper for setting selected floor
   // Use useCallback to make it stable for useEffect dependencies
-  // Use startTransition to prioritize floor changes
+  // Synchronous update to prevent floor display and map from getting out of sync
   const setSelectedFloor = useCallback((newFloor: string | null) => {
-    startTransition(() => {
-      setSelectedFloorState((prevFloor) => {
-        if (newFloor === prevFloor) return prevFloor;
-        
-        // Reset zoom on floor change
-        if (transformComponentRef.current) {
-          transformComponentRef.current.resetTransform();
-        }
+    setSelectedFloorState((prevFloor) => {
+      if (newFloor === prevFloor) return prevFloor;
+      
+      // Reset zoom on floor change
+      if (transformComponentRef.current) {
+        transformComponentRef.current.resetTransform();
+      }
 
-        return newFloor;
-      });
+      return newFloor;
     });
-  }, [startTransition]);
+  }, []);
 
   // ピクトアイコン選択時の自動フロア切り替え
   // selectedFacilityが変更されたときのみ実行（依存配列からselectedFloorを外す）
@@ -1447,11 +1409,10 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 onPointerDown={handleMapPointerDown}
                 onClick={handleMapClick}
               >
+                {/* Map with all overlays (icons, pictos) as a single animated unit */}
                 <AnimatePresence initial={false} custom={floorDirection} mode={isRapidSwitch ? "sync" : "popLayout"}>
-                  <motion.img
-                    key={`${selectedFloor || "1F"}-${floorDirection}`}
-                    src={selectedFloor === "2F" ? floor2FMap : selectedFloor === "3F" ? floor3FMap : selectedFloor === "4F" ? floor4FMap : floor1FMap}
-                    alt={`${selectedFloor || "1F"} Map`}
+                  <motion.div
+                    key={selectedFloor || "1F"}
                     custom={floorDirection}
                     variants={mapVariants}
                     initial="enter"
@@ -1462,59 +1423,90 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       opacity: { duration: animationDuration }
                     }}
                     style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
                       position: "absolute",
                       top: 0,
                       left: 0,
+                      width: "100%",
+                      height: "100%",
+                      pointerEvents: "none",
                     }}
-                  />
-                </AnimatePresence>
-
-                {/* Current Location Icons Overlay */}
-                <AnimatePresence initial={false} custom={floorDirection} mode={isRapidSwitch ? "sync" : "popLayout"}>
-                {normalizeFloor(selectedFloor || "1F") === normalizeFloor(currentFloor) && (
-                    <motion.div
-                      key={`location-icons-overlay-${selectedFloor || "1F"}-${floorDirection}`}
-                      custom={floorDirection}
-                      variants={mapVariants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                      transition={{
-                        y: { type: "tween", duration: animationDuration, ease: "easeInOut" },
-                        opacity: { duration: animationDuration }
-                      }}
+                  >
+                    {/* Map Image */}
+                    <img
+                      src={selectedFloor === "2F" ? floor2FMap : selectedFloor === "3F" ? floor3FMap : selectedFloor === "4F" ? floor4FMap : floor1FMap}
+                      alt={`${selectedFloor || "1F"} Map`}
                       style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
                         width: "100%",
                         height: "100%",
-                        pointerEvents: "none",
-                        zIndex: 20,
+                        objectFit: "contain",
+                        display: "block",
                       }}
-                    >
-                  <LocationIconsOverlay
-                    settings={(() => {
-                      const baseSettings = getLocationIconSettingsForFloor(locationIconSettings, (selectedFloor || "1F") as FloorId);
-                      // Apply scale ratio to location icon settings
-                      return {
-                        speechBubble: {
-                          ...baseSettings.speechBubble,
-                          size: baseSettings.speechBubble.size * scaleRatio
-                        },
-                        location: {
-                          ...baseSettings.location,
-                          size: baseSettings.location.size * scaleRatio
-                        }
-                      };
-                    })()}
-                    mapMetrics={{ width: CURRENT_MAP_WIDTH, height: 1080 }}
-                  />
-                    </motion.div>
-                )}
+                    />
+
+                    {/* Current Location Icons Overlay - part of the map */}
+                    {normalizeFloor(selectedFloor || "1F") === normalizeFloor(currentFloor) && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          pointerEvents: "none",
+                          zIndex: 20,
+                        }}
+                      >
+                        <LocationIconsOverlay
+                          settings={(() => {
+                            const baseSettings = getLocationIconSettingsForFloor(locationIconSettings, (selectedFloor || "1F") as FloorId);
+                            // Apply scale ratio to location icon settings
+                            return {
+                              speechBubble: {
+                                ...baseSettings.speechBubble,
+                                size: baseSettings.speechBubble.size * scaleRatio
+                              },
+                              location: {
+                                ...baseSettings.location,
+                                size: baseSettings.location.size * scaleRatio
+                              }
+                            };
+                          })()}
+                          mapMetrics={{ width: CURRENT_MAP_WIDTH, height: 1080 }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Picto Pins - part of the map */}
+                    {pictoSettings && Object.values(pictoSettings.instances)
+                      .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
+                      .map(instance => {
+                        const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
+                        const iconUrl = entry ? (entry[1] as any).default : "";
+                        if (!iconUrl) return null;
+
+                        const scaledInstance = {
+                          ...instance,
+                          size: (instance.size ?? 80) * scaleRatio
+                        };
+
+                        const isHighlighted = selectedFacility === instance.tag;
+
+                        // Picto position is already in percentage, use it directly
+                        // Since picto is inside the same motion.div as the map, it will move together
+                        return (
+                          <div key={`picto-${instance.id}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 5 }}>
+                            <PictoPin
+                              instance={scaledInstance}
+                              iconUrl={iconUrl}
+                              usePixelPosition={false}
+                              isSelected={isHighlighted}
+                              renderMode="default"
+                            />
+                          </div>
+                        );
+                      })
+                    }
+                  </motion.div>
                 </AnimatePresence>
 
                 {/* Selected Shop Pin */}
@@ -1538,104 +1530,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   )}
                 </AnimatePresence>
 
-                {/* Picto Pins */}
-                <AnimatePresence initial={false} custom={floorDirection} mode={isRapidSwitch ? "sync" : "popLayout"}>
-                {pictoSettings && Object.values(pictoSettings.instances)
-                  .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
-                  .map(instance => {
-                    const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
-                    const iconUrl = entry ? (entry[1] as any).default : "";
-                    if (!iconUrl) return null;
-
-                    const scaledInstance = {
-                      ...instance,
-                      size: (instance.size ?? 80) * scaleRatio
-                    };
-
-                    const isHighlighted = selectedFacility === instance.tag;
-
-                    return (
-                      <motion.div
-                        key={`${instance.id}-ripple`}
-                        custom={floorDirection}
-                        variants={pictoVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{
-                          y: { type: "tween", duration: animationDuration, ease: "easeInOut" },
-                          opacity: { duration: animationDuration }
-                        }}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: "100%",
-                          pointerEvents: "none",
-                          zIndex: 5, // Ripple layer - lower z-index
-                        }}
-                      >
-                      <PictoPin
-                        instance={scaledInstance}
-                        iconUrl={iconUrl}
-                        isSelected={isHighlighted}
-                        renderMode="ripple"
-                      />
-                      </motion.div>
-                    );
-                  })
-                }
-                </AnimatePresence>
-
-                <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
-                {pictoSettings && Object.values(pictoSettings.instances)
-                  .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
-                  .map(instance => {
-                    const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
-                    const iconUrl = entry ? (entry[1] as any).default : "";
-                    if (!iconUrl) return null;
-
-                    const scaledInstance = {
-                      ...instance,
-                      size: (instance.size ?? 80) * scaleRatio
-                    };
-
-                    const isHighlighted = selectedFacility === instance.tag;
-
-                    return (
-                      <motion.div
-                        key={`${instance.id}-icon`}
-                        custom={floorDirection}
-                        variants={pictoVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{
-                          y: { type: "tween", duration: animationDuration, ease: "easeInOut" },
-                          opacity: { duration: animationDuration }
-                        }}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: "100%",
-                          pointerEvents: "none",
-                          zIndex: 15, // Icon layer - higher z-index (above ripple, below user interaction layers)
-                        }}
-                      >
-                      <PictoPin
-                        instance={scaledInstance}
-                        iconUrl={iconUrl}
-                        isSelected={isHighlighted}
-                        renderMode="icon"
-                      />
-                      </motion.div>
-                    );
-                  })
-                }
-                </AnimatePresence>
               </div>
             </TransformComponent>
           </TransformWrapper>
