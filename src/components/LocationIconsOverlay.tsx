@@ -2,8 +2,8 @@
 import React, { useEffect, useState } from "react";
 import type { LocationIconSettings, IconPositionConfig } from "../types/locationIcon";
 
-import SpeechBubbleSvg from "../assets/user-locaition.svg";
-import LocationSvg from "../assets/location.svg";
+import { LocationIcon } from "./LocationIcon";
+import { UserLocationIcon } from "./UserLocationIcon";
 import "../styles/location-icons.css"; // Ensure CSS is imported
 
 interface Props {
@@ -27,6 +27,7 @@ function buildImageStyle(config: IconPositionConfig): React.CSSProperties {
     display: "block",
     transform: `rotate(${config.rotation}deg)`,
     transformOrigin: "center center",
+    overflow: "visible",
   };
 }
 
@@ -94,7 +95,8 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
   // 波紋アニメーション用のスタイルとコンテンツを生成
   const renderRippleAnimation = (
     config: IconPositionConfig,
-    uniqueId: string
+    uniqueId: string,
+    isLocationIcon: boolean = false
   ) => {
     const animation = config.animation;
     if (!animation || !animation.enabled || animation.type !== "blink") {
@@ -105,6 +107,8 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
     const rippleSize = animation.rippleSize || 1.5;
     const rippleCenterSize = animation.rippleCenterSize ?? 0.95;
     const size = config.size;
+    // 現在地アイコンの場合、波紋を少し下に移動（視覚的な中心に合わせる）
+    const topOffset = isLocationIcon ? "52%" : "50%";
 
     return (
       <>
@@ -133,7 +137,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
           className={`ripple-${uniqueId}-1`}
           style={{
             position: "absolute",
-            top: "50%",
+            top: topOffset,
             left: "50%",
             width: `${size}px`,
             height: `${size}px`,
@@ -150,7 +154,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
           className={`ripple-${uniqueId}-2`}
           style={{
             position: "absolute",
-            top: "50%",
+            top: topOffset,
             left: "50%",
             width: `${size}px`,
             height: `${size}px`,
@@ -167,39 +171,6 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
     );
   };
 
-  const renderIconContent = (config: IconPositionConfig, iconSrc: string, alt: string, uniqueId: string) => {
-    const animation = config.animation;
-    let animClass = "";
-    let animStyle: React.CSSProperties = { 
-      display: "flex", 
-      justifyContent: "center", 
-      alignItems: "center",
-      position: "relative",
-      width: "100%",
-      height: "100%"
-    };
-
-    if (isReady && animation && animation.enabled && animation.type !== "none" && animation.type !== "blink") {
-      animClass = getAnimationClass(animation.type);
-      animStyle = {
-        ...animStyle,
-        "--anim-duration": `${animation.duration}s`,
-        "--anim-amplitude": `-${animation.amplitude}px`,
-      } as React.CSSProperties;
-    }
-
-    return (
-      <div className={animClass} style={animStyle}>
-        {renderRippleAnimation(config, uniqueId)}
-        <img
-          src={iconSrc}
-          alt={alt}
-          style={buildImageStyle(config)}
-        />
-      </div>
-    );
-  };
-
   return (
     <>
       {speechBubble.enabled && (
@@ -212,7 +183,36 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
               transformOrigin: 'center center' 
             }}
           >
-            {renderIconContent(speechBubble, SpeechBubbleSvg, "Current location speech bubble", "speech-bubble")}
+            {(() => {
+              const animation = speechBubble.animation;
+              let animClass = "";
+              let animStyle: React.CSSProperties = { 
+                display: "flex", 
+                justifyContent: "center", 
+                alignItems: "center",
+                position: "relative",
+                width: "100%",
+                height: "100%"
+              };
+
+              if (isReady && animation && animation.enabled && animation.type !== "none" && animation.type !== "blink") {
+                animClass = getAnimationClass(animation.type);
+                animStyle = {
+                  ...animStyle,
+                  "--anim-duration": `${animation.duration}s`,
+                  "--anim-amplitude": `-${animation.amplitude}px`,
+                } as React.CSSProperties;
+              }
+
+              return (
+                <div className={animClass} style={animStyle}>
+                  {renderRippleAnimation(speechBubble, "speech-bubble")}
+                  <UserLocationIcon
+                    style={buildImageStyle(speechBubble)}
+                  />
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -226,7 +226,36 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
               transformOrigin: 'center center' 
             }}
           >
-            {renderIconContent(location, LocationSvg, "Current location pin", "location")}
+            {(() => {
+              const animation = location.animation;
+              let animClass = "";
+              let animStyle: React.CSSProperties = { 
+                display: "flex", 
+                justifyContent: "center", 
+                alignItems: "center",
+                position: "relative",
+                width: "100%",
+                height: "100%"
+              };
+
+              if (isReady && animation && animation.enabled && animation.type !== "none" && animation.type !== "blink") {
+                animClass = getAnimationClass(animation.type);
+                animStyle = {
+                  ...animStyle,
+                  "--anim-duration": `${animation.duration}s`,
+                  "--anim-amplitude": `-${animation.amplitude}px`,
+                } as React.CSSProperties;
+              }
+
+              return (
+                <div className={animClass} style={animStyle}>
+                  {renderRippleAnimation(location, "location", true)}
+                  <LocationIcon
+                    style={buildImageStyle(location)}
+                  />
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

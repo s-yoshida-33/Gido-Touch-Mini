@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import type { ShopPosition } from "../types/shop";
-import speechBubbleIcon from "../assets/shop-location.svg";
+import { ShopLocationIcon } from "./ShopLocationIcon";
 import "../styles/location-icons.css"; // Ensure CSS is imported
 
 interface ShopPinProps {
@@ -253,13 +253,8 @@ export const ShopPin: React.FC<ShopPinProps> = ({
         </>
       )}
       
-      <img
-        src={speechBubbleIcon}
-        alt={shopName}
-        draggable={false}
+      <ShopLocationIcon
         style={pinImageStyle}
-        onError={(e) => console.error("Pin icon failed to load", e)}
-        decoding="async"
       />
       
       {logoUrl && !logoLoading && (

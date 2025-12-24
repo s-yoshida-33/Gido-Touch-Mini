@@ -2,85 +2,67 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchContentRef } from "react-zoom-pan-pinch";
-import button1F from "../assets/button-1F.svg";
-import button2F from "../assets/button-2F.svg";
-import button3F from "../assets/button-3F.svg";
-import button4F from "../assets/button-4F.svg";
-import button1FHighlight from "../assets/button-1F-highlight.svg";
-import button2FHighlight from "../assets/button-2F-highlight.svg";
-import button3FHighlight from "../assets/button-3F-highlight.svg";
-import button4FHighlight from "../assets/button-4F-highlight.svg";
-import buttonPrevHighlight from "../assets/button-prev-highlight.svg";
-import buttonNextHighlight from "../assets/button-next-highlight.svg";
+import { FloorSelectButton } from "../components/FloorSelectButton";
+import { NavButton } from "../components/NavButton";
 import floor1FMap from "../assets/floor-1F-map.svg";
 import floor2FMap from "../assets/floor-2F-map.svg";
 import floor3FMap from "../assets/floor-3F-map.svg";
 import floor4FMap from "../assets/floor-4F-map.svg";
-import floorLabel1F from "../assets/floor-label-1F.svg";
-import floorLabel2F from "../assets/floor-label-2F.svg";
-import floorLabel3F from "../assets/floor-label-3F.svg";
-import floorLabel4F from "../assets/floor-label-4F.svg";
-import iconCurrentFloor from "../assets/icon-current-floor.svg";
-import selectLanguageSelectedEn from "../assets/select-language-selected-en.svg";
-import selectLanguageSelectedJp from "../assets/select-language-selected-jp.svg";
+import { FloorLabel } from "../components/FloorLabel";
+import { CurrentFloorIcon } from "../components/CurrentFloorIcon";
+import { LanguageSelectButton } from "../components/LanguageSelectButton";
 import openTime from "../assets/open-time.svg";
-import prev from "../assets/button-prev.svg";
-import next from "../assets/button-next.svg";
 import iconSearch from "../assets/icon_search.svg";
-import iconAll from "../assets/icon_all.svg";
-import iconAllHighlight from "../assets/icon_all_highlight.svg";
-import iconFashion from "../assets/icon_fashion.svg";
-import iconFashionHighlight from "../assets/icon_fashion_highlight.svg";
-import iconFashionGoods from "../assets/icon_fashion_goods.svg";
-import iconFashionGoodsHighlight from "../assets/icon_fashion_goods_highlight.svg";
-import iconSport from "../assets/icon_sport.svg";
-import iconSportHighlight from "../assets/icon_sport_highlight.svg";
-import iconKids from "../assets/icon_kids.svg";
-import iconKidsHighlight from "../assets/icon_kids_highlight.svg";
-import iconLifestyle from "../assets/icon_lifestyle.svg";
-import iconLifestyleHighlight from "../assets/icon_lifestyle_highlight.svg";
-import iconGourmet from "../assets/icon_gourmet.svg";
-import iconGourmetHighlight from "../assets/icon_gourmet_highlight.svg";
-import iconEntertainment from "../assets/icon_entertainment.svg";
-import iconEntertainmentHighlight from "../assets/icon_entertainment_highlight.svg";
-import iconService from "../assets/icon_survice.svg";
-import iconServiceHighlight from "../assets/icon_survice_highlight.svg";
+import iconAll from "../assets/genres/icon_all.svg";
+import iconAllHighlight from "../assets/genres/icon_all_highlight.svg";
+import iconFashion from "../assets/genres/icon_fashion.svg";
+import iconFashionHighlight from "../assets/genres/icon_fashion_highlight.svg";
+import iconFashionGoods from "../assets/genres/icon_fashion_goods.svg";
+import iconFashionGoodsHighlight from "../assets/genres/icon_fashion_goods_highlight.svg";
+import iconSport from "../assets/genres/icon_sport.svg";
+import iconSportHighlight from "../assets/genres/icon_sport_highlight.svg";
+import iconKids from "../assets/genres/icon_kids.svg";
+import iconKidsHighlight from "../assets/genres/icon_kids_highlight.svg";
+import iconLifestyle from "../assets/genres/icon_lifestyle.svg";
+import iconLifestyleHighlight from "../assets/genres/icon_lifestyle_highlight.svg";
+import iconGourmet from "../assets/genres/icon_gourmet.svg";
+import iconGourmetHighlight from "../assets/genres/icon_gourmet_highlight.svg";
+import iconEntertainment from "../assets/genres/icon_entertainment.svg";
+import iconEntertainmentHighlight from "../assets/genres/icon_entertainment_highlight.svg";
+import iconService from "../assets/genres/icon_survice.svg";
+import iconServiceHighlight from "../assets/genres/icon_survice_highlight.svg";
 import iconTime from "../assets/icon-time.svg";
 import iconTel from "../assets/icon-tel.svg";
 import iconLocation from "../assets/icon-location.svg";
-import buttonEventNews from "../assets/button_event_news.svg";
-import buttonEventNewsHighlight from "../assets/button_event_news_highlight.svg";
-import buttonShopNews from "../assets/button_shop_news.svg";
-import buttonShopNewsHighlight from "../assets/button_shop_news_highlight.svg";
-import buttonOpenTime from "../assets/button-open-time.svg";
-import buttonOpenTimeHighlight from "../assets/button-open-time-highlight.svg";
+import { EventNewsButton } from "../components/EventNewsButton";
+import { ShopNewsButton } from "../components/ShopNewsButton";
+import { OpenTimeButton } from "../components/OpenTimeButton";
 import zoomIn from "../assets/zoom-in.svg";
 import zoomInHighlight from "../assets/zoom-in-highlight.svg";
 import zoomOut from "../assets/zoom-out.svg";
 import zoomOutHighlight from "../assets/zoom-out-highlight.svg";
-import buttonInfo from "../assets/button-info.svg";
-import buttonInfoHighlight from "../assets/button-info-highlight.svg";
-import buttonRestroom from "../assets/button-restroom.svg";
-import buttonRestroomHighlight from "../assets/button-restroom-highlight.svg";
-import buttonPriorityRestroom from "../assets/button-priority-restroom.svg";
-import buttonPriorityRestroomHighlight from "../assets/button-priority-restroom-highlight.svg";
-import buttonBabyRoom from "../assets/button-baby-room.svg";
-import buttonBabyRoomHighlight from "../assets/button-baby-room-highlight.svg";
-import buttonSmokingRoom from "../assets/button-smoking-room.svg";
-import buttonSmokingRoomHighlight from "../assets/button-smoking-room-highlight.svg";
-import buttonFreeCoinLockers from "../assets/button-free-coin-lockers.svg";
-import buttonFreeCoinLockersHighlight from "../assets/button-free-coin-lockers-highlight.svg";
-import buttonATM from "../assets/button-ATM.svg";
-import buttonATMHighlight from "../assets/button-ATM-highlight.svg";
-import buttonElevator from "../assets/button-elevator.svg";
-import buttonElevatorHighlight from "../assets/button-elevator-highlight.svg";
-import buttonBusStop from "../assets/button-bus-stop.svg";
-import buttonBusStopHighlight from "../assets/button-bus-stop-highlight.svg";
-import buttonTaxiStand from "../assets/button-taxi-stand.svg";
-import buttonTaxiStandHighlight from "../assets/button-taxi-stand-highlight.svg";
+import buttonInfo from "../assets/pictos/button-info.svg";
+import buttonInfoHighlight from "../assets/pictos/button-info-highlight.svg";
+import buttonRestroom from "../assets/pictos/button-restroom.svg";
+import buttonRestroomHighlight from "../assets/pictos/button-restroom-highlight.svg";
+import buttonPriorityRestroom from "../assets/pictos/button-priority-restroom.svg";
+import buttonPriorityRestroomHighlight from "../assets/pictos/button-priority-restroom-highlight.svg";
+import buttonBabyRoom from "../assets/pictos/button-baby-room.svg";
+import buttonBabyRoomHighlight from "../assets/pictos/button-baby-room-highlight.svg";
+import buttonSmokingRoom from "../assets/pictos/button-smoking-room.svg";
+import buttonSmokingRoomHighlight from "../assets/pictos/button-smoking-room-highlight.svg";
+import buttonFreeCoinLockers from "../assets/pictos/button-free-coin-lockers.svg";
+import buttonFreeCoinLockersHighlight from "../assets/pictos/button-free-coin-lockers-highlight.svg";
+import buttonATM from "../assets/pictos/button-ATM.svg";
+import buttonATMHighlight from "../assets/pictos/button-ATM-highlight.svg";
+import buttonElevator from "../assets/pictos/button-elevator.svg";
+import buttonElevatorHighlight from "../assets/pictos/button-elevator-highlight.svg";
+import buttonBusStop from "../assets/pictos/button-bus-stop.svg";
+import buttonBusStopHighlight from "../assets/pictos/button-bus-stop-highlight.svg";
+import buttonTaxiStand from "../assets/pictos/button-taxi-stand.svg";
+import buttonTaxiStandHighlight from "../assets/pictos/button-taxi-stand-highlight.svg";
 import hint from "../assets/hint.svg";
-import buttonClose from "../assets/button-close.svg";
-import buttonCloseHighlight from "../assets/button-close-highlight.svg";
+import { CloseButton } from "../components/CloseButton";
 import commingSoon from "../assets/comming-soon.svg";
 import waonPointIcon from "../assets/waonpoint.svg";
 import type { Shop } from "../types/shop";
@@ -90,7 +72,7 @@ import { ShopPin } from "../components/ShopPin";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
 import { KeyboardModal } from "../components/KeyboardModal";
 import { EventNewsModal } from "../components/EventNewsModal";
-import { ShopEventModal } from "../components/ShopEventModal";
+import { ShopNewsModal } from "../components/ShopNewsModal";
 import { ShopLogoImage } from "../components/ShopLogoImage";
 import { buildImagePath, toFileUrl } from "../utils/imageUtils";
 import type { LocationIconSettingsPerFloor } from "../types/locationIcon";
@@ -101,7 +83,7 @@ import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLO
 import { PictoPin } from "../components/PictoPin"; // Add import
 
 // Load picto icons
-const pictoIcons = import.meta.glob('../assets/picto/*.svg', { eager: true, query: '?url' });
+const pictoIcons = import.meta.glob('../assets/pictos/*.svg', { eager: true, query: '?url' });
 
 // Idle timeout configuration (30 seconds)
 const IDLE_TIMEOUT_MS = 30000;
@@ -801,7 +783,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   const [isEventNewsModalOpen, setIsEventNewsModalOpen] = useState(false);
   
   // Shop Event Modal State
-  const [isShopEventModalOpen, setIsShopEventModalOpen] = useState(false);
+  const [isShopNewsModalOpen, setIsShopNewsModalOpen] = useState(false);
 
   const languageButtonRef = useRef<HTMLDivElement>(null);
   
@@ -907,7 +889,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           selectedGenre === "all" && 
           selectedLanguage === "ja" && 
           !isEventNewsModalOpen && 
-          !isShopEventModalOpen &&
+          !isShopNewsModalOpen &&
           !selectedShopDetail && 
           !isKeyboardOpen &&
           !isLanguageModalOpen &&
@@ -930,7 +912,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         // After fade in (500ms), reset state
         setTimeout(() => {
           setIsEventNewsModalOpen(false);
-          setIsShopEventModalOpen(false);
+          setIsShopNewsModalOpen(false);
           setSearchQuery("");
           setSelectedGenre("all"); // Assuming 'all' is the default genre ID
           setSelectedLanguage("ja");
@@ -989,7 +971,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     selectedGenre, 
     selectedLanguage, 
     isEventNewsModalOpen, 
-    isShopEventModalOpen,
+    isShopNewsModalOpen,
     selectedShopDetail, 
     isKeyboardOpen,
     isLanguageModalOpen,
@@ -1495,7 +1477,11 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     {pictoSettings && Object.values(pictoSettings.instances)
                       .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
                       .map(instance => {
-                        const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
+                        // Extract filename from path and match exactly (exclude button files)
+                        const entry = Object.entries(pictoIcons).find(([p]) => {
+                          const fileName = p.split('/').pop() || "";
+                          return fileName === instance.iconName && !fileName.startsWith('button-');
+                        });
                         const iconUrl = entry ? (entry[1] as any).default : "";
                         if (!iconUrl) return null;
 
@@ -1576,10 +1562,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         {/* Floor Label */}
         <AnimatePresence mode="sync">
           {showFloorLabel && (
-            <motion.img
+            <motion.div
               key={selectedFloor || "1F"}
-              src={selectedFloor === "2F" ? floorLabel2F : selectedFloor === "3F" ? floorLabel3F : selectedFloor === "4F" ? floorLabel4F : floorLabel1F}
-              alt="Floor Label"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1592,7 +1576,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 pointerEvents: "none",
                 userSelect: "none",
               }}
-            />
+            >
+              <FloorLabel floor={(selectedFloor || "1F") as "1F" | "2F" | "3F" | "4F"} />
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -1692,178 +1678,102 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         >
           {/* 1F Button */}
           <div 
-            style={{ position: "relative", cursor: "pointer", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
-            onClick={() => setSelectedFloor("1F")}
+            style={{ position: "relative", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
           >
-            <img 
-              src={button1F} 
-              alt="1F" 
-              style={{ 
-                display: "block",
-                opacity: selectedFloor === "1F" ? 0 : 1,
-                transition: "opacity 0.3s ease-in-out",
-              }} 
+            <FloorSelectButton
+              floor="1F"
+              isSelected={selectedFloor === "1F"}
+              onClick={() => setSelectedFloor("1F")}
             />
-            <img 
-              src={button1FHighlight} 
-              alt="1F Highlight" 
-              style={{ 
-                position: "absolute",
-                top: 0,
-                left: 0,
-                display: "block",
-                opacity: selectedFloor === "1F" ? 1 : 0,
-                transition: "opacity 0.3s ease-in-out",
-                pointerEvents: "none",
-              }} 
-            />
-            <img 
-              src={iconCurrentFloor} 
-              alt="Current Floor" 
-              style={{ 
+            <div
+              style={{
                 position: "absolute",
                 top: "-15px",
                 left: "50%",
                 transform: "translateX(-50%)",
-                display: "block",
                 opacity: normalizeFloor(currentFloor) === "1F" ? 1 : 0,
                 transition: "opacity 0.3s ease-in-out",
                 pointerEvents: "none",
                 zIndex: 2,
-              }} 
-            />
+              }}
+            >
+              <CurrentFloorIcon />
+            </div>
           </div>
 
           {/* 2F Button */}
           <div 
-            style={{ position: "relative", cursor: "pointer", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
-            onClick={() => setSelectedFloor("2F")}
+            style={{ position: "relative", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
           >
-            <img 
-              src={button2F} 
-              alt="2F" 
-              style={{ 
-                display: "block",
-                opacity: selectedFloor === "2F" ? 0 : 1,
-                transition: "opacity 0.3s ease-in-out",
-              }} 
+            <FloorSelectButton
+              floor="2F"
+              isSelected={selectedFloor === "2F"}
+              onClick={() => setSelectedFloor("2F")}
             />
-            <img 
-              src={button2FHighlight} 
-              alt="2F Highlight" 
-              style={{ 
-                position: "absolute",
-                top: 0,
-                left: 0,
-                display: "block",
-                opacity: selectedFloor === "2F" ? 1 : 0,
-                transition: "opacity 0.3s ease-in-out",
-                pointerEvents: "none",
-              }} 
-            />
-            <img 
-              src={iconCurrentFloor} 
-              alt="Current Floor" 
-              style={{ 
+            <div
+              style={{
                 position: "absolute",
                 top: "-15px",
                 left: "50%",
                 transform: "translateX(-50%)",
-                display: "block",
                 opacity: normalizeFloor(currentFloor) === "2F" ? 1 : 0,
                 transition: "opacity 0.3s ease-in-out",
                 pointerEvents: "none",
                 zIndex: 2,
-              }} 
-            />
+              }}
+            >
+              <CurrentFloorIcon />
+            </div>
           </div>
 
           {/* 3F Button */}
           <div 
-            style={{ position: "relative", cursor: "pointer", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
-            onClick={() => setSelectedFloor("3F")}
+            style={{ position: "relative", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
           >
-            <img 
-              src={button3F} 
-              alt="3F" 
-              style={{ 
-                display: "block",
-                opacity: selectedFloor === "3F" ? 0 : 1,
-                transition: "opacity 0.3s ease-in-out",
-              }} 
+            <FloorSelectButton
+              floor="3F"
+              isSelected={selectedFloor === "3F"}
+              onClick={() => setSelectedFloor("3F")}
             />
-            <img 
-              src={button3FHighlight} 
-              alt="3F Highlight" 
-              style={{ 
-                position: "absolute",
-                top: 0,
-                left: 0,
-                display: "block",
-                opacity: selectedFloor === "3F" ? 1 : 0,
-                transition: "opacity 0.3s ease-in-out",
-                pointerEvents: "none",
-              }} 
-            />
-            <img 
-              src={iconCurrentFloor} 
-              alt="Current Floor" 
-              style={{ 
+            <div
+              style={{
                 position: "absolute",
                 top: "-15px",
                 left: "50%",
                 transform: "translateX(-50%)",
-                display: "block",
                 opacity: normalizeFloor(currentFloor) === "3F" ? 1 : 0,
                 transition: "opacity 0.3s ease-in-out",
                 pointerEvents: "none",
                 zIndex: 2,
-              }} 
-            />
+              }}
+            >
+              <CurrentFloorIcon />
+            </div>
           </div>
 
           {/* 4F Button */}
           <div 
-            style={{ position: "relative", cursor: "pointer", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
-            onClick={() => setSelectedFloor("4F")}
+            style={{ position: "relative", filter: "drop-shadow(0px 0px 6px rgba(0, 0, 0, 0.25))" }}
           >
-            <img 
-              src={button4F} 
-              alt="4F" 
-              style={{ 
-                display: "block",
-                opacity: selectedFloor === "4F" ? 0 : 1,
-                transition: "opacity 0.3s ease-in-out",
-              }} 
+            <FloorSelectButton
+              floor="4F"
+              isSelected={selectedFloor === "4F"}
+              onClick={() => setSelectedFloor("4F")}
             />
-            <img 
-              src={button4FHighlight} 
-              alt="4F Highlight" 
-              style={{ 
-                position: "absolute",
-                top: 0,
-                left: 0,
-                display: "block",
-                opacity: selectedFloor === "4F" ? 1 : 0,
-                transition: "opacity 0.3s ease-in-out",
-                pointerEvents: "none",
-              }} 
-            />
-            <img 
-              src={iconCurrentFloor} 
-              alt="Current Floor" 
-              style={{ 
+            <div
+              style={{
                 position: "absolute",
                 top: "-15px",
                 left: "50%",
                 transform: "translateX(-50%)",
-                display: "block",
                 opacity: normalizeFloor(currentFloor) === "4F" ? 1 : 0,
                 transition: "opacity 0.3s ease-in-out",
                 pointerEvents: "none",
                 zIndex: 2,
-              }} 
-            />
+              }}
+            >
+              <CurrentFloorIcon />
+            </div>
           </div>
         </div>
 
@@ -2080,13 +1990,12 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 onTouchStart={() => setPressedGenreNavButton("prev")}
                 onTouchEnd={() => setPressedGenreNavButton(null)}
               >
-                <img
-                  src={pressedGenreNavButton === "prev" ? buttonPrevHighlight : prev}
-                  alt="Previous"
+                <NavButton
+                  direction="prev"
+                  isPressed={pressedGenreNavButton === "prev"}
                   style={{
                     width: "22px",
                     height: "49px",
-                    display: "block",
                   }}
                 />
               </motion.div>
@@ -2202,13 +2111,12 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 onTouchStart={() => setPressedGenreNavButton("next")}
                 onTouchEnd={() => setPressedGenreNavButton(null)}
               >
-                <img
-                  src={pressedGenreNavButton === "next" ? buttonNextHighlight : next}
-                  alt="Next"
+                <NavButton
+                  direction="next"
+                  isPressed={pressedGenreNavButton === "next"}
                   style={{
                     width: "22px",
                     height: "49px",
-                    display: "block",
                   }}
                 />
               </motion.div>
@@ -2442,52 +2350,27 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   position: "absolute",
                   top: "0", // Align to top
                   right: "0",
-                  width: "70px",
-                  height: "70px",
-                  cursor: "pointer",
                   margin: "10px",
                   zIndex: 30, // Topmost
                 }}
-                onClick={() => {
-                  setSelectedShopDetail(null);
-                  setPressedCloseButton(false);
-                  
-                  // ショップへのフォーカス（ズーム）を解除
-                  if (transformComponentRef.current) {
-                    transformComponentRef.current.setTransform(0, 0, 1, 1000, "easeOut");
-                  }
-                }}
-                onMouseDown={() => setPressedCloseButton(true)}
-                onMouseUp={() => setPressedCloseButton(false)}
-                onMouseLeave={() => setPressedCloseButton(false)}
-                onTouchStart={() => setPressedCloseButton(true)}
-                onTouchEnd={() => setPressedCloseButton(false)}
               >
-                <img
-                  src={buttonClose}
-                  alt="Close"
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    height: "100%",
-                    opacity: pressedCloseButton ? 0 : 1,
-                    transition: "opacity 0.1s ease-in-out",
+                <CloseButton
+                  onClick={() => {
+                    setSelectedShopDetail(null);
+                    setPressedCloseButton(false);
+                    
+                    // ショップへのフォーカス（ズーム）を解除
+                    if (transformComponentRef.current) {
+                      transformComponentRef.current.setTransform(0, 0, 1, 1000, "easeOut");
+                    }
                   }}
-                />
-                <img
-                  src={buttonCloseHighlight}
-                  alt="Close Highlight"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    display: "block",
-                    width: "100%",
-                    height: "100%",
-                    opacity: pressedCloseButton ? 1 : 0,
-                    transition: "opacity 0.1s ease-in-out",
-                    pointerEvents: "none",
-                  }}
+                  onMouseDown={() => setPressedCloseButton(true)}
+                  onMouseUp={() => setPressedCloseButton(false)}
+                  onMouseLeave={() => setPressedCloseButton(false)}
+                  onTouchStart={() => setPressedCloseButton(true)}
+                  onTouchEnd={() => setPressedCloseButton(false)}
+                  isPressed={pressedCloseButton}
+                  style={{ width: "70px", height: "70px" }}
                 />
               </div>
 
@@ -2779,76 +2662,29 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           {/* Top Row: News Buttons */}
           <div style={{ display: "flex", flexDirection: "row", gap: "12px" }}>
             {/* Event News Button */}
-            <div 
-              style={{ position: "relative", cursor: "pointer" }}
+            <EventNewsButton
               onClick={() => setIsEventNewsModalOpen(true)}
+              isPressed={pressedNewsButton === "event"}
               onMouseDown={() => setPressedNewsButton("event")}
               onMouseUp={() => setPressedNewsButton(null)}
               onMouseLeave={() => setPressedNewsButton(null)}
               onTouchStart={() => setPressedNewsButton("event")}
               onTouchEnd={() => setPressedNewsButton(null)}
-            >
-              <img 
-                src={buttonEventNews} 
-                alt="Event News" 
-                style={{ 
-                  display: "block",
-                  opacity: pressedNewsButton === "event" ? 0 : 1,
-                  transition: "opacity 0.1s ease-in-out",
-                }} 
-              />
-              <img 
-                src={buttonEventNewsHighlight} 
-                alt="Event News Highlight" 
-                style={{ 
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  display: "block",
-                  opacity: pressedNewsButton === "event" ? 1 : 0,
-                  transition: "opacity 0.1s ease-in-out",
-                  pointerEvents: "none",
-                }} 
-              />
-            </div>
+            />
 
             {/* Shop News Button */}
-            <div 
-              style={{ position: "relative", cursor: "pointer" }}
-              onClick={() => setIsShopEventModalOpen(true)}
+            <ShopNewsButton
+              onClick={() => setIsShopNewsModalOpen(true)}
+              isPressed={pressedNewsButton === "shop"}
               onMouseDown={() => setPressedNewsButton("shop")}
               onMouseUp={() => setPressedNewsButton(null)}
               onMouseLeave={() => setPressedNewsButton(null)}
               onTouchStart={() => setPressedNewsButton("shop")}
               onTouchEnd={() => setPressedNewsButton(null)}
-            >
-              <img 
-                src={buttonShopNews} 
-                alt="Shop News"  
-                style={{ 
-                  display: "block",
-                  opacity: pressedNewsButton === "shop" ? 0 : 1,
-                  transition: "opacity 0.1s ease-in-out",
-                }} 
-              />
-              <img 
-                src={buttonShopNewsHighlight} 
-                alt="Shop News Highlight" 
-                style={{ 
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  display: "block",
-                  opacity: pressedNewsButton === "shop" ? 1 : 0,
-                  transition: "opacity 0.1s ease-in-out",
-                  pointerEvents: "none",
-                }} 
-              />
-            </div>
+            />
 
           {/* Open Time Button */}
-          <div 
-            style={{ position: "relative", cursor: "pointer" }}
+          <OpenTimeButton
             onClick={() => {
               // Toggle: If currently open, close and unpress. If closed, open and press.
               if (showOpenTime) {
@@ -2859,61 +2695,15 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 setPressedNewsButton("openTime"); // Keep highlighted while modal is open
               }
             }}
-          >
-            <img 
-              src={buttonOpenTime} 
-              alt="Open Time" 
-              style={{ 
-                display: "block",
-                opacity: pressedNewsButton === "openTime" ? 0 : 1,
-                transition: "opacity 0.1s ease-in-out",
-              }} 
-            />
-            <img 
-              src={buttonOpenTimeHighlight} 
-              alt="Open Time Highlight" 
-              style={{ 
-                position: "absolute",
-                top: 0,
-                left: 0,
-                display: "block",
-                opacity: pressedNewsButton === "openTime" ? 1 : 0,
-                transition: "opacity 0.1s ease-in-out",
-                pointerEvents: "none",
-              }} 
-            />
-          </div>
+            isPressed={pressedNewsButton === "openTime"}
+          />
           </div>
 
           {/* Bottom Row: Language Selector */}
-          <div 
-            ref={languageButtonRef}
-            style={{ position: "relative", cursor: "pointer" }}
-            onClick={() => setIsLanguageModalOpen((prev) => !prev)}
-          >
-            {/* JP Image */}
-            <img 
-              src={selectLanguageSelectedJp}
-              alt="Language JP"
-              style={{
-                display: "block",
-                opacity: selectedLanguage === "ja" ? 1 : 0,
-                transition: "opacity 0.3s ease-in-out",
-              }}
-            />
-            {/* EN Image (Overlay) */}
-            <img 
-              src={selectLanguageSelectedEn}
-              alt="Language EN"
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                display: "block",
-                opacity: selectedLanguage === "en" ? 1 : 0,
-                transition: "opacity 0.3s ease-in-out",
-                pointerEvents: "none",
-              }}
+          <div ref={languageButtonRef}>
+            <LanguageSelectButton
+              language={selectedLanguage}
+              onClick={() => setIsLanguageModalOpen((prev) => !prev)}
             />
           </div>
         </div>
@@ -2942,9 +2732,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       />
 
       {/* Shop Event Modal */}
-      <ShopEventModal
-        isOpen={isShopEventModalOpen}
-        onClose={() => setIsShopEventModalOpen(false)}
+      <ShopNewsModal
+        isOpen={isShopNewsModalOpen}
+        onClose={() => setIsShopNewsModalOpen(false)}
         shops={shops}
         news={shopNews}
         language={selectedLanguage}

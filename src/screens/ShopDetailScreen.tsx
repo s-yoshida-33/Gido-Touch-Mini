@@ -1,16 +1,12 @@
 // src/screens/ShopDetailScreen.tsx
 import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import buttonClose from "../assets/button-close.svg";
-import buttonCloseHighlight from "../assets/button-close-highlight.svg";
+import { CloseButton } from "../components/CloseButton";
 import floor1FMap from "../assets/floor-1F-map.svg";
 import floor2FMap from "../assets/floor-2F-map.svg";
 import floor3FMap from "../assets/floor-3F-map.svg";
 import floor4FMap from "../assets/floor-4F-map.svg";
-import floorLabel1F from "../assets/floor-label-1F.svg";
-import floorLabel2F from "../assets/floor-label-2F.svg";
-import floorLabel3F from "../assets/floor-label-3F.svg";
-import floorLabel4F from "../assets/floor-label-4F.svg";
+import { FloorLabel } from "../components/FloorLabel";
 import zoomIn from "../assets/zoom-in.svg";
 import zoomOut from "../assets/zoom-out.svg";
 import zoomInHighlight from "../assets/zoom-in-highlight.svg";
@@ -319,6 +315,7 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
   const [zoomOutClicked, setZoomOutClicked] = useState(false);
   const [resetHovered, setResetHovered] = useState(false);
   const [resetClicked, setResetClicked] = useState(false);
+  const [closeButtonPressed, setCloseButtonPressed] = useState(false);
   const displayAreaRef = useRef<HTMLDivElement>(null);
 
   const floor = shop.floors && shop.floors.length > 0 ? shop.floors[0] : "";
@@ -346,26 +343,15 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
       default: return floor1FMap;
     }
   };
-  const getFloorLabel = () => {
-    switch (normalizedFloor) {
-      case "1F": return floorLabel1F;
-      case "2F": return floorLabel2F;
-      case "3F": return floorLabel3F;
-      case "4F": return floorLabel4F;
-      default: return floorLabel1F;
-    }
-  };
-
   const mapImage = getMapImage();
-  const floorLabel = getFloorLabel();
 
   return (
     <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0, 0, 0, 0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
       <div style={{ width: "1250px", height: "840px", backgroundColor: "#FFFFFF", borderRadius: "25px", position: "relative", display: "flex", flexDirection: "row", overflow: "hidden" }}>
         <div style={{ flex: 1, width: "900px", height: "100%", backgroundColor: "#D9D9D9", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div ref={displayAreaRef} style={{ width: "850px", height: "790px", backgroundColor: "#FFFFFF", overflow: "hidden", position: "relative" }}>
-            <div style={{ position: "absolute", top: "15px", left: "15px", zIndex: 10, pointerEvents: "none" }}>
-              <img src={floorLabel} alt={`${normalizedFloor} label`} draggable={false} onDragStart={(e) => e.preventDefault()} style={{ display: "block", width: "50%", height: "auto" }} />
+            <div style={{ position: "absolute", top: "15px", left: "15px", zIndex: 10, pointerEvents: "none", width: "50%" }}>
+              <FloorLabel floor={normalizedFloor as "1F" | "2F" | "3F" | "4F"} style={{ width: "100%", aspectRatio: "3/2" }} />
             </div>
             <TransformWrapper
               initialScale={1}
@@ -550,40 +536,15 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
         </div>
       </div>
       <div
-        onClick={(e) => { e.stopPropagation(); onClose(); }}
-        style={{ position: "absolute", top: "calc(50% - 420px)", right: "calc(50% - 625px)", transform: "translateY(-100%)", marginTop: "-15px", width: "70px", height: "70px", border: "none", background: "transparent", cursor: "pointer", padding: 0, zIndex: 1001 }}
-        onTouchStart={(e) => {
-          const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-          if (highlight) highlight.style.opacity = "1";
-        }}
-        onTouchEnd={(e) => {
-          const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-          if (highlight) highlight.style.opacity = "0";
-        }}
-        onTouchCancel={(e) => {
-          const highlight = e.currentTarget.querySelector(".highlight") as HTMLElement;
-          if (highlight) highlight.style.opacity = "0";
-        }}
+        style={{ position: "absolute", top: "calc(50% - 420px)", right: "calc(50% - 625px)", transform: "translateY(-100%)", marginTop: "-15px", zIndex: 1001 }}
       >
-        <img src={buttonClose} alt="Close" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "100%", height: "100%", display: "block", position: "relative", zIndex: 1 }} />
-        <img 
-          src={buttonCloseHighlight} 
-          alt="Close Highlight" 
-          className="highlight"
-          draggable={false} 
-          onDragStart={(e) => e.preventDefault()} 
-          style={{ 
-            position: "absolute", 
-            top: 0, 
-            left: 0, 
-            width: "100%", 
-            height: "100%", 
-            display: "block", 
-            opacity: 0, 
-            transition: "opacity 0.3s ease-in-out", 
-            pointerEvents: "none",
-            zIndex: 2
-          }} 
+        <CloseButton
+          onClick={(e) => { e?.stopPropagation(); onClose(); }}
+          onTouchStart={() => setCloseButtonPressed(true)}
+          onTouchEnd={() => setCloseButtonPressed(false)}
+          onTouchCancel={() => setCloseButtonPressed(false)}
+          isPressed={closeButtonPressed}
+          style={{ width: "70px", height: "70px" }}
         />
       </div>
     </div>

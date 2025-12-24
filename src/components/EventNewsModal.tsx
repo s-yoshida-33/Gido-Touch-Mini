@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import buttonClose from "../assets/button-close.svg";
-import buttonCloseHighlight from "../assets/button-close-highlight.svg";
+import { CloseButton } from "./CloseButton";
 import iconDate from "../assets/icon_date.svg";
 import iconTime from "../assets/icon-time.svg";
 import iconLocation from "../assets/icon-location.svg";
@@ -482,43 +481,18 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                 position: "absolute",
                 top: "-85px",
                 right: "0px",
-                width: "70px",
-                height: "70px",
-                cursor: "pointer",
                 zIndex: 1002,
               }}
-              onClick={onClose}
-              onMouseDown={() => setIsPressed(true)}
-              onMouseUp={() => setIsPressed(false)}
-              onMouseLeave={() => setIsPressed(false)}
-              onTouchStart={() => setIsPressed(true)}
-              onTouchEnd={() => setIsPressed(false)}
             >
-              <img
-                src={buttonClose}
-                alt="Close"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  height: "100%",
-                  opacity: isPressed ? 0 : 1,
-                  transition: "opacity 0.1s ease-in-out",
-                }}
-              />
-              <img
-                src={buttonCloseHighlight}
-                alt="Close Highlight"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  display: "block",
-                  width: "100%",
-                  height: "100%",
-                  opacity: isPressed ? 1 : 0,
-                  transition: "opacity 0.1s ease-in-out",
-                  pointerEvents: "none",
-                }}
+              <CloseButton
+                onClick={onClose}
+                onMouseDown={() => setIsPressed(true)}
+                onMouseUp={() => setIsPressed(false)}
+                onMouseLeave={() => setIsPressed(false)}
+                onTouchStart={() => setIsPressed(true)}
+                onTouchEnd={() => setIsPressed(false)}
+                isPressed={isPressed}
+                style={{ width: "70px", height: "70px" }}
               />
             </div>
           </motion.div>

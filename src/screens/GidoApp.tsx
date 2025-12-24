@@ -25,7 +25,7 @@ import { PictoPin } from "../components/PictoPin";
 import { logInfo, logError } from "../logs/logging";
 
 // Load picto icons
-const pictoIcons = import.meta.glob('../assets/picto/*.svg', { eager: true, query: '?url' });
+const pictoIcons = import.meta.glob('../assets/pictos/*.svg', { eager: true, query: '?url' });
 
 
 const LIST_HEIGHT_VH = APP_CONFIG.listHeightVh;
@@ -464,8 +464,11 @@ const ShopPinsOverlay: React.FC<{
     return Object.values(instances)
       .filter(instance => instance.floor === normalizedFloor)
       .map(instance => {
-         // Find URL from pictoIcons based on filename match
-         const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(instance.iconName));
+         // Find URL from pictoIcons based on exact filename match (exclude button files)
+         const entry = Object.entries(pictoIcons).find(([p]) => {
+           const fileName = p.split('/').pop() || "";
+           return fileName === instance.iconName && !fileName.startsWith('button-');
+         });
          const iconUrl = entry ? (entry[1] as any).default : "";
          
          if (!iconUrl) return null;

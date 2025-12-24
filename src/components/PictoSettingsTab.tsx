@@ -4,7 +4,7 @@ import type { PictoSettings, PictoInstance, PictoTag } from "../types/picto";
 import type { AnimationConfig, AnimationType, ShadowConfig } from "../types/locationIcon";
 
 // Picto icons glob import
-const pictoIcons = import.meta.glob('../assets/picto/*.svg', { eager: true, query: '?url' });
+const pictoIcons = import.meta.glob('../assets/pictos/*.svg', { eager: true, query: '?url' });
 
 const PICTO_TAGS: { id: PictoTag; label: string }[] = [
   { id: "info", label: "Info" },
@@ -81,12 +81,19 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
   // Extract filename from path for display/storage
   const getFileName = (path: string) => path.split('/').pop() || "";
   
-  // Sorted list of icons for dropdown
+  // Sorted list of icons for dropdown (exclude button files)
   const iconOptions = useMemo(() => {
-    return Object.keys(pictoIcons).map(path => ({
+    return Object.keys(pictoIcons)
+      .filter(path => {
+        const fileName = getFileName(path);
+        // Exclude button files (button-* and button-*-highlight)
+        return !fileName.startsWith('button-');
+      })
+      .map(path => ({
         path,
         name: getFileName(path)
-    })).sort((a, b) => a.name.localeCompare(b.name));
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, []);
 
   // Filter instances by current floor
@@ -267,9 +274,12 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
                   }}
                 >
                   <div style={{ width: 30, height: 30, backgroundColor: "#fff", borderRadius: 4, padding: 2 }}>
-                    {/* Find URL from pictoIcons based on filename match */}
+                    {/* Find URL from pictoIcons based on exact filename match (exclude button files) */}
                     {(() => {
-                        const entry = Object.entries(pictoIcons).find(([p]) => p.endsWith(inst.iconName));
+                        const entry = Object.entries(pictoIcons).find(([p]) => {
+                          const fileName = p.split('/').pop() || "";
+                          return fileName === inst.iconName && !fileName.startsWith('button-');
+                        });
                         return entry ? <img src={(entry[1] as any).default} style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null;
                     })()}
                   </div>

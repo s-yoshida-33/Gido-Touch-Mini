@@ -1,11 +1,6 @@
 // src/components/LanguageSelectModal.tsx
 import React, { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import selectLanguageBg from "../assets/select-language-bg.svg";
-import selectLanguageJp from "../assets/select-language-jp.svg";
-import selectLanguageJpHighlight from "../assets/select-language-jp-highlight.svg";
-import selectLanguageEn from "../assets/select-language-en.svg";
-import selectLanguageEnHighlight from "../assets/select-language-en-highlight.svg";
 
 interface LanguageSelectModalProps {
   isOpen: boolean;
@@ -57,30 +52,6 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
     }
   }, [isOpen]);
 
-  // Handle click outside to close logic is handled by the backdrop click
-  // Removing the document-level mousedown listener to avoid conflicts with the toggle button
-  /*
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen, onClose, buttonRef]);
-  */
-
   // Handle escape key
   useEffect(() => {
     if (!isOpen) return;
@@ -106,10 +77,9 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
     const buttonRect = buttonRef.current.getBoundingClientRect();
     const modalWidth = 400; // Original SVG width
     const modalHeight = 201; // Original SVG height
-    const gap = 30; // Gap between button and modal
 
     // Position above the button, centered horizontally
-    const top = buttonRect.top - modalHeight - gap;
+    const top = buttonRect.top - modalHeight;
     const left = buttonRect.left + buttonRect.width / 2 - modalWidth / 2;
 
     return { top, left };
@@ -143,19 +113,13 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
     setPressedLanguage(null);
   };
 
-  // Determine which image to show for each language
-  const getJapaneseImage = () => {
-    if (pressedLanguage === "ja") return selectLanguageJpHighlight;
-    if (hoveredLanguage === "ja") return selectLanguageJpHighlight;
-    if (selectedLanguage === "ja") return selectLanguageJpHighlight;
-    return selectLanguageJp;
+  // Determine if language option should be highlighted
+  const isJapaneseHighlighted = (): boolean => {
+    return pressedLanguage === "ja" || hoveredLanguage === "ja" || selectedLanguage === "ja";
   };
 
-  const getEnglishImage = () => {
-    if (pressedLanguage === "en") return selectLanguageEnHighlight;
-    if (hoveredLanguage === "en") return selectLanguageEnHighlight;
-    if (selectedLanguage === "en") return selectLanguageEnHighlight;
-    return selectLanguageEn;
+  const isEnglishHighlighted = (): boolean => {
+    return pressedLanguage === "en" || hoveredLanguage === "en" || selectedLanguage === "en";
   };
 
   return (
@@ -189,16 +153,18 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
               top: `${position.top}px`,
               left: `${position.left}px`,
               width: "400px",
-              height: "263px",
+              height: "201px",
               zIndex: 1000,
               pointerEvents: "auto",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Background */}
-            <img
-              src={selectLanguageBg}
-              alt="Language Select Background"
+            <svg
+              width="400"
+              height="201"
+              viewBox="0 0 400 201"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
               style={{
                 position: "absolute",
                 top: 0,
@@ -207,8 +173,23 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
                 height: "100%",
                 pointerEvents: "none",
               }}
-              draggable={false}
-            />
+            >
+              <rect
+                x="0"
+                y="0"
+                width="400"
+                height="183.01"
+                rx="12"
+                ry="12"
+                fill="black"
+                fillOpacity="0.7"
+              />
+              <path
+                d="M203.48 199.434C201.948 201.522 198.052 201.522 196.52 199.434L183 183.01H217L203.48 199.434Z"
+                fill="black"
+                fillOpacity="0.7"
+              />
+            </svg>
 
             {/* Japanese option (top) */}
             <div
@@ -220,27 +201,30 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
               onTouchEnd={() => handleMouseUp("ja")}
               style={{
                 position: "absolute",
-                top: "55px", // Vertically centered in 183px body: (183 - (59*2 + 15)) / 2 = 25px
-                left: "20px", // Centered (400 - 360) / 2
+                top: "25px",
+                left: "20px",
                 width: "360px",
                 height: "59px",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                backgroundColor: isJapaneseHighlighted() ? "#E63B93" : "white",
+                borderRadius: "10px",
+                transition: "background-color 0.1s ease-in-out",
               }}
             >
-              <img
-                src={getJapaneseImage()}
-                alt="日本語"
+              <span
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                  pointerEvents: "none",
+                  color: isJapaneseHighlighted() ? "white" : "black",
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  fontFamily: "'Rounded Mplus 1c', sans-serif",
+                  userSelect: "none",
                 }}
-                draggable={false}
-              />
+              >
+                日本語
+              </span>
             </div>
 
             {/* English option (bottom) */}
@@ -253,27 +237,30 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
               onTouchEnd={() => handleMouseUp("en")}
               style={{
                 position: "absolute",
-                top: "129px", // 25px top + 59px button + 15px gap
-                left: "20px", // Centered (400 - 360) / 2
+                top: "99px",
+                left: "20px",
                 width: "360px",
                 height: "59px",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                backgroundColor: isEnglishHighlighted() ? "#E63B93" : "white",
+                borderRadius: "10px",
+                transition: "background-color 0.1s ease-in-out",
               }}
             >
-              <img
-                src={getEnglishImage()}
-                alt="English"
+              <span
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                  pointerEvents: "none",
+                  color: isEnglishHighlighted() ? "white" : "black",
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  fontFamily: "'Rounded Mplus 1c', sans-serif",
+                  userSelect: "none",
                 }}
-                draggable={false}
-              />
+              >
+                English
+              </span>
             </div>
           </motion.div>
         </>
