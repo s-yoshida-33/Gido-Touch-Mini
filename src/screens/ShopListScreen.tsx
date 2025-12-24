@@ -594,50 +594,31 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   const animationDuration = isRapidSwitch ? 0.2 : 0.5;
 
   // Ref to track the latest floor request to ensure we always process the most recent one
+  // This helps prevent race conditions during rapid floor switching
   const latestFloorRequestRef = useRef<string | null>(null);
-  const floorUpdateRafRef = useRef<number | null>(null);
 
   // Wrapper for setting selected floor
   // Use useCallback to make it stable for useEffect dependencies
   // Synchronous update to prevent floor display and map from getting out of sync
   // Always process the latest floor request to prevent race conditions during rapid switching
   const setSelectedFloor = useCallback((newFloor: string | null) => {
-    // Store the latest request
+    // Store the latest request immediately
     latestFloorRequestRef.current = newFloor;
     
-    // Clear any pending animation frame
-    if (floorUpdateRafRef.current !== null) {
-      cancelAnimationFrame(floorUpdateRafRef.current);
-    }
-    
-    // Use requestAnimationFrame to batch updates and ensure we always use the latest value
-    // This ensures that even if multiple floor changes happen in quick succession,
-    // only the latest one will be applied
-    floorUpdateRafRef.current = requestAnimationFrame(() => {
+    // Update state synchronously to ensure immediate consistency
+    // Always use the latest request from the ref to handle rapid switching
+    setSelectedFloorState((prevFloor) => {
       const latestFloor = latestFloorRequestRef.current;
       
-      setSelectedFloorState((prevFloor) => {
-        if (latestFloor === prevFloor) return prevFloor;
-        
-        // Reset zoom on floor change
-        if (transformComponentRef.current) {
-          transformComponentRef.current.resetTransform();
-        }
-
-        return latestFloor;
-      });
+      if (latestFloor === prevFloor) return prevFloor;
       
-      floorUpdateRafRef.current = null;
-    });
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (floorUpdateRafRef.current !== null) {
-        cancelAnimationFrame(floorUpdateRafRef.current);
+      // Reset zoom on floor change
+      if (transformComponentRef.current) {
+        transformComponentRef.current.resetTransform();
       }
-    };
+
+      return latestFloor;
+    });
   }, []);
 
   // ピクトアイコン選択時の自動フロア切り替え
@@ -1072,6 +1053,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     }
 
     // 1. Filter by Floor -> REMOVED (Replaced by Sort)
+    // Floor filtering is not applied - instead, shops on the selected floor are prioritized in sorting
+    // This allows all shops to be visible while showing selected floor shops at the top
     /*
     if (selectedFloor) {
       const normalizedSelectedFloor = normalizeFloor(selectedFloor);
@@ -1441,8 +1424,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 onClick={handleMapClick}
               >
                 {/* Map with all overlays (icons, pictos) as a single animated unit */}
-                {/* Use "sync" mode during rapid switching to ensure map and floor display stay in sync */}
-                <AnimatePresence initial={false} custom={floorDirection} mode={isRapidSwitch ? "sync" : "popLayout"}>
+                {/* Use "popLayout" mode to allow smooth animations while ensuring latest floor is always shown */}
+                <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
                   <motion.div
                     key={selectedFloor || "1F"}
                     custom={floorDirection}
