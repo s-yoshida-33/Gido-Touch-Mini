@@ -593,20 +593,51 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Calculate animation duration based on rapid switching
   const animationDuration = isRapidSwitch ? 0.2 : 0.5;
 
+  // Ref to track the latest floor request to ensure we always process the most recent one
+  const latestFloorRequestRef = useRef<string | null>(null);
+  const floorUpdateRafRef = useRef<number | null>(null);
+
   // Wrapper for setting selected floor
   // Use useCallback to make it stable for useEffect dependencies
   // Synchronous update to prevent floor display and map from getting out of sync
+  // Always process the latest floor request to prevent race conditions during rapid switching
   const setSelectedFloor = useCallback((newFloor: string | null) => {
-    setSelectedFloorState((prevFloor) => {
-      if (newFloor === prevFloor) return prevFloor;
+    // Store the latest request
+    latestFloorRequestRef.current = newFloor;
+    
+    // Clear any pending animation frame
+    if (floorUpdateRafRef.current !== null) {
+      cancelAnimationFrame(floorUpdateRafRef.current);
+    }
+    
+    // Use requestAnimationFrame to batch updates and ensure we always use the latest value
+    // This ensures that even if multiple floor changes happen in quick succession,
+    // only the latest one will be applied
+    floorUpdateRafRef.current = requestAnimationFrame(() => {
+      const latestFloor = latestFloorRequestRef.current;
       
-      // Reset zoom on floor change
-      if (transformComponentRef.current) {
-        transformComponentRef.current.resetTransform();
-      }
+      setSelectedFloorState((prevFloor) => {
+        if (latestFloor === prevFloor) return prevFloor;
+        
+        // Reset zoom on floor change
+        if (transformComponentRef.current) {
+          transformComponentRef.current.resetTransform();
+        }
 
-      return newFloor;
+        return latestFloor;
+      });
+      
+      floorUpdateRafRef.current = null;
     });
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (floorUpdateRafRef.current !== null) {
+        cancelAnimationFrame(floorUpdateRafRef.current);
+      }
+    };
   }, []);
 
   // ピクトアイコン選択時の自動フロア切り替え
@@ -1410,6 +1441,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 onClick={handleMapClick}
               >
                 {/* Map with all overlays (icons, pictos) as a single animated unit */}
+                {/* Use "sync" mode during rapid switching to ensure map and floor display stay in sync */}
                 <AnimatePresence initial={false} custom={floorDirection} mode={isRapidSwitch ? "sync" : "popLayout"}>
                   <motion.div
                     key={selectedFloor || "1F"}
