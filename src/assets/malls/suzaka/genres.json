@@ -1,0 +1,94 @@
+{
+  "genres": [
+    {
+      "id": "all",
+      "name": {
+        "ja": "すべて",
+        "en": "All"
+      },
+      "iconFile": "icon-all.svg",
+      "order": 0
+    },
+    {
+      "id": "fashion",
+      "name": {
+        "ja": "ファッション",
+        "en": "Fashion"
+      },
+      "iconFile": "icon-fashion.svg",
+      "genreMatch": "ファッション",
+      "order": 1
+    },
+    {
+      "id": "fashion_goods",
+      "name": {
+        "ja": "ファッション雑貨",
+        "en": "Fashion Goods"
+      },
+      "iconFile": "icon-fashion-goods.svg",
+      "genreMatch": "ファッション雑貨",
+      "order": 2
+    },
+    {
+      "id": "sport",
+      "name": {
+        "ja": "スポーツ・アウトドア",
+        "en": "Sport"
+      },
+      "iconFile": "icon-sport.svg",
+      "genreMatch": "スポーツ・アウトドア",
+      "order": 3
+    },
+    {
+      "id": "kids",
+      "name": {
+        "ja": "キッズ",
+        "en": "Kids"
+      },
+      "iconFile": "icon-kids.svg",
+      "genreMatch": "キッズ",
+      "order": 4
+    },
+    {
+      "id": "lifestyle",
+      "name": {
+        "ja": "ライフスタイル",
+        "en": "Lifestyle"
+      },
+      "iconFile": "icon-lifestyle.svg",
+      "genreMatch": "ライフスタイル",
+      "order": 5
+    },
+    {
+      "id": "gourmet",
+      "name": {
+        "ja": "グルメ",
+        "en": "Gourmet"
+      },
+      "iconFile": "icon-gourmet.svg",
+      "genreMatch": "グルメ",
+      "order": 6
+    },
+    {
+      "id": "entertainment",
+      "name": {
+        "ja": "エンターテインメント",
+        "en": "Entertainment"
+      },
+      "iconFile": "icon-entertainment.svg",
+      "genreMatch": "エンターテインメント",
+      "order": 7
+    },
+    {
+      "id": "service",
+      "name": {
+        "ja": "サービス",
+        "en": "Service"
+      },
+      "iconFile": "icon-survice.svg",
+      "genreMatch": "サービス",
+      "order": 8
+    }
+  ]
+}
+

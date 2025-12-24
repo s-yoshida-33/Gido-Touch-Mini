@@ -204,6 +204,7 @@ function loadSettings() {
   const defaultPictoSettings = loadDefaultPictoSettings();
   
   const base = {
+    mallId: 'suzaka', // デフォルトは須坂
     floor: '1F',
     locationIcons: createDefaultPerFloorSettings(),
     shopPositions: defaultShopPositions,
@@ -716,6 +717,21 @@ ipcMain.handle('settings:get-floor', () => {
   return settings.floor;
 });
 
+ipcMain.handle('get-mall-id', () => {
+  const settings = loadSettings();
+  const mallId = settings.mallId || 'suzaka';
+  logger.debug('IPC get-mall-id', { mallId });
+  return mallId;
+});
+
+ipcMain.handle('set-mall-id', async (_event, mallId) => {
+  const current = loadSettings();
+  const updated = { ...current, mallId };
+  saveSettings({ mallId });
+  logger.info('Mall ID updated', { mallId });
+  return mallId;
+});
+
 ipcMain.handle('get-app-version', () => {
   const version = app.getVersion();
   logger.debug('IPC get-app-version', { version });
@@ -947,6 +963,62 @@ ipcMain.handle('get-shop-image', async (_event, filePath) => {
       error: error?.message,
       filePath,
     });
+    return null;
+  }
+});
+
+/**
+ * Get mall assets base path (development or production)
+ */
+function getMallAssetsBasePath() {
+  if (isDev) {
+    // Development: project root/src/assets/malls
+    // Use process.cwd() to get the project root directory
+    return path.join(process.cwd(), 'src', 'assets', 'malls');
+  } else {
+    // Production: resources/assets/malls
+    return path.join(process.resourcesPath, 'assets', 'malls');
+  }
+}
+
+/**
+ * IPC handler for reading mall config files (genres.json, pictos.json)
+ */
+ipcMain.handle('read-mall-config', async (_event, mallId, configType) => {
+  try {
+    const basePath = getMallAssetsBasePath();
+    const configPath = path.join(basePath, mallId, `${configType}.json`);
+    
+    if (!fs.existsSync(configPath)) {
+      logger.warn('Mall config not found', { mallId, configType, configPath });
+      return null;
+    }
+    
+    const content = fs.readFileSync(configPath, 'utf-8');
+    return JSON.parse(content);
+  } catch (error) {
+    logger.error('Failed to read mall config', { error: error?.message, mallId, configType });
+    return null;
+  }
+});
+
+/**
+ * IPC handler for reading mall asset files (SVG images)
+ */
+ipcMain.handle('read-mall-asset', async (_event, relativePath) => {
+  try {
+    const basePath = getMallAssetsBasePath();
+    const fullPath = path.join(basePath, relativePath);
+    
+    if (!fs.existsSync(fullPath)) {
+      logger.warn('Mall asset not found', { relativePath, fullPath });
+      return null;
+    }
+    
+    // Return as data URL for images
+    return readImageFileAsDataUrl(fullPath);
+  } catch (error) {
+    logger.error('Failed to read mall asset', { error: error?.message, relativePath });
     return null;
   }
 });

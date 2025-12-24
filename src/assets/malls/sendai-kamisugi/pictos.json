@@ -1,0 +1,93 @@
+{
+  "pictos": [
+    {
+      "id": "info",
+      "tag": "info",
+      "name": {
+        "ja": "インフォメーション",
+        "en": "Information"
+      },
+      "buttonFile": "button-info.svg",
+      "iconFile": "info.svg",
+      "order": 0
+    },
+    {
+      "id": "restroom",
+      "tag": "restroom",
+      "name": {
+        "ja": "トイレ",
+        "en": "Restroom"
+      },
+      "buttonFile": "button-restroom.svg",
+      "iconFile": "sharedRestroom.svg",
+      "order": 1
+    },
+    {
+      "id": "priority_restroom",
+      "tag": "priority_restroom",
+      "name": {
+        "ja": "優先トイレ",
+        "en": "Priority Restroom"
+      },
+      "buttonFile": "button-priority-restroom.svg",
+      "iconFile": "priorityRestroom.svg",
+      "order": 2
+    },
+    {
+      "id": "baby_room",
+      "tag": "baby_room",
+      "name": {
+        "ja": "ベビールーム",
+        "en": "Baby Room"
+      },
+      "buttonFile": "button-baby-room.svg",
+      "iconFile": "babyRoom.svg",
+      "order": 3
+    },
+    {
+      "id": "smoking_room",
+      "tag": "smoking_room",
+      "name": {
+        "ja": "喫煙所",
+        "en": "Smoking Room"
+      },
+      "buttonFile": "button-smoking-room.svg",
+      "iconFile": "smokingArea.svg",
+      "order": 4
+    },
+    {
+      "id": "atm",
+      "tag": "atm",
+      "name": {
+        "ja": "ATM",
+        "en": "ATM"
+      },
+      "buttonFile": "button-ATM.svg",
+      "iconFile": "atm.svg",
+      "order": 5
+    },
+    {
+      "id": "elevator",
+      "tag": "elevator",
+      "name": {
+        "ja": "エレベーター",
+        "en": "Elevator"
+      },
+      "buttonFile": "button-elevator.svg",
+      "iconFile": "elevator.svg",
+      "order": 6
+    },
+    {
+      "id": "bus_stop",
+      "tag": "bus_stop",
+      "name": {
+        "ja": "バス停",
+        "en": "Bus Stop"
+      },
+      "buttonFile": "button-bus-stop.svg",
+      "iconFile": "busStop.svg",
+      "order": 7
+    }
+  ]
+}
+

@@ -35,6 +35,11 @@
         "from": "media",
         "to": "media",
         "filter": ["**/*"]
+      },
+      {
+        "from": "dist/assets/malls",
+        "to": "assets/malls",
+        "filter": ["**/*"]
       }
     ],
     "win": {

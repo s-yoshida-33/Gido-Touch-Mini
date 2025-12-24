@@ -38,6 +38,12 @@ interface ElectronAPI {
   savePictoSettings: (settings: PictoSettings) => Promise<PictoSettings>;
   onPictoSettingsUpdated: (cb: (settings: PictoSettings) => void) => () => void;
 
+  // Mall Settings
+  getMallId: () => Promise<string>;
+  setMallId: (mallId: string) => Promise<void>;
+  readMallConfig: (mallId: string, configType: 'genres' | 'pictos') => Promise<any>;
+  readMallAsset: (relativePath: string) => Promise<string | null>;
+
   manualUpdateCheck: () => void;
   oneClickUpdate: () => void;
   quitApp: () => void;

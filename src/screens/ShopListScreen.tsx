@@ -4,63 +4,28 @@ import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchContentRef } from "react-zoom-pan-pinch";
 import { FloorSelectButton } from "../components/FloorSelectButton";
 import { NavButton } from "../components/NavButton";
-import floor1FMap from "../assets/floor-1F-map.svg";
-import floor2FMap from "../assets/floor-2F-map.svg";
-import floor3FMap from "../assets/floor-3F-map.svg";
-import floor4FMap from "../assets/floor-4F-map.svg";
 import { FloorLabel } from "../components/FloorLabel";
 import { CurrentFloorIcon } from "../components/CurrentFloorIcon";
 import { LanguageSelectButton } from "../components/LanguageSelectButton";
 import openTime from "../assets/open-time.svg";
 import iconSearch from "../assets/icon_search.svg";
-import iconAll from "../assets/genres/icon_all.svg";
-import iconAllHighlight from "../assets/genres/icon_all_highlight.svg";
-import iconFashion from "../assets/genres/icon_fashion.svg";
-import iconFashionHighlight from "../assets/genres/icon_fashion_highlight.svg";
-import iconFashionGoods from "../assets/genres/icon_fashion_goods.svg";
-import iconFashionGoodsHighlight from "../assets/genres/icon_fashion_goods_highlight.svg";
-import iconSport from "../assets/genres/icon_sport.svg";
-import iconSportHighlight from "../assets/genres/icon_sport_highlight.svg";
-import iconKids from "../assets/genres/icon_kids.svg";
-import iconKidsHighlight from "../assets/genres/icon_kids_highlight.svg";
-import iconLifestyle from "../assets/genres/icon_lifestyle.svg";
-import iconLifestyleHighlight from "../assets/genres/icon_lifestyle_highlight.svg";
-import iconGourmet from "../assets/genres/icon_gourmet.svg";
-import iconGourmetHighlight from "../assets/genres/icon_gourmet_highlight.svg";
-import iconEntertainment from "../assets/genres/icon_entertainment.svg";
-import iconEntertainmentHighlight from "../assets/genres/icon_entertainment_highlight.svg";
-import iconService from "../assets/genres/icon_survice.svg";
-import iconServiceHighlight from "../assets/genres/icon_survice_highlight.svg";
+// Genre icons are now loaded dynamically from mall-specific directories
 import iconTime from "../assets/icon-time.svg";
 import iconTel from "../assets/icon-tel.svg";
 import iconLocation from "../assets/icon-location.svg";
 import { EventNewsButton } from "../components/EventNewsButton";
 import { ShopNewsButton } from "../components/ShopNewsButton";
 import { OpenTimeButton } from "../components/OpenTimeButton";
-import zoomIn from "../assets/zoom-in.svg";
-import zoomInHighlight from "../assets/zoom-in-highlight.svg";
-import zoomOut from "../assets/zoom-out.svg";
-import zoomOutHighlight from "../assets/zoom-out-highlight.svg";
-import buttonInfo from "../assets/pictos/button-info.svg";
-import buttonInfoHighlight from "../assets/pictos/button-info-highlight.svg";
-import buttonRestroom from "../assets/pictos/button-restroom.svg";
-import buttonRestroomHighlight from "../assets/pictos/button-restroom-highlight.svg";
-import buttonPriorityRestroom from "../assets/pictos/button-priority-restroom.svg";
-import buttonPriorityRestroomHighlight from "../assets/pictos/button-priority-restroom-highlight.svg";
-import buttonBabyRoom from "../assets/pictos/button-baby-room.svg";
-import buttonBabyRoomHighlight from "../assets/pictos/button-baby-room-highlight.svg";
-import buttonSmokingRoom from "../assets/pictos/button-smoking-room.svg";
-import buttonSmokingRoomHighlight from "../assets/pictos/button-smoking-room-highlight.svg";
-import buttonFreeCoinLockers from "../assets/pictos/button-free-coin-lockers.svg";
-import buttonFreeCoinLockersHighlight from "../assets/pictos/button-free-coin-lockers-highlight.svg";
-import buttonATM from "../assets/pictos/button-ATM.svg";
-import buttonATMHighlight from "../assets/pictos/button-ATM-highlight.svg";
-import buttonElevator from "../assets/pictos/button-elevator.svg";
-import buttonElevatorHighlight from "../assets/pictos/button-elevator-highlight.svg";
-import buttonBusStop from "../assets/pictos/button-bus-stop.svg";
-import buttonBusStopHighlight from "../assets/pictos/button-bus-stop-highlight.svg";
-import buttonTaxiStand from "../assets/pictos/button-taxi-stand.svg";
-import buttonTaxiStandHighlight from "../assets/pictos/button-taxi-stand-highlight.svg";
+// Zoom buttons are loaded dynamically based on language
+import zoomInJa from "../assets/zoom-in.svg";
+import zoomInJaHighlight from "../assets/zoom-in-highlight.svg";
+import zoomInEn from "../assets/zoom-in-en.svg";
+import zoomInEnHighlight from "../assets/zoom-in-en-highlight.svg";
+import zoomOutJa from "../assets/zoom-out.svg";
+import zoomOutJaHighlight from "../assets/zoom-out-highlight.svg";
+import zoomOutEn from "../assets/zoom-out-en.svg";
+import zoomOutEnHighlight from "../assets/zoom-out-en-highlight.svg";
+// Picto icons are now loaded dynamically from mall-specific directories
 import hint from "../assets/hint.svg";
 import { CloseButton } from "../components/CloseButton";
 import commingSoon from "../assets/comming-soon.svg";
@@ -81,9 +46,11 @@ import type { PictoSettings } from "../types/picto"; // Add import
 import { logInfo } from "../logs/logging";
 import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from "../config";
 import { PictoPin } from "../components/PictoPin"; // Add import
+import { loadMallGenreConfig, loadMallPictoConfig, loadGenreIcon, loadPictoIcon } from "../utils/mallConfig";
+import type { GenreConfig, PictoConfig } from "../types/mallConfig";
 
-// Load picto icons
-const pictoIcons = import.meta.glob('../assets/pictos/*.svg', { eager: true, query: '?url' });
+// Load picto icons (removed - now using mall-specific icons)
+// const pictoIcons = import.meta.glob('../assets/pictos/*.svg', { eager: true, query: '?url' });
 
 // Idle timeout configuration (30 seconds)
 const IDLE_TIMEOUT_MS = 30000;
@@ -250,29 +217,31 @@ type Facility = {
   highlightIcon: string;
 };
 
-const FACILITY_LIST: Facility[] = [
-  { id: "info", name: "Info", icon: buttonInfo, highlightIcon: buttonInfoHighlight },
-  { id: "restroom", name: "Restroom", icon: buttonRestroom, highlightIcon: buttonRestroomHighlight },
-  { id: "priority_restroom", name: "Priority Restroom", icon: buttonPriorityRestroom, highlightIcon: buttonPriorityRestroomHighlight },
-  { id: "baby_room", name: "Baby Room", icon: buttonBabyRoom, highlightIcon: buttonBabyRoomHighlight },
-  { id: "smoking_room", name: "Smoking Room", icon: buttonSmokingRoom, highlightIcon: buttonSmokingRoomHighlight },
-  { id: "free_coin_lockers", name: "Coin Lockers", icon: buttonFreeCoinLockers, highlightIcon: buttonFreeCoinLockersHighlight },
-  { id: "atm", name: "ATM", icon: buttonATM, highlightIcon: buttonATMHighlight },
-  { id: "elevator", name: "Elevator", icon: buttonElevator, highlightIcon: buttonElevatorHighlight },
-  { id: "bus_stop", name: "Bus Stop", icon: buttonBusStop, highlightIcon: buttonBusStopHighlight },
-  { id: "taxi_stand", name: "Taxi Stand", icon: buttonTaxiStand, highlightIcon: buttonTaxiStandHighlight },
+// デフォルトのFACILITY_LIST（フォールバック用 - 空のアイコン）
+const DEFAULT_FACILITY_LIST: Facility[] = [
+  { id: "info", name: "Info", icon: "", highlightIcon: "" },
+  { id: "restroom", name: "Restroom", icon: "", highlightIcon: "" },
+  { id: "priority_restroom", name: "Priority Restroom", icon: "", highlightIcon: "" },
+  { id: "baby_room", name: "Baby Room", icon: "", highlightIcon: "" },
+  { id: "smoking_room", name: "Smoking Room", icon: "", highlightIcon: "" },
+  { id: "free_coin_lockers", name: "Coin Lockers", icon: "", highlightIcon: "" },
+  { id: "atm", name: "ATM", icon: "", highlightIcon: "" },
+  { id: "elevator", name: "Elevator", icon: "", highlightIcon: "" },
+  { id: "bus_stop", name: "Bus Stop", icon: "", highlightIcon: "" },
+  { id: "taxi_stand", name: "Taxi Stand", icon: "", highlightIcon: "" },
 ];
 
-const GENRE_LIST: Genre[] = [
-  { id: "all", name: "All", icon: iconAll, highlightIcon: iconAllHighlight },
-  { id: "fashion", name: "Fashion", icon: iconFashion, highlightIcon: iconFashionHighlight },
-  { id: "fashion_goods", name: "Fashion Goods", icon: iconFashionGoods, highlightIcon: iconFashionGoodsHighlight },
-  { id: "sport", name: "Sport", icon: iconSport, highlightIcon: iconSportHighlight },
-  { id: "kids", name: "Kids", icon: iconKids, highlightIcon: iconKidsHighlight },
-  { id: "lifestyle", name: "Lifestyle", icon: iconLifestyle, highlightIcon: iconLifestyleHighlight },
-  { id: "gourmet", name: "Gourmet", icon: iconGourmet, highlightIcon: iconGourmetHighlight },
-  { id: "entertainment", name: "Entertainment", icon: iconEntertainment, highlightIcon: iconEntertainmentHighlight },
-  { id: "service", name: "Service", icon: iconService, highlightIcon: iconServiceHighlight },
+// デフォルトのGENRE_LIST（フォールバック用 - 空のアイコン）
+const DEFAULT_GENRE_LIST: Genre[] = [
+  { id: "all", name: "All", icon: "", highlightIcon: "" },
+  { id: "fashion", name: "Fashion", icon: "", highlightIcon: "" },
+  { id: "fashion_goods", name: "Fashion Goods", icon: "", highlightIcon: "" },
+  { id: "sport", name: "Sport", icon: "", highlightIcon: "" },
+  { id: "kids", name: "Kids", icon: "", highlightIcon: "" },
+  { id: "lifestyle", name: "Lifestyle", icon: "", highlightIcon: "" },
+  { id: "gourmet", name: "Gourmet", icon: "", highlightIcon: "" },
+  { id: "entertainment", name: "Entertainment", icon: "", highlightIcon: "" },
+  { id: "service", name: "Service", icon: "", highlightIcon: "" },
 ];
 
 // Remove CURRENT_FLOOR constant as it is now passed via props
@@ -329,6 +298,7 @@ interface ShopListScreenProps {
   isSettingsOpen?: boolean;
   locationIconSettings?: LocationIconSettingsPerFloor;
   currentFloor?: string;
+  mallId?: string; // モールID
   shops: Shop[];
   shopPositions?: any;
   shopNews?: ShopNews[];
@@ -387,12 +357,27 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   isSettingsOpen = false,
   locationIconSettings = DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
   currentFloor = "1F",
+  mallId = "suzaka",
   shops,
   shopPositions,
   shopNews = [],
   eventNews = [],
   pictoSettings,
 }) => {
+  // Get default floor map path based on mallId
+  const getDefaultFloorMapPath = (floor: FloorId): string => {
+    if (import.meta.env.DEV) {
+      return `/src/assets/malls/${mallId}/maps/floor-${floor}-map.svg`;
+    } else {
+      return `assets/malls/${mallId}/maps/floor-${floor}-map.svg`;
+    }
+  };
+
+  // Get floor map path for current floor
+  const getFloorMapPath = (floor: FloorId): string => {
+    return getDefaultFloorMapPath(floor);
+  };
+
   // Map content ref for direct style manipulation (zoom scale)
   const mapContentRef = useRef<HTMLDivElement>(null);
 
@@ -811,6 +796,152 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       localStorage.setItem("gido-selected-language", lang);
     }
   };
+
+  // モール設定の状態
+  const [mallGenreConfig, setMallGenreConfig] = useState<GenreConfig[] | null>(null);
+  const [mallPictoConfig, setMallPictoConfig] = useState<PictoConfig[] | null>(null);
+  const [genreIcons, setGenreIcons] = useState<Record<string, { normal: string; highlight: string }>>({});
+  const [pictoIcons, setPictoIcons] = useState<Record<string, { button: string; buttonHighlight: string }>>({});
+  // Map icon URLs for displaying pictos on the map (key: iconName like "info.svg", value: icon URL)
+  const [pictoIconUrls, setPictoIconUrls] = useState<Record<string, string>>({});
+
+  // モール設定を読み込む
+  useEffect(() => {
+    const loadMallConfig = async () => {
+      try {
+        // ジャンル設定を読み込む
+        const genreConfig = await loadMallGenreConfig(mallId);
+        if (genreConfig && genreConfig.genres) {
+          setMallGenreConfig(genreConfig.genres);
+          
+          // ジャンルアイコンを読み込む
+          const iconPromises = genreConfig.genres.map(async (genre) => {
+            const normal = await loadGenreIcon(mallId, selectedLanguage, genre.iconFile, false);
+            const highlight = await loadGenreIcon(mallId, selectedLanguage, genre.iconFile, true);
+            return {
+              id: genre.id,
+              normal: normal || "",
+              highlight: highlight || "",
+            };
+          });
+          
+          const loadedIcons = await Promise.all(iconPromises);
+          const iconMap: Record<string, { normal: string; highlight: string }> = {};
+          loadedIcons.forEach((icon) => {
+            if (icon.normal && icon.highlight) {
+              iconMap[icon.id] = { normal: icon.normal, highlight: icon.highlight };
+            }
+          });
+          setGenreIcons(iconMap);
+        }
+
+        // ピクト設定を読み込む
+        const pictoConfig = await loadMallPictoConfig(mallId);
+        if (pictoConfig && pictoConfig.pictos) {
+          setMallPictoConfig(pictoConfig.pictos);
+          
+          // ピクトボタンアイコンを読み込む
+          const buttonIconPromises = pictoConfig.pictos.map(async (picto) => {
+            const button = await loadPictoIcon(mallId, selectedLanguage, picto.buttonFile.replace("button-", "").replace(".svg", ""), false, true);
+            const buttonHighlight = await loadPictoIcon(mallId, selectedLanguage, picto.buttonFile.replace("button-", "").replace(".svg", ""), true, true);
+            return {
+              id: picto.id,
+              button: button || "",
+              buttonHighlight: buttonHighlight || "",
+            };
+          });
+          
+          const loadedButtonIcons = await Promise.all(buttonIconPromises);
+          const buttonIconMap: Record<string, { button: string; buttonHighlight: string }> = {};
+          loadedButtonIcons.forEach((icon) => {
+            if (icon.button && icon.buttonHighlight) {
+              buttonIconMap[icon.id] = { button: icon.button, buttonHighlight: icon.buttonHighlight };
+            }
+          });
+          setPictoIcons(buttonIconMap);
+          
+          // ピクトマップアイコンを読み込む（設定で使用されるiconNameに基づく）
+          // 設定画面で使用される可能性のあるすべてのアイコンファイル名を読み込む
+          // ピクトアイコンはテキストを含まないため、常に日本語版を使用
+          const mapIconPromises = pictoConfig.pictos.map(async (picto) => {
+            // iconFileはマップ上で使用されるアイコンファイル名
+            const baseName = picto.iconFile.replace('.svg', '');
+            const iconUrl = await loadPictoIcon(mallId, "ja", baseName, false, false);
+            return {
+              iconFile: picto.iconFile,
+              iconUrl: iconUrl || "",
+            };
+          });
+          
+          const loadedMapIcons = await Promise.all(mapIconPromises);
+          const mapIconMap: Record<string, string> = {};
+          loadedMapIcons.forEach((icon) => {
+            if (icon.iconUrl) {
+              mapIconMap[icon.iconFile] = icon.iconUrl;
+            }
+          });
+          setPictoIconUrls(mapIconMap);
+        }
+      } catch (error) {
+        console.error("Failed to load mall config", error);
+      }
+    };
+
+    loadMallConfig();
+  }, [mallId, selectedLanguage]);
+
+  // 動的にGENRE_LISTとFACILITY_LISTを生成
+  const GENRE_LIST = useMemo(() => {
+    if (mallGenreConfig && Object.keys(genreIcons).length > 0) {
+      // モール設定から動的に生成
+      return mallGenreConfig
+        .sort((a, b) => a.order - b.order)
+        .map((genre) => {
+          const icons = genreIcons[genre.id];
+          const name = selectedLanguage === "ja" ? genre.name.ja : (genre.name.en || genre.name.ja);
+          return {
+            id: genre.id,
+            name,
+            icon: icons?.normal || "",
+            highlightIcon: icons?.highlight || "",
+          };
+        });
+    }
+    // フォールバック: デフォルトリストを使用
+    return DEFAULT_GENRE_LIST;
+  }, [mallGenreConfig, genreIcons, selectedLanguage]);
+
+  const FACILITY_LIST = useMemo(() => {
+    if (mallPictoConfig && Object.keys(pictoIcons).length > 0) {
+      // モール設定から動的に生成
+      return mallPictoConfig
+        .sort((a, b) => a.order - b.order)
+        .map((picto) => {
+          const icons = pictoIcons[picto.id];
+          const name = selectedLanguage === "ja" ? picto.name.ja : (picto.name.en || picto.name.ja);
+          return {
+            id: picto.id,
+            name,
+            icon: icons?.button || "",
+            highlightIcon: icons?.buttonHighlight || "",
+          };
+        });
+    }
+    // フォールバック: デフォルトリストを使用
+    return DEFAULT_FACILITY_LIST;
+  }, [mallPictoConfig, pictoIcons, selectedLanguage]);
+
+  // ピクトメニューの横幅を動的に計算（ボタン数に応じて）
+  const pictoMenuWidth = useMemo(() => {
+    const buttonCount = FACILITY_LIST.length;
+    const buttonWidth = 80; // 各ボタンの幅
+    const gap = 20; // ボタン間のギャップ
+    const padding = 40; // 左右のパディング
+    const minWidth = 400; // 最小幅
+    const maxWidth = 1000; // 最大幅
+    const calculatedWidth = buttonCount * buttonWidth + (buttonCount - 1) * gap + padding;
+    return Math.max(minWidth, Math.min(maxWidth, calculatedWidth));
+  }, [FACILITY_LIST.length]);
 
   // Initialize language to Japanese on mount (force reset to Japanese)
   useEffect(() => {
@@ -1430,7 +1561,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   >
                     {/* Map Image */}
                     <img
-                      src={selectedFloor === "2F" ? floor2FMap : selectedFloor === "3F" ? floor3FMap : selectedFloor === "4F" ? floor4FMap : floor1FMap}
+                      src={getFloorMapPath(selectedFloor as FloorId)}
                       alt={`${selectedFloor || "1F"} Map`}
                       style={{
                         width: "100%",
@@ -1477,13 +1608,12 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     {pictoSettings && Object.values(pictoSettings.instances)
                       .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
                       .map(instance => {
-                        // Extract filename from path and match exactly (exclude button files)
-                        const entry = Object.entries(pictoIcons).find(([p]) => {
-                          const fileName = p.split('/').pop() || "";
-                          return fileName === instance.iconName && !fileName.startsWith('button-');
-                        });
-                        const iconUrl = entry ? (entry[1] as any).default : "";
-                        if (!iconUrl) return null;
+                        // Load icon dynamically from pictoIconUrls map
+                        const iconUrl = pictoIconUrls[instance.iconName] || "";
+                        if (!iconUrl) {
+                          console.warn(`Picto icon not found for map: ${instance.iconName} in mallId: ${mallId}`);
+                          return null;
+                        }
 
                         const scaledInstance = {
                           ...instance,
@@ -1589,7 +1719,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             bottom: "30px",
             left: "710px", // Adjusted to center between left (80px width) and right (120px width) buttons
             transform: "translateX(-50%)",
-            width: "1000px",
+            width: `${pictoMenuWidth}px`,
             height: "100px",
             backgroundColor: "#FFFFFF",
             borderRadius: "26px",
@@ -1808,7 +1938,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             onTouchEnd={() => setPressedZoomButton(null)}
           >
             <img
-              src={zoomIn}
+              src={selectedLanguage === "en" ? zoomInEn : zoomInJa}
               alt="Zoom In"
               style={{
                 display: "block",
@@ -1817,7 +1947,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               }}
             />
             <img
-              src={zoomInHighlight}
+              src={selectedLanguage === "en" ? zoomInEnHighlight : zoomInJaHighlight}
               alt="Zoom In Highlight"
               style={{
                 position: "absolute",
@@ -1849,7 +1979,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             onTouchEnd={() => setPressedZoomButton(null)}
           >
             <img
-              src={zoomOut}
+              src={selectedLanguage === "en" ? zoomOutEn : zoomOutJa}
               alt="Zoom Out"
               style={{
                 display: "block",
@@ -1858,7 +1988,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               }}
             />
             <img
-              src={zoomOutHighlight}
+              src={selectedLanguage === "en" ? zoomOutEnHighlight : zoomOutJaHighlight}
               alt="Zoom Out Highlight"
               style={{
                 position: "absolute",

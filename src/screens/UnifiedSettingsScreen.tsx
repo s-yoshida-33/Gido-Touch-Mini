@@ -15,13 +15,16 @@ import type { Shop } from "../types/shop";
 import { PictoSettingsTab } from "../components/PictoSettingsTab";
 import type { PictoSettings } from "../types/picto";
 import { DEFAULT_PICTO_SETTINGS } from "../types/picto";
+import { MallSelectTab } from "../components/MallSelectTab";
 
-type TabType = "image" | "shopPosition" | "floor" | "picto";
+type TabType = "mall" | "image" | "shopPosition" | "floor" | "picto";
 
 // Export props interface to ensure visibility
 export interface UnifiedSettingsScreenProps {
   isOpen: boolean;
   onClose: () => void;
+  mallId: string;
+  onSaveMallId: (mallId: string) => Promise<void> | void;
   floor: FloorId;
   onSaveFloor: (floor: FloorId) => Promise<void> | void;
   locationIconSettings: LocationIconSettingsPerFloor;
@@ -38,6 +41,8 @@ export interface UnifiedSettingsScreenProps {
 const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   isOpen,
   onClose,
+  mallId: initialMallId,
+  onSaveMallId,
   floor: initialFloor,
   onSaveFloor,
   locationIconSettings: initialLocationIconSettings,
@@ -50,7 +55,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   pictoSettings: initialPictoSettings,
   onSavePictoSettings,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>("image");
+  const [activeTab, setActiveTab] = useState<TabType>("mall");
+  const [mallId, setMallId] = useState<string>(initialMallId);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -121,7 +127,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   useEffect(() => {
     // Only run initialization when isOpen changes from false to true
     if (isOpen && !prevIsOpen.current) {
-      setActiveTab("floor");
+      setActiveTab("mall");
+      setMallId(initialMallId);
       setFloor(initialFloor);
       setLocationIconSettings(initialLocationIconSettings);
       setImageSettings(initialImageSettings);
@@ -140,7 +147,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       }
     }
     prevIsOpen.current = isOpen;
-  }, [isOpen, initialFloor, initialLocationIconSettings, initialImageSettings, initialShopPositions, calculateOtherTabCenterPosition]);
+  }, [isOpen, initialMallId, initialFloor, initialLocationIconSettings, initialImageSettings, initialShopPositions, calculateOtherTabCenterPosition]);
 
   const handleClose = () => {
     onClose();
@@ -149,6 +156,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
 
   const handleCancel = () => {
     // Revert to initial values
+    setMallId(initialMallId);
     setFloor(initialFloor);
     setLocationIconSettings(initialLocationIconSettings);
     setImageSettings(initialImageSettings);
@@ -184,6 +192,9 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       console.log("Saving settings...");
       
       // Save sequentially to avoid race conditions in main process file writing
+      console.log("Saving mall ID...");
+      await onSaveMallId(mallId);
+      
       console.log("Saving floor...");
       await onSaveFloor(floor);
       
@@ -349,6 +360,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
           {/* Tabs */}
           <div style={{ flex: 1, padding: "16px 0" }}>
             {[
+              { id: "mall" as TabType, label: "店舗選択" },
               { id: "floor" as TabType, label: "フロア設定" },
               { id: "image" as TabType, label: "画像" },
               { id: "shopPosition" as TabType, label: "座標設定" },
@@ -438,6 +450,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               >
               {(activeTab === "shopPosition" || activeTab === "picto" || activeTab === "image") && (
                 <GidoApp
+                  mallId={mallId}
                   locationIconSettings={getLocationIconSettingsForFloor(locationIconSettings, floor)}
                   previewFloor={floor}
                   imageSettings={imageSettings}
@@ -532,6 +545,12 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
             padding: "24px",
           }}
         >
+          {activeTab === "mall" && (
+            <MallSelectTab
+              selectedMallId={mallId}
+              onSelectMall={setMallId}
+            />
+          )}
           {activeTab === "floor" && (
             <FloorSettingsTab
               floor={floor}
@@ -566,6 +585,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               onSavePictoSettings={setPictoSettings}
               selectedInstanceId={selectedPictoId}
               onSelectedInstanceIdChange={setSelectedPictoId}
+              mallId={mallId}
             />
           )}
         </div>

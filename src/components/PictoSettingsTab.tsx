@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { FloorId } from "../types/floorLayout";
 import type { PictoSettings, PictoInstance, PictoTag } from "../types/picto";
 import type { AnimationConfig, AnimationType, ShadowConfig } from "../types/locationIcon";
+import { loadMallPictoConfig, loadPictoIcon } from "../utils/mallConfig";
 
-// Picto icons glob import
-const pictoIcons = import.meta.glob('../assets/pictos/*.svg', { eager: true, query: '?url' });
+// Picto icons are now loaded dynamically from mall-specific directories
 
 const PICTO_TAGS: { id: PictoTag; label: string }[] = [
   { id: "info", label: "Info" },
@@ -45,6 +45,31 @@ const ConfigGroup: React.FC<{ title: string; children: React.ReactNode }> = ({ t
   </fieldset>
 );
 
+// Component to display picto icon dynamically
+// ピクトアイコンはテキストを含まないため、常に日本語版を使用
+const PictoIconDisplay: React.FC<{ iconName: string; mallId: string }> = ({ iconName, mallId }) => {
+  const [iconUrl, setIconUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadIcon = async () => {
+      // Extract base name from iconName (e.g., "info.svg" -> "info", "priorityRestroom.svg" -> "priorityRestroom")
+      const baseName = iconName.replace('.svg', '').replace('button-', '');
+      // Load icon (not button, not highlight) - ピクトアイコンは常に日本語版を使用
+      const url = await loadPictoIcon(mallId, "ja", baseName, false, false);
+      setIconUrl(url);
+      if (!url) {
+        console.warn(`Picto icon not found in settings: ${iconName} (baseName: ${baseName}) for mallId: ${mallId}`);
+      }
+    };
+    loadIcon();
+  }, [iconName, mallId]);
+
+  return (
+    <div style={{ width: 30, height: 30, backgroundColor: "#fff", borderRadius: 4, padding: 2 }}>
+      {iconUrl ? <img src={iconUrl} style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null}
+    </div>
+  );
+};
 
 export interface PictoSettingsTabProps {
   floor: FloorId;
@@ -54,6 +79,7 @@ export interface PictoSettingsTabProps {
   // External control for selected instance
   selectedInstanceId?: string | null;
   onSelectedInstanceIdChange?: (id: string | null) => void;
+  mallId?: string;
 }
 
 export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
@@ -63,6 +89,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
   onSavePictoSettings,
   selectedInstanceId: externalSelectedInstanceId,
   onSelectedInstanceIdChange,
+  mallId = "suzaka",
 }) => {
   const [selectedIconPath, setSelectedIconPath] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<PictoTag>("info");
@@ -80,21 +107,35 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
 
   // Extract filename from path for display/storage
   const getFileName = (path: string) => path.split('/').pop() || "";
-  
-  // Sorted list of icons for dropdown (exclude button files)
-  const iconOptions = useMemo(() => {
-    return Object.keys(pictoIcons)
-      .filter(path => {
-        const fileName = getFileName(path);
-        // Exclude button files (button-* and button-*-highlight)
-        return !fileName.startsWith('button-');
-      })
-      .map(path => ({
-        path,
-        name: getFileName(path)
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
+
+  // Load picto config and icons dynamically
+  const [iconOptions, setIconOptions] = useState<Array<{ path: string; name: string }>>([]);
+
+  useEffect(() => {
+    const loadIcons = async () => {
+      try {
+        const config = await loadMallPictoConfig(mallId);
+        if (config && config.pictos) {
+          // Load icon options from config (exclude button files)
+          // ピクトアイコンは常に日本語版を使用
+          const options = await Promise.all(
+            config.pictos.map(async (picto: any) => {
+              const iconUrl = await loadPictoIcon(mallId, "ja", picto.iconFile.replace('.svg', ''), false, false);
+              return {
+                path: iconUrl || "",
+                name: picto.iconFile
+              };
+            })
+          );
+          setIconOptions(options.filter(opt => opt.path && !opt.name.startsWith('button-')));
+        }
+      } catch (error) {
+        console.error("Failed to load picto config", error);
+        setIconOptions([]);
+      }
+    };
+    loadIcons();
+  }, [mallId]);
 
   // Filter instances by current floor
   const floorInstances = useMemo(() => {
@@ -218,11 +259,16 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
               
               {selectedIconPath && (
                  <div style={{ marginTop: 10, width: 60, height: 60, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 6, padding: 4, display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    <img 
-                        src={(pictoIcons[selectedIconPath] as any).default} 
-                        alt="preview" 
-                        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
-                    />
+                    {(() => {
+                      const selectedOption = iconOptions.find(opt => opt.path === selectedIconPath);
+                      return selectedOption ? (
+                        <img 
+                          src={selectedOption.path} 
+                          alt="preview" 
+                          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
+                        />
+                      ) : null;
+                    })()}
                  </div>
               )}
             </div>
@@ -273,16 +319,10 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
                     display: "flex", alignItems: "center", gap: 10
                   }}
                 >
-                  <div style={{ width: 30, height: 30, backgroundColor: "#fff", borderRadius: 4, padding: 2 }}>
-                    {/* Find URL from pictoIcons based on exact filename match (exclude button files) */}
-                    {(() => {
-                        const entry = Object.entries(pictoIcons).find(([p]) => {
-                          const fileName = p.split('/').pop() || "";
-                          return fileName === inst.iconName && !fileName.startsWith('button-');
-                        });
-                        return entry ? <img src={(entry[1] as any).default} style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null;
-                    })()}
-                  </div>
+                  <PictoIconDisplay
+                    iconName={inst.iconName}
+                    mallId={mallId}
+                  />
                   <div style={{ flex: 1, overflow: "hidden" }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{inst.tag}</div>
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{inst.iconName}</div>
