@@ -107,6 +107,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('image-settings-updated', listener);
     };
   },
+  getMallSettings() {
+    return ipcRenderer.invoke('get-mall-settings');
+  },
+  saveMallSettings(settings) {
+    return ipcRenderer.invoke('save-mall-settings', settings);
+  },
+  onMallSettingsUpdated(callback) {
+    const listener = (_event, updated) => callback(updated);
+    ipcRenderer.on('mall-settings-updated', listener);
+
+    return () => {
+      ipcRenderer.removeListener('mall-settings-updated', listener);
+    };
+  },
   manualUpdateCheck() {
     ipcRenderer.send('menu:check-updates');
   },

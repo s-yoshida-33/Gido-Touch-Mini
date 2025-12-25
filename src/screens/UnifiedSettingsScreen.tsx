@@ -8,13 +8,19 @@ import type { FloorId } from "../types/floorLayout";
 import { ImageSettingsTab } from "../components/ImageSettingsTab";
 import { ShopPositionSettingsTab } from "../components/ShopPositionSettingsTab";
 import { FloorSettingsTab } from "../components/FloorSettingsTab";
-import iconSvg from "../assets/icon.svg";
+// iconSvg import removed - loading from common assets
 import type { ImageSettings } from "../types/imageSettings";
 import type { ShopPositionSettings } from "../types/shopPosition";
 import type { Shop } from "../types/shop";
 import { PictoSettingsTab } from "../components/PictoSettingsTab";
 import type { PictoSettings } from "../types/picto";
 import { DEFAULT_PICTO_SETTINGS } from "../types/picto";
+import type { MallSettings } from "../types/mall";
+import { DEFAULT_MALL_SETTINGS } from "../types/mall";
+import { getMallConfig } from "../config/malls";
+import { getCommonAssetUrl } from "../utils/assets"; // Import
+
+const iconSvg = getCommonAssetUrl("icon.svg"); // Assuming icon.svg moved to common or use getAssetUrl('icon.svg') if root // Import
 
 type TabType = "image" | "shopPosition" | "floor" | "picto";
 
@@ -33,6 +39,8 @@ export interface UnifiedSettingsScreenProps {
   shops: Shop[];
   pictoSettings: PictoSettings;
   onSavePictoSettings: (settings: PictoSettings) => Promise<void> | void;
+  mallSettings: MallSettings;
+  onSaveMallSettings: (settings: MallSettings) => Promise<void> | void;
 }
 
 const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
@@ -49,6 +57,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   shops,
   pictoSettings: initialPictoSettings,
   onSavePictoSettings,
+  mallSettings: initialMallSettings,
+  onSaveMallSettings,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>("image");
   const [saving, setSaving] = useState(false);
@@ -61,6 +71,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   const [imageSettings, setImageSettings] = useState<ImageSettings>(initialImageSettings);
   const [shopPositions, setShopPositions] = useState<ShopPositionSettings>(initialShopPositions);
   const [pictoSettings, setPictoSettings] = useState<PictoSettings>(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
+  const [mallSettings, setMallSettings] = useState<MallSettings>(initialMallSettings || DEFAULT_MALL_SETTINGS);
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [selectedPictoId, setSelectedPictoId] = useState<string | null>(null);
 
@@ -87,6 +98,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   // Current scale state to control panning (詳細モーダルと同じ仕様)
   const [currentScale, setCurrentScale] = useState(1);
   
+  const currentMallConfig = getMallConfig(mallSettings.mallId);
+
   // 中央位置を計算する関数（すべてのタブで同じロジックを使用）
   const calculateOtherTabCenterPosition = useCallback(() => {
     if (!previewContainerRef.current) return { x: 0, y: 0, scale: 0.6 };
@@ -127,6 +140,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       setImageSettings(initialImageSettings);
       setShopPositions(initialShopPositions);
       setPictoSettings(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
+      setMallSettings(initialMallSettings || DEFAULT_MALL_SETTINGS);
       setErrors({});
       
       // Reset transform when opening settings
@@ -154,6 +168,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     setImageSettings(initialImageSettings);
     setShopPositions(initialShopPositions);
     setPictoSettings(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
+    setMallSettings(initialMallSettings || DEFAULT_MALL_SETTINGS);
     setErrors({});
     // Reset transform - 現在のactiveTabに応じて適切な中央位置を計算
     if (transformRef.current && previewContainerRef.current) {
@@ -198,6 +213,9 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
 
       console.log("Saving picto settings...", pictoSettings);
       await onSavePictoSettings(pictoSettings);
+
+      console.log("Saving mall settings...", mallSettings);
+      await onSaveMallSettings(mallSettings);
       
       console.log("Settings saved successfully");
       handleClose();
@@ -346,6 +364,19 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
             borderRight: "1px solid rgba(255, 255, 255, 0.1)",
           }}
         >
+          {/* Mall Settings */}
+          <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
+             <label style={{ display: "block", color: "rgba(255, 255, 255, 0.8)", fontSize: 13, marginBottom: 8, fontWeight: 500 }}>モール設定</label>
+             <select
+                value={mallSettings.mallId}
+                onChange={(e) => setMallSettings({ ...mallSettings, mallId: e.target.value as any })}
+                style={{ width: "100%", padding: "8px 12px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 6, color: "#ffffff", fontSize: 14 }}
+             >
+                <option value="suzaka" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>須坂</option>
+                <option value="sendai-kamisugi" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>仙台上杉</option>
+             </select>
+          </div>
+
           {/* Tabs */}
           <div style={{ flex: 1, padding: "16px 0" }}>
             {[
@@ -447,6 +478,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                   showOnlyMap={activeTab === "shopPosition" || activeTab === "picto" || activeTab === "image"}
                   pictoSettings={activeTab === "picto" ? pictoSettings : undefined}
                   selectedPictoId={activeTab === "picto" ? selectedPictoId : undefined}
+                  mallId={mallSettings.mallId}
+                  defaultFloorMaps={currentMallConfig.floorMaps}
                 />
               )}
               </div>

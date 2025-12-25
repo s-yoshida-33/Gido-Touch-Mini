@@ -2,9 +2,8 @@ import React, { useState, useMemo } from "react";
 import type { FloorId } from "../types/floorLayout";
 import type { PictoSettings, PictoInstance, PictoTag } from "../types/picto";
 import type { AnimationConfig, AnimationType, ShadowConfig } from "../types/locationIcon";
-
-// Picto icons glob import
-const pictoIcons = import.meta.glob('../assets/pictos/*.svg', { eager: true, query: '?url' });
+import { getMallAssetPaths, findMallPictoUrl } from "../utils/assets"; // Import
+import type { MallId } from "../types/mall"; // Import
 
 const PICTO_TAGS: { id: PictoTag; label: string }[] = [
   { id: "info", label: "Info" },
@@ -54,6 +53,7 @@ export interface PictoSettingsTabProps {
   // External control for selected instance
   selectedInstanceId?: string | null;
   onSelectedInstanceIdChange?: (id: string | null) => void;
+  mallId?: MallId; // Add prop
 }
 
 export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
@@ -63,6 +63,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
   onSavePictoSettings,
   selectedInstanceId: externalSelectedInstanceId,
   onSelectedInstanceIdChange,
+  mallId = "suzaka", // Default
 }) => {
   const [selectedIconPath, setSelectedIconPath] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<PictoTag>("info");
@@ -83,18 +84,47 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
   
   // Sorted list of icons for dropdown (exclude button files)
   const iconOptions = useMemo(() => {
-    return Object.keys(pictoIcons)
-      .filter(path => {
+    const paths = getMallAssetPaths(mallId, "pictos");
+    
+    // Create unique set of filenames
+    // 優先順位: 1. pictos/直下（アイコン用）、2. pictos/ja/（ボタン用）、3. pictos/en/（ボタン用）
+    const uniqueFiles = new Map<string, string>(); // filename -> full path
+    
+    paths.forEach(path => {
         const fileName = getFileName(path);
-        // Exclude button files (button-* and button-*-highlight)
-        return !fileName.startsWith('button-');
-      })
-      .map(path => ({
-        path,
-        name: getFileName(path)
+        // Exclude button files and highlight files
+        if (!fileName.startsWith('button-') && !fileName.includes('-highlight')) {
+            const currentPath = uniqueFiles.get(fileName);
+            // 優先順位: 直下 > ja/ > en/
+            if (!currentPath) {
+                uniqueFiles.set(fileName, path);
+            } else {
+                // より優先度の高いパスに置き換え
+                const isCurrentInSubDir = currentPath.includes('/ja/') || currentPath.includes('/en/');
+                const isNewInSubDir = path.includes('/ja/') || path.includes('/en/');
+                const isNewInJa = path.includes('/ja/');
+                const isCurrentInJa = currentPath.includes('/ja/');
+                
+                // 直下のファイルを優先
+                if (!isNewInSubDir && isCurrentInSubDir) {
+                    uniqueFiles.set(fileName, path);
+                }
+                // 直下がなければ ja/ を優先
+                else if (isNewInJa && !isCurrentInJa && isCurrentInSubDir) {
+                    uniqueFiles.set(fileName, path);
+                }
+            }
+        }
+    });
+
+    return Array.from(uniqueFiles.entries())
+      .map(([name, fullPath]) => ({
+        path: name, // Store only filename (without subdirectory)
+        name: name,
+        fullPath: fullPath // Keep for reference if needed
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
+  }, [mallId]);
 
   // Filter instances by current floor
   const floorInstances = useMemo(() => {
@@ -110,7 +140,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
     const newInstance: PictoInstance = {
       id: newId,
       tag: selectedTag,
-      iconName: getFileName(selectedIconPath),
+      iconName: selectedIconPath, // Use selected name
       floor: floor,
       x: 50,
       y: 50,
@@ -219,7 +249,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
               {selectedIconPath && (
                  <div style={{ marginTop: 10, width: 60, height: 60, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 6, padding: 4, display: "flex", justifyContent: "center", alignItems: "center" }}>
                     <img 
-                        src={(pictoIcons[selectedIconPath] as any).default} 
+                        src={findMallPictoUrl(mallId, selectedIconPath)} 
                         alt="preview" 
                         style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
                     />
@@ -274,14 +304,8 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
                   }}
                 >
                   <div style={{ width: 30, height: 30, backgroundColor: "#fff", borderRadius: 4, padding: 2 }}>
-                    {/* Find URL from pictoIcons based on exact filename match (exclude button files) */}
-                    {(() => {
-                        const entry = Object.entries(pictoIcons).find(([p]) => {
-                          const fileName = p.split('/').pop() || "";
-                          return fileName === inst.iconName && !fileName.startsWith('button-');
-                        });
-                        return entry ? <img src={(entry[1] as any).default} style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null;
-                    })()}
+                    {/* Find URL from helper */}
+                    <img src={findMallPictoUrl(mallId, inst.iconName)} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                   </div>
                   <div style={{ flex: 1, overflow: "hidden" }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{inst.tag}</div>

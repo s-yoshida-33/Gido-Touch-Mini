@@ -5,12 +5,6 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 import ShopList from "../components/ShopList";
 import type { Shop } from "../types/shop";
 
-import floor1FMap from "../assets/floor-1F-map.svg";
-import floor2FMap from "../assets/floor-2F-map.svg";
-import floor3FMap from "../assets/floor-3F-map.svg";
-import floor4FMap from "../assets/floor-4F-map.svg";
-import openTimeImage from "../assets/open-time.svg";
-
 import { APP_CONFIG } from "../config";
 import type { LocationIconSettings, LocationIconSettingsPerFloor } from "../types/locationIcon";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
@@ -21,12 +15,13 @@ import type { ShopPositionSettings } from "../types/shopPosition";
 import type { PictoSettings } from "../types/picto";
 import { ShopPin } from "../components/ShopPin";
 import { PictoPin } from "../components/PictoPin";
+import type { MallId } from "../types/mall";
+import { getMallAssetUrl, findMallPictoUrl } from "../utils/assets"; // Update import
 
 import { logInfo, logError } from "../logs/logging";
 
-// Load picto icons
-const pictoIcons = import.meta.glob('../assets/pictos/*.svg', { eager: true, query: '?url' });
-
+// Placeholder for openTimeImage if not in settings (optional fallback)
+const openTimeImageDefault = getMallAssetUrl("suzaka", "open-time", "open-time.svg"); 
 
 const LIST_HEIGHT_VH = APP_CONFIG.listHeightVh;
 const TOP_HEIGHT_VH = 100 - LIST_HEIGHT_VH;
@@ -35,14 +30,6 @@ const TOP_HEIGHT_VH = 100 - LIST_HEIGHT_VH;
 // We use 1920px as the standard reference width (Full HD).
 const REFERENCE_MAP_WIDTH = 1920;
 const DEFAULT_PIN_SIZE = 80;
-
-// Map floor id to image asset
-const FLOOR_MAPS: Record<string, string> = {
-  "1F": floor1FMap,
-  "2F": floor2FMap,
-  "3F": floor3FMap,
-  "4F": floor4FMap,
-};
 
 interface GidoAppProps {
   locationIconSettings: LocationIconSettings | LocationIconSettingsPerFloor;
@@ -54,6 +41,8 @@ interface GidoAppProps {
   showOnlyMap?: boolean;
   pictoSettings?: PictoSettings;
   selectedPictoId?: string | null;
+  mallId?: MallId; // Add
+  defaultFloorMaps?: Record<string, string>; // Add
 }
 
 const GidoApp: React.FC<GidoAppProps> = ({
@@ -66,6 +55,8 @@ const GidoApp: React.FC<GidoAppProps> = ({
   showOnlyMap = false,
   pictoSettings,
   selectedPictoId,
+  mallId = "suzaka", // Default
+  defaultFloorMaps,
 }) => {
   const shops = useMemo(() => previewShops || [], [previewShops]);
 
@@ -112,7 +103,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
 
   const floorId = floor as FloorId;
   const customFloorMap = floorId ? imageSettings?.floorMaps?.[floorId] : undefined;
-  const floorMap = customFloorMap || FLOOR_MAPS[floor] || floor1FMap;
+  const floorMap = customFloorMap || (defaultFloorMaps ? defaultFloorMaps[floor] : undefined) || "";
 
   // Memoize locationIconSettings resolution
   const resolvedLocationIconSettings = useMemo(() => {
@@ -144,6 +135,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
           selectedShopId={selectedShopId}
           pictoSettings={pictoSettings}
           selectedPictoId={selectedPictoId}
+          mallId={mallId} // Pass mallId
         />
       </div>
     );
@@ -174,6 +166,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
           selectedShopId={selectedShopId}
           pictoSettings={pictoSettings}
           selectedPictoId={selectedPictoId}
+          mallId={mallId} // Pass mallId
         />
       </div>
 
@@ -217,7 +210,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
           }}
         >
           <img
-            src={imageSettings?.openTimeImage || openTimeImage}
+            src={imageSettings?.openTimeImage || openTimeImageDefault}
             alt="Open Time"
             style={{
               maxWidth: "100%",
@@ -227,12 +220,12 @@ const GidoApp: React.FC<GidoAppProps> = ({
             }}
             onLoad={() => {
               logInfo("openTime", "Open-time image loaded", {
-                src: imageSettings?.openTimeImage || openTimeImage,
+                src: imageSettings?.openTimeImage || openTimeImageDefault,
               });
             }}
             onError={(event) => {
               logError("openTime", "Failed to load open-time image", {
-                src: imageSettings?.openTimeImage || openTimeImage,
+                src: imageSettings?.openTimeImage || openTimeImageDefault,
               });
               (event.target as HTMLImageElement).style.visibility = "hidden";
             }}
@@ -330,7 +323,8 @@ const ShopPinsOverlay: React.FC<{
   selectedShopId?: string | null;
   pictoSettings?: PictoSettings;
   selectedPictoId?: string | null;
-}> = ({ floor, floorMap, locationIconSettings, shopPositions, shops, selectedShopId, pictoSettings, selectedPictoId }) => {
+  mallId: MallId; // Add
+}> = ({ floor, floorMap, locationIconSettings, shopPositions, shops, selectedShopId, pictoSettings, selectedPictoId, mallId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const [imageMetrics, setImageMetrics] = useState<{ 
@@ -464,12 +458,8 @@ const ShopPinsOverlay: React.FC<{
     return Object.values(instances)
       .filter(instance => instance.floor === normalizedFloor)
       .map(instance => {
-         // Find URL from pictoIcons based on exact filename match (exclude button files)
-         const entry = Object.entries(pictoIcons).find(([p]) => {
-           const fileName = p.split('/').pop() || "";
-           return fileName === instance.iconName && !fileName.startsWith('button-');
-         });
-         const iconUrl = entry ? (entry[1] as any).default : "";
+         // Find URL from assets utility based on filename
+         const iconUrl = findMallPictoUrl(mallId, instance.iconName);
          
          if (!iconUrl) return null;
 
@@ -499,7 +489,7 @@ const ShopPinsOverlay: React.FC<{
          };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [imageMetrics, normalizedFloor]);
+  }, [imageMetrics, normalizedFloor, mallId]); // Add mallId to deps
 
   // Memoize picto data to avoid recalculation on every render
   const pictoData = useMemo(() => {

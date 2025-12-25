@@ -212,29 +212,45 @@ function loadSettings() {
       floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
       openTimeImage: ""
     },
+    mallSettings: {
+      mallId: "suzaka"
+    },
+    dataByMall: {
+      suzaka: {
+        shopPositions: defaultShopPositions,
+        pictoSettings: defaultPictoSettings
+      },
+      "sendai-kamisugi": {
+        shopPositions: { positions: {} },
+        pictoSettings: { instances: {} }
+      }
+    }
   };
 
   try {
     const settingsPath = getSettingsPath();
     if (!fs.existsSync(settingsPath)) {
       logger.debug('Settings file does not exist, using defaults');
-      
-      // DEBUG: Record internal state (defaults)
-      lastLoadSettingsDebug = {
-        timestamp: new Date().toISOString(),
-        rawPreview: null,
-        parsedValue: null,
-        parsedType: null,
-        checkResult: false,
-        finalValue: base,
-        error: "File not found, using defaults"
-      };
-      
       return base;
     }
 
     const raw = fs.readFileSync(settingsPath, 'utf-8');
     const parsed = JSON.parse(raw);
+
+    // Migration: Move root shopPositions/pictoSettings to dataByMall if not present
+    if (!parsed.dataByMall) {
+      logger.info('Migrating settings to dataByMall structure');
+      parsed.dataByMall = {
+        suzaka: {
+          shopPositions: parsed.shopPositions || defaultShopPositions,
+          pictoSettings: parsed.pictoSettings || defaultPictoSettings
+        },
+        "sendai-kamisugi": {
+          shopPositions: { positions: {} },
+          pictoSettings: { instances: {} }
+        }
+      };
+    }
 
     // Check if locationIcons is per-floor (has "1F", "2F" etc) or single (has "speechBubble")
     let mergedLocationIcons = base.locationIcons;
@@ -275,25 +291,19 @@ function loadSettings() {
     // Explicitly set processed fields
     merged.locationIcons = mergedLocationIcons;
     
-    // Ensure shopPositions has correct structure and merge explicitly to be safe
-    if (parsed.shopPositions) {
-      merged.shopPositions = deepMerge(base.shopPositions, parsed.shopPositions);
-    } else {
-      merged.shopPositions = base.shopPositions;
+    // Ensure mallSettings has correct structure
+    if (!merged.mallSettings) {
+      merged.mallSettings = {
+        mallId: "suzaka"
+      };
     }
 
-    // Double check structure
-    if (!merged.shopPositions || !merged.shopPositions.positions) {
-       merged.shopPositions = { positions: {} };
-    }
-
-    // Ensure pictoSettings has correct structure
-    if (!merged.pictoSettings) {
-      merged.pictoSettings = { instances: {} };
-    } else if (!merged.pictoSettings.instances) {
-      // If it exists but lacks instances, ensure instances exists (preserve other props if any)
-      merged.pictoSettings.instances = {};
-    }
+    // Populate root shopPositions and pictoSettings based on current mallId for backward compatibility
+    const currentMallId = merged.mallSettings.mallId;
+    const currentMallData = merged.dataByMall[currentMallId] || merged.dataByMall.suzaka;
+    
+    merged.shopPositions = currentMallData.shopPositions || { positions: {} };
+    merged.pictoSettings = currentMallData.pictoSettings || { instances: {} };
 
     // Ensure imageSettings has correct structure
     if (!merged.imageSettings) {
@@ -344,35 +354,89 @@ function saveSettings(partial) {
   const current = loadSettings();
   
   // Create next settings object
-  let next = deepMerge(current, partial);
+  const next = deepMerge(current, partial);
   
   // Special handling for pictoSettings to allow deletion (overwrite instead of deep merge for instances)
-  // We can't just use deepMerge because it preserves keys in target that are missing in source.
   if (partial.pictoSettings && partial.pictoSettings.instances) {
      next.pictoSettings.instances = partial.pictoSettings.instances;
   }
 
+  // Update dataByMall based on what was changed.
+  // Note: 'next' has updated root props (shopPositions, etc.) from 'partial'.
+  // We need to sync these back to the appropriate mall in dataByMall.
+  
+  // Determine target mall ID. 
+  // If partial updated mallSettings.mallId, we are switching malls.
+  // In that case, we usually don't update data simultaneously.
+  // If we are just saving data, we save to the *current* mall (before switch, or consistent with switch).
+  // The 'current' object has shopPositions populated from the mall that was active when loaded.
+  
+  // Use the new mall ID if it's being changed, otherwise use current
+  const targetMallId = (partial.mallSettings && partial.mallSettings.mallId) 
+    ? partial.mallSettings.mallId 
+    : current.mallSettings.mallId;
+  
+  // Ensure dataByMall exists
+  if (!next.dataByMall) next.dataByMall = {};
+  if (!next.dataByMall[targetMallId]) next.dataByMall[targetMallId] = {};
+
+  // If partial contained data updates, apply them to the target mall in dataByMall
+  if (partial.shopPositions) {
+      next.dataByMall[targetMallId].shopPositions = next.shopPositions;
+  }
+  if (partial.pictoSettings) {
+      next.dataByMall[targetMallId].pictoSettings = next.pictoSettings;
+  }
+
   try {
     const settingsPath = getSettingsPath();
-    fs.writeFileSync(settingsPath, JSON.stringify(next, null, 2), 'utf-8');
+    
+    // Create object to save (remove root data props to avoid duplication on disk)
+    // JSON.stringify will ignore undefined properties
+    const toSave = {
+        ...next,
+        shopPositions: undefined,
+        pictoSettings: undefined
+    };
+
+    fs.writeFileSync(settingsPath, JSON.stringify(toSave, null, 2), 'utf-8');
     
     // Log saving of shop positions specifically if present
     if (partial.shopPositions) {
        logger.info('Shop positions saved to disk', {
-         count: Object.keys(next.shopPositions?.positions || {}).length
+         count: Object.keys(next.shopPositions?.positions || {}).length,
+         mallId: targetMallId
        });
     }
     
     // Log saving of picto settings specifically if present
     if (partial.pictoSettings) {
        logger.info('Picto settings saved to disk', {
-         count: Object.keys(next.pictoSettings?.instances || {}).length
+         count: Object.keys(next.pictoSettings?.instances || {}).length,
+         mallId: targetMallId
        });
     }
 
     logger.info('Settings saved', {
       floor: next.floor,
+      mallId: next.mallSettings.mallId
     });
+
+    // If mall ID changed, we need to broadcast new data to renderer
+    if (partial.mallSettings && partial.mallSettings.mallId !== current.mallSettings.mallId) {
+        const newMallId = partial.mallSettings.mallId;
+        // Re-load settings to get fresh data for the new mall
+        const newSettings = loadSettings(); // This will populate root props from new mall
+        
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            logger.info('Broadcasting new mall data', { newMallId });
+            mainWindow.webContents.send('shop-positions-updated', newSettings.shopPositions);
+            mainWindow.webContents.send('picto-settings-updated', newSettings.pictoSettings);
+        }
+        
+        return newSettings;
+    }
+
   } catch (error) {
     logger.error('Failed to save settings', {
       error: error?.message,
@@ -853,6 +917,25 @@ ipcMain.handle('save-image-settings', (_event, imageSettings) => {
   }
   
   return settings.imageSettings;
+});
+
+/**
+ * IPC handlers for Mall Settings
+ */
+ipcMain.handle('get-mall-settings', () => {
+  logger.info('IPC get-mall-settings');
+  const settings = loadSettings();
+  return settings.mallSettings || { mallId: "suzaka" };
+});
+
+ipcMain.handle('save-mall-settings', (_event, mallSettings) => {
+  logger.info('IPC save-mall-settings', { mallId: mallSettings?.mallId });
+  const settings = saveSettings({ mallSettings });
+  
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('mall-settings-updated', settings.mallSettings);
+  }
+  return settings.mallSettings;
 });
 
 /**

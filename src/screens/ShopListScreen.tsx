@@ -4,67 +4,15 @@ import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchContentRef } from "react-zoom-pan-pinch";
 import { FloorSelectButton } from "../components/FloorSelectButton";
 import { NavButton } from "../components/NavButton";
-import floor1FMap from "../assets/floor-1F-map.svg";
-import floor2FMap from "../assets/floor-2F-map.svg";
-import floor3FMap from "../assets/floor-3F-map.svg";
-import floor4FMap from "../assets/floor-4F-map.svg";
 import { FloorLabel } from "../components/FloorLabel";
 import { CurrentFloorIcon } from "../components/CurrentFloorIcon";
 import { LanguageSelectButton } from "../components/LanguageSelectButton";
-import openTime from "../assets/open-time.svg";
-import iconSearch from "../assets/icon_search.svg";
-import iconAll from "../assets/genres/icon_all.svg";
-import iconAllHighlight from "../assets/genres/icon_all_highlight.svg";
-import iconFashion from "../assets/genres/icon_fashion.svg";
-import iconFashionHighlight from "../assets/genres/icon_fashion_highlight.svg";
-import iconFashionGoods from "../assets/genres/icon_fashion_goods.svg";
-import iconFashionGoodsHighlight from "../assets/genres/icon_fashion_goods_highlight.svg";
-import iconSport from "../assets/genres/icon_sport.svg";
-import iconSportHighlight from "../assets/genres/icon_sport_highlight.svg";
-import iconKids from "../assets/genres/icon_kids.svg";
-import iconKidsHighlight from "../assets/genres/icon_kids_highlight.svg";
-import iconLifestyle from "../assets/genres/icon_lifestyle.svg";
-import iconLifestyleHighlight from "../assets/genres/icon_lifestyle_highlight.svg";
-import iconGourmet from "../assets/genres/icon_gourmet.svg";
-import iconGourmetHighlight from "../assets/genres/icon_gourmet_highlight.svg";
-import iconEntertainment from "../assets/genres/icon_entertainment.svg";
-import iconEntertainmentHighlight from "../assets/genres/icon_entertainment_highlight.svg";
-import iconService from "../assets/genres/icon_survice.svg";
-import iconServiceHighlight from "../assets/genres/icon_survice_highlight.svg";
-import iconTime from "../assets/icon-time.svg";
-import iconTel from "../assets/icon-tel.svg";
-import iconLocation from "../assets/icon-location.svg";
+// import openTime removed - used via button/component
 import { EventNewsButton } from "../components/EventNewsButton";
 import { ShopNewsButton } from "../components/ShopNewsButton";
 import { OpenTimeButton } from "../components/OpenTimeButton";
-import zoomIn from "../assets/zoom-in.svg";
-import zoomInHighlight from "../assets/zoom-in-highlight.svg";
-import zoomOut from "../assets/zoom-out.svg";
-import zoomOutHighlight from "../assets/zoom-out-highlight.svg";
-import buttonInfo from "../assets/pictos/button-info.svg";
-import buttonInfoHighlight from "../assets/pictos/button-info-highlight.svg";
-import buttonRestroom from "../assets/pictos/button-restroom.svg";
-import buttonRestroomHighlight from "../assets/pictos/button-restroom-highlight.svg";
-import buttonPriorityRestroom from "../assets/pictos/button-priority-restroom.svg";
-import buttonPriorityRestroomHighlight from "../assets/pictos/button-priority-restroom-highlight.svg";
-import buttonBabyRoom from "../assets/pictos/button-baby-room.svg";
-import buttonBabyRoomHighlight from "../assets/pictos/button-baby-room-highlight.svg";
-import buttonSmokingRoom from "../assets/pictos/button-smoking-room.svg";
-import buttonSmokingRoomHighlight from "../assets/pictos/button-smoking-room-highlight.svg";
-import buttonFreeCoinLockers from "../assets/pictos/button-free-coin-lockers.svg";
-import buttonFreeCoinLockersHighlight from "../assets/pictos/button-free-coin-lockers-highlight.svg";
-import buttonATM from "../assets/pictos/button-ATM.svg";
-import buttonATMHighlight from "../assets/pictos/button-ATM-highlight.svg";
-import buttonElevator from "../assets/pictos/button-elevator.svg";
-import buttonElevatorHighlight from "../assets/pictos/button-elevator-highlight.svg";
-import buttonBusStop from "../assets/pictos/button-bus-stop.svg";
-import buttonBusStopHighlight from "../assets/pictos/button-bus-stop-highlight.svg";
-import buttonTaxiStand from "../assets/pictos/button-taxi-stand.svg";
-import buttonTaxiStandHighlight from "../assets/pictos/button-taxi-stand-highlight.svg";
-import hint from "../assets/hint.svg";
+// Facility button imports removed - loaded dynamically via mall assets
 import { CloseButton } from "../components/CloseButton";
-import commingSoon from "../assets/comming-soon.svg";
-import waonPointIcon from "../assets/waonpoint.svg";
 import type { Shop } from "../types/shop";
 import type { ShopNews } from "../types/shopNews";
 import { LanguageSelectModal } from "../components/LanguageSelectModal";
@@ -75,15 +23,39 @@ import { EventNewsModal } from "../components/EventNewsModal";
 import { ShopNewsModal } from "../components/ShopNewsModal";
 import { ShopLogoImage } from "../components/ShopLogoImage";
 import { buildImagePath, toFileUrl } from "../utils/imageUtils";
+// Unused variables removed
+import { getCommonAssetUrl } from "../utils/assets"; // Import common assets helper
+// ImageSettings import removed - handled in parent
+// MallConfig import removed - handled via props
 import type { LocationIconSettingsPerFloor } from "../types/locationIcon";
 import type { FloorId } from "../types/floorLayout";
-import type { PictoSettings } from "../types/picto"; // Add import
+import type { PictoSettings } from "../types/picto";
+import type { Genre } from "../types/mall"; // Update import
+import type { ShopPositionSettings } from "../types/shopPosition";
 import { logInfo } from "../logs/logging";
 import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from "../config";
-import { PictoPin } from "../components/PictoPin"; // Add import
+import { PictoPin } from "../components/PictoPin";
+import type { MallId } from "../types/mall"; // Import
+import { findMallPictoUrl, getMallAssetUrl } from "../utils/assets"; // Import
 
-// Load picto icons
-const pictoIcons = import.meta.glob('../assets/pictos/*.svg', { eager: true, query: '?url' });
+// Load common assets
+const iconSearch = getCommonAssetUrl("search.svg");
+const iconTime = getCommonAssetUrl("time.svg");
+const iconTel = getCommonAssetUrl("tel.svg");
+const iconLocation = getCommonAssetUrl("location.svg");
+const hint = getCommonAssetUrl("hint.svg");
+const commingSoon = getCommonAssetUrl("comming-soon.svg");
+const waonPointIcon = getCommonAssetUrl("waonpoint.svg");
+// Unused openTime import removed
+// Zoom icons - common but language/state specific (might need more logic if fully dynamic, 
+// for now hardcoding path if they are in common/zoom/[lang]/...)
+// Or using the getCommonAssetUrl with subpaths if supported by helper (it prepends 'common/')
+const zoomIn = getCommonAssetUrl("zoom/ja/zoom-in.svg");
+const zoomInHighlight = getCommonAssetUrl("zoom/ja/zoom-in-highlight.svg");
+const zoomOut = getCommonAssetUrl("zoom/ja/zoom-out.svg");
+const zoomOutHighlight = getCommonAssetUrl("zoom/ja/zoom-out-highlight.svg");
+
+// Unused DEFAULT_MAPS removed
 
 // Idle timeout configuration (30 seconds)
 const IDLE_TIMEOUT_MS = 30000;
@@ -234,13 +206,7 @@ function normalizeFloor(value: string): string {
   return m ? `${m[1]}F` : value;
 }
 
-// Genre data definition
-type Genre = {
-  id: string;
-  name: string;
-  icon: string;
-  highlightIcon: string;
-};
+// Genre data definition removed (imported from types/mall)
 
 // Facility data definition
 type Facility = {
@@ -250,30 +216,27 @@ type Facility = {
   highlightIcon: string;
 };
 
-const FACILITY_LIST: Facility[] = [
-  { id: "info", name: "Info", icon: buttonInfo, highlightIcon: buttonInfoHighlight },
-  { id: "restroom", name: "Restroom", icon: buttonRestroom, highlightIcon: buttonRestroomHighlight },
-  { id: "priority_restroom", name: "Priority Restroom", icon: buttonPriorityRestroom, highlightIcon: buttonPriorityRestroomHighlight },
-  { id: "baby_room", name: "Baby Room", icon: buttonBabyRoom, highlightIcon: buttonBabyRoomHighlight },
-  { id: "smoking_room", name: "Smoking Room", icon: buttonSmokingRoom, highlightIcon: buttonSmokingRoomHighlight },
-  { id: "free_coin_lockers", name: "Coin Lockers", icon: buttonFreeCoinLockers, highlightIcon: buttonFreeCoinLockersHighlight },
-  { id: "atm", name: "ATM", icon: buttonATM, highlightIcon: buttonATMHighlight },
-  { id: "elevator", name: "Elevator", icon: buttonElevator, highlightIcon: buttonElevatorHighlight },
-  { id: "bus_stop", name: "Bus Stop", icon: buttonBusStop, highlightIcon: buttonBusStopHighlight },
-  { id: "taxi_stand", name: "Taxi Stand", icon: buttonTaxiStand, highlightIcon: buttonTaxiStandHighlight },
-];
+// Helper function to get facility list based on mallId
+const getFacilityList = (mallId: MallId): Facility[] => {
+  // Button icons are in pictos/ja/ folder
+  const getButtonUrl = (name: string) => getMallAssetUrl(mallId, "pictos/ja", `${name}.svg`);
+  const getButtonHighlightUrl = (name: string) => getMallAssetUrl(mallId, "pictos/ja", `${name}-highlight.svg`);
+  
+  return [
+    { id: "info", name: "Info", icon: getButtonUrl("info"), highlightIcon: getButtonHighlightUrl("info") },
+    { id: "restroom", name: "Restroom", icon: getButtonUrl("restroom"), highlightIcon: getButtonHighlightUrl("restroom") },
+    { id: "priority_restroom", name: "Priority Restroom", icon: getButtonUrl("priority-restroom"), highlightIcon: getButtonHighlightUrl("priority-restroom") },
+    { id: "baby_room", name: "Baby Room", icon: getButtonUrl("baby-room"), highlightIcon: getButtonHighlightUrl("baby-room") },
+    { id: "smoking_room", name: "Smoking Room", icon: getButtonUrl("smoking-room"), highlightIcon: getButtonHighlightUrl("smoking-room") },
+    { id: "free_coin_lockers", name: "Coin Lockers", icon: getButtonUrl("free-coin-lockers"), highlightIcon: getButtonHighlightUrl("free-coin-lockers") },
+    { id: "atm", name: "ATM", icon: getButtonUrl("atm"), highlightIcon: getButtonHighlightUrl("atm") },
+    { id: "elevator", name: "Elevator", icon: getButtonUrl("elevator"), highlightIcon: getButtonHighlightUrl("elevator") },
+    { id: "bus_stop", name: "Bus Stop", icon: getButtonUrl("bus-stop"), highlightIcon: getButtonHighlightUrl("bus-stop") },
+    { id: "taxi_stand", name: "Taxi Stand", icon: getButtonUrl("taxi-stand"), highlightIcon: getButtonHighlightUrl("taxi-stand") },
+  ];
+};
 
-const GENRE_LIST: Genre[] = [
-  { id: "all", name: "All", icon: iconAll, highlightIcon: iconAllHighlight },
-  { id: "fashion", name: "Fashion", icon: iconFashion, highlightIcon: iconFashionHighlight },
-  { id: "fashion_goods", name: "Fashion Goods", icon: iconFashionGoods, highlightIcon: iconFashionGoodsHighlight },
-  { id: "sport", name: "Sport", icon: iconSport, highlightIcon: iconSportHighlight },
-  { id: "kids", name: "Kids", icon: iconKids, highlightIcon: iconKidsHighlight },
-  { id: "lifestyle", name: "Lifestyle", icon: iconLifestyle, highlightIcon: iconLifestyleHighlight },
-  { id: "gourmet", name: "Gourmet", icon: iconGourmet, highlightIcon: iconGourmetHighlight },
-  { id: "entertainment", name: "Entertainment", icon: iconEntertainment, highlightIcon: iconEntertainmentHighlight },
-  { id: "service", name: "Service", icon: iconService, highlightIcon: iconServiceHighlight },
-];
+// GENRE_LIST removed - passed via props
 
 // Remove CURRENT_FLOOR constant as it is now passed via props
 // const CURRENT_FLOOR: string = "1F";
@@ -330,11 +293,17 @@ interface ShopListScreenProps {
   locationIconSettings?: LocationIconSettingsPerFloor;
   currentFloor?: string;
   shops: Shop[];
-  shopPositions?: any;
+  shopPositions?: ShopPositionSettings;
   shopNews?: ShopNews[];
   eventNews?: ShopNews[];
-  pictoSettings?: PictoSettings; // Add prop
+  pictoSettings?: PictoSettings;
+  genres: Genre[]; // Added prop
+  mallId?: MallId; // Added prop
+  floorMaps?: Record<string, string>; // Added prop
+  openTimeImage?: string; // Add prop
 }
+
+// 五十音行マッピング
 
 // 五十音行マッピング
 const KANA_MAP: Record<string, RegExp> = {
@@ -392,15 +361,28 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   shopNews = [],
   eventNews = [],
   pictoSettings,
+  genres = [],
+  mallId = "suzaka",
+  floorMaps = {},
+  openTimeImage: propOpenTimeImage, // Add prop
 }) => {
   // Map content ref for direct style manipulation (zoom scale)
   const mapContentRef = useRef<HTMLDivElement>(null);
+  
+  // Get facility list based on mallId
+  const facilityList = useMemo(() => getFacilityList(mallId), [mallId]);
 
   // Map transform ref
   const transformComponentRef = useRef<ReactZoomPanPinchContentRef>(null);
   
   // Ref to track drag start position for click vs drag detection
   const dragStartPosRef = useRef<{ x: number, y: number } | null>(null);
+
+  // Determine current map based on settings or fallback (Unused but kept for reference if needed logic later)
+  // const currentMap = floorMaps[currentFloor] || "";
+
+  // Resolve open time image - use prop or fallback to mall default
+  const openTimeImage = propOpenTimeImage || getMallAssetUrl(mallId, "open-time", "open-time.svg");
 
   // Genre scroll container ref
   const genreScrollContainerRef = useRef<HTMLDivElement>(null);
@@ -464,8 +446,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   const handleSetSelectedGenre = (newGenreId: string) => {
     if (newGenreId === selectedGenre) return;
 
-    const currentIndex = GENRE_LIST.findIndex(g => g.id === selectedGenre);
-    const newIndex = GENRE_LIST.findIndex(g => g.id === newGenreId);
+    const currentIndex = genres.findIndex(g => g.id === selectedGenre);
+    const newIndex = genres.findIndex(g => g.id === newGenreId);
     
     if (currentIndex !== -1 && newIndex !== -1) {
         if (newIndex > currentIndex) {
@@ -1297,7 +1279,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               <img
-                src={openTime}
+                src={openTimeImage} // Use dynamic image
                 alt="Open Time Info"
                 style={{
                   maxWidth: "90%", // Add some padding
@@ -1430,7 +1412,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   >
                     {/* Map Image */}
                     <img
-                      src={selectedFloor === "2F" ? floor2FMap : selectedFloor === "3F" ? floor3FMap : selectedFloor === "4F" ? floor4FMap : floor1FMap}
+                      src={floorMaps[selectedFloor || "1F"] || ""}
                       alt={`${selectedFloor || "1F"} Map`}
                       style={{
                         width: "100%",
@@ -1477,12 +1459,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     {pictoSettings && Object.values(pictoSettings.instances)
                       .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
                       .map(instance => {
-                        // Extract filename from path and match exactly (exclude button files)
-                        const entry = Object.entries(pictoIcons).find(([p]) => {
-                          const fileName = p.split('/').pop() || "";
-                          return fileName === instance.iconName && !fileName.startsWith('button-');
-                        });
-                        const iconUrl = entry ? (entry[1] as any).default : "";
+                        // Find URL from assets utility based on filename
+                        const iconUrl = findMallPictoUrl(mallId, instance.iconName);
                         if (!iconUrl) return null;
 
                         const scaledInstance = {
@@ -1601,7 +1579,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             gap: "20px", // Add gap between icons
           }}
         >
-          {FACILITY_LIST.map((facility) => {
+          {facilityList.map((facility) => {
             const isSelected = selectedFacility === facility.id;
             
             return (
@@ -2026,7 +2004,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             }}
           >
 
-            {GENRE_LIST.map((genre) => {
+            {genres.map((genre) => {
               const isSelected = selectedGenre === genre.id;
               
               return (

@@ -3,11 +3,8 @@ import React, { useEffect, useState, useMemo, useRef } from "react";
 import "./styles/global-image.css"; // Global image styles
 import ShopListScreen from "./screens/ShopListScreen";
 
-import floor1FMap from "./assets/floor-1F-map.svg";
-import floor2FMap from "./assets/floor-2F-map.svg";
-import floor3FMap from "./assets/floor-3F-map.svg";
-import floor4FMap from "./assets/floor-4F-map.svg";
-import openTimeImage from "./assets/open-time.svg";
+// floor maps imports removed - managed by mall config and assets
+// openTimeImage import removed - managed by mall config
 
 import VersionInfoScreen from "./screens/VersionInfoScreen";
 import UnifiedSettingsScreen from "./screens/UnifiedSettingsScreen";
@@ -21,6 +18,10 @@ import { DEFAULT_IMAGE_SETTINGS } from "./types/imageSettings";
 import type { ShopPositionSettings } from "./types/shopPosition";
 import type { PictoSettings } from "./types/picto";
 import { DEFAULT_PICTO_SETTINGS } from "./types/picto";
+import type { MallSettings } from "./types/mall";
+import { DEFAULT_MALL_SETTINGS } from "./types/mall";
+import { getMallConfig } from "./config/malls";
+import { getMallAssetUrl } from "./utils/assets";
 import type { Shop } from "./types/shop";
 import { fetchShops, loadShopsFromCache, saveShopsToCache } from "./repositories/shopRepository";
 import { 
@@ -43,16 +44,21 @@ import { logInfo, logError } from "./logs/logging";
 
 type FloorId = "1F" | "2F" | "3F" | "4F";
 
-const mergeWithDefaultImages = (settings: ImageSettings): ImageSettings => {
+const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageSettings => {
+  const config = getMallConfig(mallId as any);
+  // Default open time image path based on mallId
+  const defaultOpenTime = getMallAssetUrl(mallId, "open-time", "open-time.svg");
+  
   return {
     ...settings,
     floorMaps: {
-      "1F": settings.floorMaps["1F"] || floor1FMap,
-      "2F": settings.floorMaps["2F"] || floor2FMap,
-      "3F": settings.floorMaps["3F"] || floor3FMap,
-      "4F": settings.floorMaps["4F"] || floor4FMap,
+      "1F": settings.floorMaps["1F"] || config.floorMaps["1F"],
+      "2F": settings.floorMaps["2F"] || config.floorMaps["2F"],
+      "3F": settings.floorMaps["3F"] || config.floorMaps["3F"],
+      "4F": settings.floorMaps["4F"] || config.floorMaps["4F"],
     },
-    openTimeImage: settings.openTimeImage || openTimeImage,
+    // Use settings value if present, otherwise use default
+    openTimeImage: settings.openTimeImage || defaultOpenTime,
   };
 };
 
@@ -79,8 +85,9 @@ const App: React.FC = () => {
 
   // Floor and floor layout state for unified settings
   const [floor, setFloor] = useState<FloorId>("1F");
+  const [mallSettings, setMallSettings] = useState<MallSettings>(DEFAULT_MALL_SETTINGS);
   const [imageSettings, setImageSettings] = useState<ImageSettings>(
-    mergeWithDefaultImages(DEFAULT_IMAGE_SETTINGS)
+    mergeWithDefaultImages(DEFAULT_IMAGE_SETTINGS, mallSettings.mallId)
   );
   const [shopPositions, setShopPositions] = useState<ShopPositionSettings>({ positions: {} });
   const [pictoSettings, setPictoSettings] = useState<PictoSettings>(DEFAULT_PICTO_SETTINGS);
@@ -395,12 +402,27 @@ const App: React.FC = () => {
         }
       }
 
+      // Load mall settings first (needed for image settings merge)
+      let currentMallId = "suzaka";
+      if (api.getMallSettings) {
+        try {
+          const saved = await api.getMallSettings();
+          if (saved) {
+            setMallSettings(saved);
+            currentMallId = saved.mallId;
+            addDebug(`Mall settings loaded: ${saved.mallId}`);
+          }
+        } catch (e) {
+          addDebug(`Failed to load mall settings: ${e}`);
+        }
+      }
+
       // Load image settings
       if (api.getImageSettings) {
         try {
           const saved = await api.getImageSettings();
           if (saved) {
-            setImageSettings(mergeWithDefaultImages(saved));
+            setImageSettings(mergeWithDefaultImages(saved, currentMallId));
             addDebug(`Image settings loaded`);
           }
         } catch (e) {
@@ -434,7 +456,7 @@ const App: React.FC = () => {
           addDebug(`Failed to load picto settings: ${e}`);
         }
       }
-      
+
       // Load API URLs
       if (api.getBridgeBaseUrl) {
          try {
@@ -549,6 +571,12 @@ const App: React.FC = () => {
           setPictoSettings(updated);
         });
       }
+
+      if (api.onMallSettingsUpdated) {
+        api.onMallSettingsUpdated((updated) => {
+          setMallSettings(updated);
+        });
+      }
     }
 
     return () => {
@@ -648,6 +676,73 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSaveMallSettings = async (settings: MallSettings) => {
+    const api = window.electronAPI;
+    if (!api) {
+      setMallSettings(settings);
+      return;
+    }
+
+    try {
+      const saved = await api.saveMallSettings(settings);
+      if (saved) {
+        setMallSettings(saved);
+        logInfo("app", "Mall settings saved successfully", { mallId: saved.mallId });
+        
+        // Reload mall-specific settings when mall changes
+        if (saved.mallId !== mallSettings.mallId) {
+          // Reload shop positions for the new mall
+          if (api.getShopPositions) {
+            try {
+              const newShopPositions = await api.getShopPositions();
+              if (newShopPositions) {
+                setShopPositions(newShopPositions);
+                logInfo("app", "Shop positions reloaded for new mall", { 
+                  mallId: saved.mallId,
+                  count: Object.keys(newShopPositions.positions).length 
+                });
+              }
+            } catch (e) {
+              logError("app", "Failed to reload shop positions", { error: e });
+            }
+          }
+          
+          // Reload picto settings for the new mall
+          if (api.getPictoSettings) {
+            try {
+              const newPictoSettings = await api.getPictoSettings();
+              if (newPictoSettings) {
+                setPictoSettings(newPictoSettings);
+                logInfo("app", "Picto settings reloaded for new mall", { 
+                  mallId: saved.mallId,
+                  count: Object.keys(newPictoSettings.instances).length 
+                });
+              }
+            } catch (e) {
+              logError("app", "Failed to reload picto settings", { error: e });
+            }
+          }
+          
+          // Reload image settings for the new mall
+          if (api.getImageSettings) {
+            try {
+              const savedImageSettings = await api.getImageSettings();
+              if (savedImageSettings) {
+                setImageSettings(mergeWithDefaultImages(savedImageSettings, saved.mallId));
+                logInfo("app", "Image settings reloaded for new mall", { mallId: saved.mallId });
+              }
+            } catch (e) {
+              logError("app", "Failed to reload image settings", { error: e });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      logError("app", "Failed to save mall settings", { error: e });
+      console.error("Failed to save mall settings", e);
+    }
+  };
+
   // Merge shops with positions
   const mergedShops = useMemo(() => {
     return shops.map((shop) => {
@@ -661,6 +756,8 @@ const App: React.FC = () => {
       return shop;
     });
   }, [shops, shopPositions]);
+
+  const currentMallConfig = getMallConfig(mallSettings.mallId);
 
   return (
     <>
@@ -752,6 +849,10 @@ const App: React.FC = () => {
       shopNews={shopNews}
       eventNews={eventNews}
       pictoSettings={pictoSettings}
+      genres={currentMallConfig.genres}
+      mallId={mallSettings.mallId}
+      floorMaps={currentMallConfig.floorMaps}
+      openTimeImage={imageSettings.openTimeImage} // Pass openTimeImage
     />
     <UnifiedSettingsScreen
         isOpen={isSettingsOpen}
@@ -768,6 +869,9 @@ const App: React.FC = () => {
         // Picto settings
         pictoSettings={pictoSettings}
         onSavePictoSettings={handleSavePictoSettings}
+        // Mall settings
+        mallSettings={mallSettings}
+        onSaveMallSettings={handleSaveMallSettings}
       />
       <VersionInfoScreen onClose={() => {}} />
     </>

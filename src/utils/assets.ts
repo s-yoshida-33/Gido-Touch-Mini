@@ -1,0 +1,162 @@
+// すべてのアセットを一括読み込み
+// キーはファイルパス、値はModule（defaultにURLが入っている）
+// ../assets/malls/**/*.svg と ../assets/common/**/*.svg を両方カバーするために ../assets/**/*.svg とする
+const assetModules = import.meta.glob('../assets/**/*.svg', { eager: true, query: '?url' });
+
+export function getAssetUrl(path: string): string {
+  // pathは assets/ 以下からの相対パスなどを想定
+  // 例: malls/suzaka/maps/1F.svg -> ../assets/malls/suzaka/maps/1F.svg
+  // 例: common/search.svg -> ../assets/common/search.svg
+  const fullPath = `../assets/${path}`;
+  const module = assetModules[fullPath] as { default: string } | undefined;
+  return module?.default || "";
+}
+
+export function getMallAssetUrl(mallId: string, category: string, filename: string): string {
+  // category: "maps", "genres/ja", "pictos" など
+  return getAssetUrl(`malls/${mallId}/${category}/${filename}`);
+}
+
+export function getCommonAssetUrl(filename: string): string {
+  // commonフォルダ直下のファイルを取得
+  // 例: search.svg, time.svg
+  return getAssetUrl(`common/${filename}`);
+}
+
+// ピクト一覧取得用
+// 指定されたモール・カテゴリ内のファイルパス一覧を返す
+export function getMallAssetPaths(mallId: string, category: string): string[] {
+    const prefix = `../assets/malls/${mallId}/${category}/`;
+    return Object.keys(assetModules)
+        .filter(path => path.startsWith(prefix))
+        .map(path => path.replace(prefix, '')); // ファイル名のみ返す
+}
+
+// ファイル名からモール内のピクト画像URLを探す
+export function findMallPictoUrl(mallId: string, filename: string): string {
+    // ファイル名からサブディレクトリを抽出（例: "ja/restroom.svg" -> "ja", "restroom.svg"）
+    const parts = filename.split('/');
+    const hasSubDir = parts.length > 1;
+    const baseFilename = hasSubDir ? parts[parts.length - 1] : filename;
+    const subDir = hasSubDir ? parts.slice(0, -1).join('/') : null;
+    
+    // CamelCase to KebabCase conversion (e.g. freeCoinLocker -> free-coin-locker)
+    const kebabName = baseFilename
+        .replace(/\.svg$/i, '')
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .toLowerCase() + '.svg';
+    const kebabNameWithoutExt = kebabName.replace(/\.svg$/, '');
+    
+    // ファイル名を正規化（アンダースコアをハイフンに変換、拡張子を確保）
+    const normalizedName = baseFilename.replace(/_/g, '-');
+    const nameWithoutExt = normalizedName.replace(/\.svg$/, '');
+    const nameWithExt = nameWithoutExt + '.svg';
+    
+    // 検索パターンのリスト
+    const searchPatterns: string[] = [];
+    
+    // サブディレクトリが指定されている場合
+    if (subDir) {
+        // 元のファイル名そのまま
+        searchPatterns.push(`../assets/malls/${mallId}/pictos/${subDir}/${baseFilename}`);
+        // 正規化したファイル名
+        if (normalizedName !== baseFilename) {
+            searchPatterns.push(`../assets/malls/${mallId}/pictos/${subDir}/${nameWithExt}`);
+        }
+        // Kebab case
+        if (kebabName !== baseFilename && kebabName !== normalizedName) {
+            searchPatterns.push(`../assets/malls/${mallId}/pictos/${subDir}/${kebabName}`);
+        }
+    }
+    
+    // 1. 直下（pictos/）- アイコン用、最優先
+    searchPatterns.push(`../assets/malls/${mallId}/pictos/${baseFilename}`);
+    if (normalizedName !== baseFilename) {
+        searchPatterns.push(`../assets/malls/${mallId}/pictos/${nameWithExt}`);
+    }
+    if (kebabName !== baseFilename && kebabName !== normalizedName) {
+        searchPatterns.push(`../assets/malls/${mallId}/pictos/${kebabName}`);
+    }
+    
+    // 2. ja/ フォルダ - ボタン用
+    searchPatterns.push(`../assets/malls/${mallId}/pictos/ja/${baseFilename}`);
+    if (normalizedName !== baseFilename) {
+        searchPatterns.push(`../assets/malls/${mallId}/pictos/ja/${nameWithExt}`);
+    }
+    if (kebabName !== baseFilename && kebabName !== normalizedName) {
+        searchPatterns.push(`../assets/malls/${mallId}/pictos/ja/${kebabName}`);
+    }
+    
+    // 3. en/ フォルダ - ボタン用
+    searchPatterns.push(`../assets/malls/${mallId}/pictos/en/${baseFilename}`);
+    if (normalizedName !== baseFilename) {
+        searchPatterns.push(`../assets/malls/${mallId}/pictos/en/${nameWithExt}`);
+    }
+    if (kebabName !== baseFilename && kebabName !== normalizedName) {
+        searchPatterns.push(`../assets/malls/${mallId}/pictos/en/${kebabName}`);
+    }
+    
+    // 各パターンを試す
+    for (const path of searchPatterns) {
+        if (assetModules[path]) {
+            return (assetModules[path] as { default: string }).default;
+        }
+    }
+    
+    // 追加のフォールバック: 単数形/複数形の違いを考慮（例: free-coin-locker vs free-coin-lockers）
+    const namesToTry = [nameWithoutExt, kebabNameWithoutExt];
+    if (normalizedName !== baseFilename && normalizedName !== kebabName) {
+        namesToTry.push(normalizedName.replace(/\.svg$/, ''));
+    }
+    
+    // 末尾が "s" の場合、削除して試す
+    for (const name of namesToTry) {
+        if (name.endsWith('s') && name.length > 1) {
+            const singularName = name.slice(0, -1) + '.svg';
+            const fallbackPatterns = [
+                `../assets/malls/${mallId}/pictos/${singularName}`,
+                `../assets/malls/${mallId}/pictos/ja/${singularName}`,
+                `../assets/malls/${mallId}/pictos/en/${singularName}`,
+            ];
+            for (const path of fallbackPatterns) {
+                if (assetModules[path]) {
+                    return (assetModules[path] as { default: string }).default;
+                }
+            }
+        }
+    }
+    
+    // 末尾に "s" を追加して試す
+    for (const name of namesToTry) {
+        if (!name.endsWith('s')) {
+            const pluralName = name + 's.svg';
+            const fallbackPatterns = [
+                `../assets/malls/${mallId}/pictos/${pluralName}`,
+                `../assets/malls/${mallId}/pictos/ja/${pluralName}`,
+                `../assets/malls/${mallId}/pictos/en/${pluralName}`,
+            ];
+            for (const path of fallbackPatterns) {
+                if (assetModules[path]) {
+                    return (assetModules[path] as { default: string }).default;
+                }
+            }
+        }
+    }
+    
+    // デバッグ用：見つからなかった場合にログ出力（開発時のみ）
+    if (process.env.NODE_ENV === 'development') {
+        const availablePictos = Object.keys(assetModules)
+            .filter(p => p.includes(`malls/${mallId}/pictos`))
+            .map(p => p.replace(`../assets/malls/${mallId}/pictos/`, ''))
+            .filter(p => !p.includes('-highlight') && !p.includes('button-'));
+        console.warn(`Picto icon not found: ${filename} for mall ${mallId}`, {
+            baseFilename,
+            normalizedName,
+            kebabName,
+            searchPatterns: searchPatterns.slice(0, 5),
+            availablePictos: availablePictos.slice(0, 20)
+        });
+    }
+    
+    return "";
+}

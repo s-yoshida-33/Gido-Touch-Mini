@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CloseButton } from "./CloseButton";
-import iconDate from "../assets/icon_date.svg";
-import iconTime from "../assets/icon-time.svg";
-import iconLocation from "../assets/icon-location.svg";
+import { getCommonAssetUrl } from "../utils/assets";
 import type { ShopNews } from "../types/shopNews";
+
+const iconDate = getCommonAssetUrl("date.svg");
+const iconTime = getCommonAssetUrl("time.svg");
+const iconLocation = getCommonAssetUrl("location.svg");
 interface EventNewsModalProps {
   isOpen: boolean;
   onClose: () => void;
