@@ -161,6 +161,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('picto-settings-updated', listener);
     };
   },
+  getMallId() {
+    return ipcRenderer.invoke('get-mall-id');
+  },
+  setMallId(mallId) {
+    return ipcRenderer.invoke('set-mall-id', mallId);
+  },
+  readMallConfig(mallId, configType) {
+    return ipcRenderer.invoke('read-mall-config', mallId, configType);
+  },
+  readMallAsset(relativePath) {
+    return ipcRenderer.invoke('read-mall-asset', relativePath);
+  },
 });
 
 contextBridge.exposeInMainWorld('logger', {

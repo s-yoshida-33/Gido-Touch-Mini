@@ -43,6 +43,10 @@ interface ElectronAPI {
   getMallSettings: () => Promise<MallSettings>;
   saveMallSettings: (settings: MallSettings) => Promise<MallSettings>;
   onMallSettingsUpdated: (cb: (settings: MallSettings) => void) => () => void;
+  getMallId: () => Promise<string>;
+  setMallId: (mallId: string) => Promise<void>;
+  readMallConfig: (mallId: string, configType: 'genres' | 'pictos') => Promise<any>;
+  readMallAsset: (relativePath: string) => Promise<string | null>;
 
   manualUpdateCheck: () => void;
   oneClickUpdate: () => void;

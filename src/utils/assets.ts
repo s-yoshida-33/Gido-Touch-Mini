@@ -160,3 +160,65 @@ export function findMallPictoUrl(mallId: string, filename: string): string {
     
     return "";
 }
+
+// 非同期読み込みヘルパー
+export async function loadMallPictoConfig(mallId: string) {
+  if (window.electronAPI?.readMallConfig) {
+     return window.electronAPI.readMallConfig(mallId, 'pictos');
+  }
+  return null;
+}
+
+export async function loadMallGenreConfig(mallId: string) {
+    if (window.electronAPI?.readMallConfig) {
+        return window.electronAPI.readMallConfig(mallId, 'genres');
+    }
+    return null;
+}
+
+export async function loadPictoIcon(mallId: string, lang: string, name: string, isHighlight: boolean, isButton: boolean) {
+    let filename = name;
+    if (isHighlight) filename += '-highlight';
+    if (!filename.endsWith('.svg')) filename += '.svg';
+    
+    // ピクトアイコンのパス構築ルール
+    // ボタンの場合: pictos/{lang}/{filename}
+    // アイコンの場合: pictos/{filename} (優先), pictos/ja/{filename} (フォールバック)
+    
+    if (window.electronAPI?.readMallAsset) {
+        let path = '';
+        if (isButton) {
+            path = `${mallId}/pictos/${lang}/${filename}`;
+        } else {
+            path = `${mallId}/pictos/${filename}`;
+        }
+        
+        let result = await window.electronAPI.readMallAsset(path);
+        
+        // アイコンで直下に見つからない場合、jaフォルダを探す
+        if (!result && !isButton) {
+            const fallbackPath = `${mallId}/pictos/${lang}/${filename}`;
+            result = await window.electronAPI.readMallAsset(fallbackPath);
+        }
+        
+        return result;
+    }
+    
+    // Electron環境でない場合のフォールバック（findMallPictoUrlを使用）
+    return findMallPictoUrl(mallId, filename);
+}
+
+export async function loadGenreIcon(mallId: string, lang: string, name: string, isHighlight: boolean) {
+     let filename = name;
+     if (isHighlight) filename += '-highlight';
+     if (!filename.endsWith('.svg')) filename += '.svg';
+     
+     const path = `${mallId}/genres/${lang}/${filename}`;
+     
+     if (window.electronAPI?.readMallAsset) {
+         return await window.electronAPI.readMallAsset(path);
+     }
+     
+     // Fallback
+     return getMallAssetUrl(mallId, `genres/${lang}`, filename);
+}

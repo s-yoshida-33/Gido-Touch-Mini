@@ -18,7 +18,7 @@ import { DEFAULT_IMAGE_SETTINGS } from "./types/imageSettings";
 import type { ShopPositionSettings } from "./types/shopPosition";
 import type { PictoSettings } from "./types/picto";
 import { DEFAULT_PICTO_SETTINGS } from "./types/picto";
-import type { MallSettings } from "./types/mall";
+import type { MallSettings, MallId } from "./types/mall";
 import { DEFAULT_MALL_SETTINGS } from "./types/mall";
 import { getMallConfig } from "./config/malls";
 import { getMallAssetUrl } from "./utils/assets";
@@ -83,6 +83,9 @@ const App: React.FC = () => {
     DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR
   );
 
+  // Mall ID state
+  const [mallId, setMallId] = useState<string>("suzaka");
+  
   // Floor and floor layout state for unified settings
   const [floor, setFloor] = useState<FloorId>("1F");
   const [mallSettings, setMallSettings] = useState<MallSettings>(DEFAULT_MALL_SETTINGS);
@@ -556,7 +559,7 @@ const App: React.FC = () => {
 
       if (api.onImageSettingsUpdated) {
         api.onImageSettingsUpdated((updated) => {
-          setImageSettings(updated);
+          setImageSettings(mergeWithDefaultImages(updated, mallId));
         });
       }
 
@@ -613,6 +616,23 @@ const App: React.FC = () => {
   };
 
 
+  const handleSaveMallId = async (nextMallId: string) => {
+    const api = window.electronAPI;
+    if (!api) return;
+
+    try {
+      await api.setMallId(nextMallId);
+      // setMallIdはvoidを返すので、成功した場合はnextMallIdを使用
+      setMallId(nextMallId);
+      // モールIDが変更されたら、フロアマップのデフォルトパスも更新
+      setImageSettings(mergeWithDefaultImages(imageSettings, nextMallId));
+      logInfo("app", "Mall ID saved successfully", { mallId: nextMallId });
+    } catch (e) {
+      logError("app", "Failed to save mall ID", { error: e });
+      console.error("Failed to save mall ID", e);
+    }
+  };
+
   const handleSaveFloor = async (nextFloor: FloorId) => {
     const api = window.electronAPI;
     if (!api) return;
@@ -632,7 +652,7 @@ const App: React.FC = () => {
     try {
       const saved = await api.saveImageSettings(settings);
       if (saved) {
-        setImageSettings(saved);
+        setImageSettings(mergeWithDefaultImages(saved, mallId));
       }
     } catch (e) {
       console.error("Failed to save image settings", e);
@@ -844,19 +864,21 @@ const App: React.FC = () => {
       isSettingsOpen={isSettingsOpen} 
       locationIconSettings={locationSettings}
       currentFloor={floor}
+      mallId={mallId as MallId}
       shops={mergedShops}
       shopPositions={shopPositions}
       shopNews={shopNews}
       eventNews={eventNews}
       pictoSettings={pictoSettings}
       genres={currentMallConfig.genres}
-      mallId={mallSettings.mallId}
       floorMaps={currentMallConfig.floorMaps}
       openTimeImage={imageSettings.openTimeImage} // Pass openTimeImage
     />
     <UnifiedSettingsScreen
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        mallId={mallId}
+        onSaveMallId={handleSaveMallId}
         floor={floor}
         onSaveFloor={handleSaveFloor}
         locationIconSettings={locationSettings}

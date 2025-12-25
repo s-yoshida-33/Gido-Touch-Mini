@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { FloorId } from "../types/floorLayout";
 import type { PictoSettings, PictoInstance, PictoTag } from "../types/picto";
 import type { AnimationConfig, AnimationType, ShadowConfig } from "../types/locationIcon";
-import { getMallAssetPaths, findMallPictoUrl } from "../utils/assets"; // Import
+import { findMallPictoUrl, loadMallPictoConfig, loadPictoIcon } from "../utils/assets"; // Import
 import type { MallId } from "../types/mall"; // Import
 
 const PICTO_TAGS: { id: PictoTag; label: string }[] = [
@@ -44,6 +44,8 @@ const ConfigGroup: React.FC<{ title: string; children: React.ReactNode }> = ({ t
   </fieldset>
 );
 
+// Component to display picto icon dynamically - Removed as it's no longer used
+// and replaced by direct usage of findMallPictoUrl
 
 export interface PictoSettingsTabProps {
   floor: FloorId;
@@ -79,51 +81,34 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
     }
   };
 
-  // Extract filename from path for display/storage
-  const getFileName = (path: string) => path.split('/').pop() || "";
   
-  // Sorted list of icons for dropdown (exclude button files)
-  const iconOptions = useMemo(() => {
-    const paths = getMallAssetPaths(mallId, "pictos");
-    
-    // Create unique set of filenames
-    // 優先順位: 1. pictos/直下（アイコン用）、2. pictos/ja/（ボタン用）、3. pictos/en/（ボタン用）
-    const uniqueFiles = new Map<string, string>(); // filename -> full path
-    
-    paths.forEach(path => {
-        const fileName = getFileName(path);
-        // Exclude button files and highlight files
-        if (!fileName.startsWith('button-') && !fileName.includes('-highlight')) {
-            const currentPath = uniqueFiles.get(fileName);
-            // 優先順位: 直下 > ja/ > en/
-            if (!currentPath) {
-                uniqueFiles.set(fileName, path);
-            } else {
-                // より優先度の高いパスに置き換え
-                const isCurrentInSubDir = currentPath.includes('/ja/') || currentPath.includes('/en/');
-                const isNewInSubDir = path.includes('/ja/') || path.includes('/en/');
-                const isNewInJa = path.includes('/ja/');
-                const isCurrentInJa = currentPath.includes('/ja/');
-                
-                // 直下のファイルを優先
-                if (!isNewInSubDir && isCurrentInSubDir) {
-                    uniqueFiles.set(fileName, path);
-                }
-                // 直下がなければ ja/ を優先
-                else if (isNewInJa && !isCurrentInJa && isCurrentInSubDir) {
-                    uniqueFiles.set(fileName, path);
-                }
-            }
-        }
-    });
+  // Load picto config and icons dynamically
+  const [iconOptions, setIconOptions] = useState<Array<{ path: string; name: string }>>([]);
 
-    return Array.from(uniqueFiles.entries())
-      .map(([name, fullPath]) => ({
-        path: name, // Store only filename (without subdirectory)
-        name: name,
-        fullPath: fullPath // Keep for reference if needed
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+  useEffect(() => {
+    const loadIcons = async () => {
+      try {
+        const config = await loadMallPictoConfig(mallId);
+        if (config && config.pictos) {
+          // Load icon options from config (exclude button files)
+          // ピクトアイコンは常に日本語版を使用
+          const options = await Promise.all(
+            config.pictos.map(async (picto: any) => {
+              const iconUrl = await loadPictoIcon(mallId, "ja", picto.iconFile.replace('.svg', ''), false, false);
+              return {
+                path: iconUrl || "",
+                name: picto.iconFile
+              };
+            })
+          );
+          setIconOptions(options.filter(opt => opt.path && !opt.name.startsWith('button-')));
+        }
+      } catch (error) {
+        console.error("Failed to load picto config", error);
+        setIconOptions([]);
+      }
+    };
+    loadIcons();
   }, [mallId]);
 
   // Filter instances by current floor

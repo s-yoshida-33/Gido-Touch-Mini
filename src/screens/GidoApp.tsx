@@ -4,24 +4,22 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 
 import ShopList from "../components/ShopList";
 import type { Shop } from "../types/shop";
-
-import { APP_CONFIG } from "../config";
+import { APP_CONFIG, getLocationIconSettingsForFloor } from "../config";
 import type { LocationIconSettings, LocationIconSettingsPerFloor } from "../types/locationIcon";
-import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
-import { getLocationIconSettingsForFloor } from "../config";
 import type { ImageSettings } from "../types/imageSettings";
-import type { FloorId } from "../types/floorLayout";
 import type { ShopPositionSettings } from "../types/shopPosition";
 import type { PictoSettings } from "../types/picto";
+import type { MallId } from "../types/mall";
+import type { FloorId } from "../types/floorLayout";
+import { getMallAssetUrl, loadPictoIcon } from "../utils/assets";
+import { logInfo, logError } from "../logs/logging";
+import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
 import { ShopPin } from "../components/ShopPin";
 import { PictoPin } from "../components/PictoPin";
-import type { MallId } from "../types/mall";
-import { getMallAssetUrl, findMallPictoUrl } from "../utils/assets"; // Update import
 
-import { logInfo, logError } from "../logs/logging";
 
 // Placeholder for openTimeImage if not in settings (optional fallback)
-const openTimeImageDefault = getMallAssetUrl("suzaka", "open-time", "open-time.svg"); 
+const openTimeImageDefault = getMallAssetUrl("suzaka", "open-time", "open-time.svg");
 
 const LIST_HEIGHT_VH = APP_CONFIG.listHeightVh;
 const TOP_HEIGHT_VH = 100 - LIST_HEIGHT_VH;
@@ -102,6 +100,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
   }, [previewFloor]);
 
   const floorId = floor as FloorId;
+  // Get floor map from imageSettings or use default path
   const customFloorMap = floorId ? imageSettings?.floorMaps?.[floorId] : undefined;
   const floorMap = customFloorMap || (defaultFloorMaps ? defaultFloorMaps[floor] : undefined) || "";
 
@@ -135,7 +134,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
           selectedShopId={selectedShopId}
           pictoSettings={pictoSettings}
           selectedPictoId={selectedPictoId}
-          mallId={mallId} // Pass mallId
+          mallId={mallId}
         />
       </div>
     );
@@ -166,7 +165,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
           selectedShopId={selectedShopId}
           pictoSettings={pictoSettings}
           selectedPictoId={selectedPictoId}
-          mallId={mallId} // Pass mallId
+          mallId={mallId}
         />
       </div>
 
@@ -323,8 +322,8 @@ const ShopPinsOverlay: React.FC<{
   selectedShopId?: string | null;
   pictoSettings?: PictoSettings;
   selectedPictoId?: string | null;
-  mallId: MallId; // Add
-}> = ({ floor, floorMap, locationIconSettings, shopPositions, shops, selectedShopId, pictoSettings, selectedPictoId, mallId }) => {
+  mallId?: string;
+}> = ({ floor, floorMap, locationIconSettings, shopPositions, shops, selectedShopId, pictoSettings, selectedPictoId, mallId = "suzaka" }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const [imageMetrics, setImageMetrics] = useState<{ 
@@ -452,16 +451,26 @@ const ShopPinsOverlay: React.FC<{
   }, [shopPositions, imageMetrics, positions, selectedShopId, normalizedFloor, safeShops]);
 
   // Common logic for processing picto instances
-  const processPictoInstances = useCallback((instances: PictoSettings['instances']) => {
+  const processPictoInstances = useCallback(async (instances: PictoSettings['instances']) => {
     if (!imageMetrics) return [];
     
-    return Object.values(instances)
-      .filter(instance => instance.floor === normalizedFloor)
-      .map(instance => {
-         // Find URL from assets utility based on filename
-         const iconUrl = findMallPictoUrl(mallId, instance.iconName);
-         
-         if (!iconUrl) return null;
+    const results = await Promise.all(
+      Object.values(instances)
+        .filter(instance => instance.floor === normalizedFloor)
+        .map(async (instance) => {
+          // Load icon dynamically from mall-specific directory
+          // Extract base name from iconName (e.g., "info.svg" -> "info", "priorityRestroom.svg" -> "priorityRestroom")
+          // iconName may be like "info.svg", "priorityRestroom.svg", etc.
+          const baseName = instance.iconName.replace('.svg', '').replace('button-', '');
+          // Load icon (not button, not highlight)
+          const iconUrl = await loadPictoIcon(mallId, "ja", baseName, false, false);
+          
+          // Debug log if icon not found
+          if (!iconUrl) {
+            console.warn(`Picto icon not found: ${instance.iconName} (baseName: ${baseName}) for mallId: ${mallId}`);
+          }
+          
+          if (!iconUrl) return null;
 
          // Calculate pixel position
          const xPercent = instance.x / 100;
@@ -488,13 +497,26 @@ const ShopPinsOverlay: React.FC<{
             pixelY
          };
       })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [imageMetrics, normalizedFloor, mallId]); // Add mallId to deps
+    );
+    
+    return results.filter((item): item is NonNullable<typeof item> => item !== null);
+  }, [imageMetrics, normalizedFloor, mallId]);
 
-  // Memoize picto data to avoid recalculation on every render
-  const pictoData = useMemo(() => {
-    if (!pictoSettings || !imageMetrics) return [];
-    return processPictoInstances(pictoSettings.instances);
+  // Load picto data asynchronously
+  const [pictoData, setPictoData] = useState<Array<{
+    instance: any;
+    scaledInstance: any;
+    iconUrl: string;
+    pixelX: number;
+    pixelY: number;
+  }>>([]);
+
+  useEffect(() => {
+    if (!pictoSettings || !imageMetrics) {
+      setPictoData([]);
+      return;
+    }
+    processPictoInstances(pictoSettings.instances).then(setPictoData);
   }, [pictoSettings, imageMetrics, processPictoInstances]);
 
   return (
