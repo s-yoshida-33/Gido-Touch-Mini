@@ -10,6 +10,7 @@ interface ShopNewsButtonProps {
   isPressed?: boolean;
   style?: React.CSSProperties;
   className?: string;
+  language?: "ja" | "en";
 }
 
 /**
@@ -26,6 +27,7 @@ export const ShopNewsButton: React.FC<ShopNewsButtonProps> = ({
   isPressed = false,
   style,
   className,
+  language = "ja",
 }) => {
   const buttonStyle: React.CSSProperties = {
     position: "relative",
@@ -103,7 +105,7 @@ export const ShopNewsButton: React.FC<ShopNewsButtonProps> = ({
             lineHeight: "1.2",
           }}
         >
-          ショップ
+          {language === "ja" ? "ショップ" : "Shop"}
         </span>
         <span
           style={{
@@ -115,7 +117,7 @@ export const ShopNewsButton: React.FC<ShopNewsButtonProps> = ({
             lineHeight: "1.2",
           }}
         >
-          ニュース
+          {language === "ja" ? "ニュース" : "News"}
         </span>
       </div>
     </button>

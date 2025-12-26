@@ -149,7 +149,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     if (isStale) {
       // If stale, enforce defaults for the current mall
       const config = getMallConfig(currentMallId);
-      const defaultOpenTime = getMallAssetUrl(currentMallId, "open-time", "open-time.svg");
+      const defaultOpenTime = getMallAssetUrl(currentMallId, "open-time/ja", "open-time.svg");
       setImageSettings({
         ...initialImageSettings,
         floorMaps: { ...config.floorMaps } as Record<FloorId, string>,
@@ -366,7 +366,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
           }}
         >
           <img
-            src={iconSvg}
+            src={iconSvg || undefined}
             alt="Gido Touch Mini"
             style={{
               width: 24,
@@ -449,7 +449,17 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                 onChange={async (e) => {
                   const newMallId = e.target.value as any;
                   const newSettings = { ...mallSettings, mallId: newMallId };
+                  const oldMallId = mallSettings.mallId;
+                  
                   setMallSettings(newSettings);
+
+                  // モール変更時にピクト設定なども即座にリセット（ローカル反映）
+                  if (newMallId !== oldMallId) {
+                      setPictoSettings({ instances: {} });
+                      setShopPositions({ positions: {} });
+                      // 画像設定はuseEffectでmallId変更を検知して更新されるのでここでは触らない
+                  }
+
                   // モール切り替え時に即座に設定を保存（リロード）して、表示を切り替える
                   await onSaveMallSettings(newSettings);
                 }}

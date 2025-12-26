@@ -3,11 +3,13 @@ import React from "react";
 interface UserLocationIconProps {
   style?: React.CSSProperties;
   className?: string;
+  language?: "ja" | "en";
 }
 
 export const UserLocationIcon: React.FC<UserLocationIconProps> = ({
   style,
   className,
+  language = "ja",
 }) => {
   const containerStyle: React.CSSProperties = {
     position: "relative",
@@ -59,7 +61,7 @@ export const UserLocationIcon: React.FC<UserLocationIconProps> = ({
               userSelect: "none",
             }}
           >
-            現在地
+            {language === "ja" ? "現在地" : "Here"}
           </text>
         </g>
       </svg>

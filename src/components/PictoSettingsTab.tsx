@@ -75,8 +75,9 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
   // Load picto config and icons dynamically
   const [iconOptions, setIconOptions] = useState<Array<{ fileName: string; url: string }>>([]);
 
-  // Generate tags dynamically based on mall config
-  const pictoTags = useMemo(() => {
+    // Generate tags dynamically based on mall config
+    const pictoTags = useMemo(() => {
+    console.log("PictoSettingsTab: generating tags for mallId:", mallId); // DEBUG
     const config = getMallConfig(mallId);
     if (!config) return [];
     
@@ -90,11 +91,16 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
     }));
   }, [mallId]);
 
-  useEffect(() => {
+    useEffect(() => {
+    // モールIDが変わったら一旦オプションをリセット
+    setIconOptions([]);
+
     const loadIcons = async () => {
+      console.log("PictoSettingsTab: loadIcons started for mallId:", mallId); // DEBUG
       try {
         // Method 1: Load from "pictos/icon" directory (Priority)
         const iconFiles = getMallAssetPaths(mallId, "pictos/icon");
+        console.log("PictoSettingsTab: iconFiles found:", iconFiles); // DEBUG
         
         if (iconFiles && iconFiles.length > 0) {
           const options = iconFiles.map(fileName => {

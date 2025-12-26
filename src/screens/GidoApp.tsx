@@ -19,7 +19,7 @@ import { PictoPin } from "../components/PictoPin";
 
 
 // Placeholder for openTimeImage if not in settings (optional fallback)
-const openTimeImageDefault = getMallAssetUrl("suzaka", "open-time", "open-time.svg");
+const openTimeImageDefault = getMallAssetUrl("suzaka", "open-time/ja", "open-time.svg");
 
 const LIST_HEIGHT_VH = APP_CONFIG.listHeightVh;
 const TOP_HEIGHT_VH = 100 - LIST_HEIGHT_VH;

@@ -104,7 +104,7 @@ export const PictoPin: React.FC<PictoPinProps> = ({
       )}
       
       {/* Icon Layer */}
-      {(renderMode === 'default' || renderMode === 'icon') && (
+      {(renderMode === 'default' || renderMode === 'icon') && iconUrl && (
         <img
           src={iconUrl}
           alt={instance.tag}

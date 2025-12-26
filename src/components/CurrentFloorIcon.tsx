@@ -3,11 +3,13 @@ import React from "react";
 interface CurrentFloorIconProps {
   style?: React.CSSProperties;
   className?: string;
+  language?: "ja" | "en";
 }
 
 export const CurrentFloorIcon: React.FC<CurrentFloorIconProps> = ({
   style,
   className,
+  language = "ja",
 }) => {
   const containerStyle: React.CSSProperties = {
     position: "relative",
@@ -50,7 +52,7 @@ export const CurrentFloorIcon: React.FC<CurrentFloorIconProps> = ({
             fontWeight="bold"
             fontFamily="'Rounded Mplus 1c', sans-serif"
           >
-            現在地
+            {language === "ja" ? "現在地" : "Here"}
           </text>
         </g>
       </svg>

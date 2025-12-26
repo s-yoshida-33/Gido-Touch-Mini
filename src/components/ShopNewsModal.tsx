@@ -196,7 +196,7 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
                     flexShrink: 0,
                   }}
                 >
-                  ショップニュース
+                  {language === "ja" ? "ショップニュース" : "Shop News"}
                 </div>
 
                 {/* Shop News Content */}

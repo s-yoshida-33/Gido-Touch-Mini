@@ -27,6 +27,7 @@ export function getCommonAssetUrl(filename: string): string {
 // 指定されたモール・カテゴリ内のファイルパス一覧を返す
 export function getMallAssetPaths(mallId: string, category: string): string[] {
     const prefix = `../assets/malls/${mallId}/${category}/`;
+    // console.log(`getMallAssetPaths: searching for prefix ${prefix}`); // DEBUG
     return Object.keys(assetModules)
         .filter(path => path.startsWith(prefix))
         .map(path => path.replace(prefix, '')); // ファイル名のみ返す
@@ -215,6 +216,10 @@ export async function loadPictoIcon(mallId: string, lang: string, name: string, 
     }
     
     // Electron環境でない場合のフォールバック（findMallPictoUrlを使用）
+    // ボタンの場合は言語フォルダを考慮
+    if (isButton) {
+        return findMallPictoUrl(mallId, `${lang}/${filename}`);
+    }
     return findMallPictoUrl(mallId, filename);
 }
 

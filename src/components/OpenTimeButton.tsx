@@ -10,6 +10,7 @@ interface OpenTimeButtonProps {
   isPressed?: boolean;
   style?: React.CSSProperties;
   className?: string;
+  language?: "ja" | "en";
 }
 
 export const OpenTimeButton: React.FC<OpenTimeButtonProps> = ({
@@ -22,6 +23,7 @@ export const OpenTimeButton: React.FC<OpenTimeButtonProps> = ({
   isPressed = false,
   style,
   className,
+  language = "ja",
 }) => {
   const buttonStyle: React.CSSProperties = {
     position: "relative",
@@ -62,7 +64,7 @@ export const OpenTimeButton: React.FC<OpenTimeButtonProps> = ({
           userSelect: "none",
         }}
       >
-        営業時間
+        {language === "ja" ? "営業時間" : "Open Time"}
       </span>
     </button>
   );

@@ -146,7 +146,7 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
   if (!photo || (!imageUrl && !isLoading)) return <span style={{ color: "#FFFFFF", fontSize: "12px", fontWeight: 700 }}>Image</span>;
 
   return (
-    <img src={imageUrl} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "100%", height: "100%", objectFit: "contain", userSelect: "none", pointerEvents: "auto", display: isLoading ? "none" : "block" }} onError={(e) => { const target = e.target as HTMLImageElement; target.style.display = "none"; if (target.parentElement) { target.parentElement.style.backgroundColor = "#333333"; target.parentElement.style.color = "#FFFFFF"; target.parentElement.style.fontSize = "12px"; target.parentElement.style.fontWeight = "700"; target.parentElement.textContent = "Image"; } }} />
+    <img src={imageUrl || undefined} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "100%", height: "100%", objectFit: "contain", userSelect: "none", pointerEvents: "auto", display: isLoading ? "none" : "block" }} onError={(e) => { const target = e.target as HTMLImageElement; target.style.display = "none"; if (target.parentElement) { target.parentElement.style.backgroundColor = "#333333"; target.parentElement.style.color = "#FFFFFF"; target.parentElement.style.fontSize = "12px"; target.parentElement.style.fontWeight = "700"; target.parentElement.textContent = "Image"; } }} />
   );
 };
 

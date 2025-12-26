@@ -47,7 +47,7 @@ type FloorId = "1F" | "2F" | "3F" | "4F";
 const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageSettings => {
   const config = getMallConfig(mallId as any);
   // Default open time image path based on mallId
-  const defaultOpenTime = getMallAssetUrl(mallId, "open-time", "open-time.svg");
+  const defaultOpenTime = getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
   
   return {
     ...settings,
@@ -413,6 +413,7 @@ const App: React.FC = () => {
           if (saved) {
             setMallSettings(saved);
             currentMallId = saved.mallId;
+            setMallId(saved.mallId);
             addDebug(`Mall settings loaded: ${saved.mallId}`);
           }
         } catch (e) {
@@ -578,6 +579,7 @@ const App: React.FC = () => {
       if (api.onMallSettingsUpdated) {
         api.onMallSettingsUpdated((updated) => {
           setMallSettings(updated);
+          setMallId(updated.mallId);
         });
       }
     }
@@ -699,7 +701,15 @@ const App: React.FC = () => {
   const handleSaveMallSettings = async (settings: MallSettings) => {
     const api = window.electronAPI;
     if (!api) {
+      const oldMallId = mallSettings.mallId;
       setMallSettings(settings);
+
+      // ブラウザ環境でのモック動作：モールが変わったらデータをリセット
+      if (settings.mallId !== oldMallId) {
+          setPictoSettings({ instances: {} });
+          setShopPositions({ positions: {} });
+          setImageSettings(mergeWithDefaultImages(DEFAULT_IMAGE_SETTINGS, settings.mallId));
+      }
       return;
     }
 
@@ -707,6 +717,7 @@ const App: React.FC = () => {
       const saved = await api.saveMallSettings(settings);
       if (saved) {
         setMallSettings(saved);
+        setMallId(saved.mallId);
         logInfo("app", "Mall settings saved successfully", { mallId: saved.mallId });
         
         // Reload mall-specific settings when mall changes

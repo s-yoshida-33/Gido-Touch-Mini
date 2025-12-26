@@ -11,6 +11,7 @@ export const DEFAULT_MALL_SETTINGS: MallSettings = {
 export interface Genre {
   id: string;
   name: string;
+  name_en?: string; // 英語名を追加
   icon: string;
   highlightIcon: string;
 }
@@ -18,6 +19,7 @@ export interface Genre {
 export interface Facility {
   id: string;
   name: string;
+  name_en?: string; // 英語名を追加
   icon: string;
   highlightIcon: string;
   iconFile: string; // Added for reference in settings

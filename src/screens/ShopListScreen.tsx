@@ -74,7 +74,8 @@ const iconSearch = getCommonAssetUrl("search.svg");
 const iconTime = getCommonAssetUrl("time.svg");
 const iconTel = getCommonAssetUrl("tel.svg");
 const iconLocation = getCommonAssetUrl("location.svg");
-const hint = getCommonAssetUrl("hint.svg");
+const hintJa = getCommonAssetUrl("hint/ja/hint.svg");
+const hintEn = getCommonAssetUrl("hint/en/hint.svg");
 const commingSoon = getCommonAssetUrl("comming-soon.svg");
 const waonPointIcon = getCommonAssetUrl("waonpoint.svg");
 // Unused openTime import removed
@@ -154,7 +155,7 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
 
   return (
     <img
-      src={imageUrl}
+      src={imageUrl || undefined}
       alt=""
       draggable={false}
       onDragStart={(e) => e.preventDefault()}
@@ -398,8 +399,16 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // const currentMap = floorMaps[currentFloor] || "";
 
   // Resolve open time image - use prop or fallback to mall default
-  const openTimeImage = propOpenTimeImage || getMallAssetUrl(mallId, "open-time", "open-time.svg");
-
+  // 言語に応じてパスを切り替える (英語リソースがない場合は日本語にフォールバックされるよう、getMallAssetUrlでjaを指定)
+  const openTimeImageBase = propOpenTimeImage || getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
+  
+  // もし propOpenTimeImage が渡されていればそれを優先（ただし、言語切り替えに対応するには prop も言語別である必要があるが、
+  // 現状 imageSettings には単一の openTimeImage しかない。
+  // ここでは動的パス解決を行うため、もし propOpenTimeImage が設定されていなければ getMallAssetUrl で言語別パスを生成する。
+  
+  // selectedLanguageState は後で定義されるが、ここで使いたいので、state定義を上に持ってくる必要がある。
+  // しかし、Refなどの定義順序もあるので、openTimeImageの解決ロジックを下（state定義後）に移動する。
+  
   // Genre scroll container ref
   const genreScrollContainerRef = useRef<HTMLDivElement>(null);
   
@@ -810,6 +819,21 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     }
   };
 
+  const openTimeImage = useMemo(() => {
+     if (propOpenTimeImage) return propOpenTimeImage;
+     
+     // 1. 英語の場合
+     if (selectedLanguage === "en") {
+        const enPath = getMallAssetUrl(mallId, "open-time/en", "open-time.svg");
+        if (enPath) return enPath;
+        // フォールバック: 日本語
+        return getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
+     }
+     
+     // 2. 日本語 (デフォルト)
+     return getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
+  }, [mallId, selectedLanguage, propOpenTimeImage]);
+
   // モール設定の状態
   const [mallGenreConfig, setMallGenreConfig] = useState<GenreItem[] | null>(null);
   const [mallPictoConfig, setMallPictoConfig] = useState<PictoItem[] | null>(null);
@@ -820,6 +844,12 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   useEffect(() => {
     const loadMallConfig = async () => {
       try {
+        // Set loading state or clear previous config
+        setMallGenreConfig([]);
+        setMallPictoConfig([]);
+        setGenreIcons({});
+        setPictoIcons({});
+
         // ジャンル設定を読み込む
         const genreConfig = await loadMallGenreConfig(mallId) as GenreConfig;
         if (genreConfig && genreConfig.genres) {
@@ -870,8 +900,40 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             }
           });
           setPictoIcons(buttonIconMap);
-          
+        } else {
+             // Electron環境外などでconfigが見つからない場合のフォールバック
+            const config = getMallConfig(mallId);
+            const facilities = config.facilities;
+            const pIcons: Record<string, { button: string; buttonHighlight: string }> = {};
+            const mallPictoList = facilities.map((f, index) => ({
+                id: f.id,
+                order: index,
+                name: { ja: f.name, en: f.name_en || f.name },
+                iconFile: f.iconFile || `${f.id.replace(/_/g, '-')}.svg`,
+                buttonFile: `button-${f.id.replace(/_/g, '-')}.svg`
+            }));
+            
+            setMallPictoConfig(mallPictoList);
+
+            await Promise.all(facilities.map(async (facility) => {
+                 // アイコンパスの推測
+                 const buttonName = `button-${facility.id.replace(/_/g, '-')}`;
+                 const button = await loadPictoIcon(mallId, selectedLanguage, buttonName, false, true);
+                 const buttonHighlight = await loadPictoIcon(mallId, selectedLanguage, buttonName, true, true);
+                 
+                 // フォールバック: Configから取得 (getMallAssetUrl)
+                 // selectedLanguage を考慮したパスに変更
+                 const fallbackButton = getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, facility.iconFile || facility.id.replace(/_/g, '-') + '.svg');
+                 const fallbackHighlight = getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, (facility.iconFile?.replace('.svg', '') || facility.id.replace(/_/g, '-')) + '-highlight.svg');
+
+                 pIcons[facility.id] = {
+                     button: button || fallbackButton,
+                     buttonHighlight: buttonHighlight || fallbackHighlight
+                 };
+            }));
+            setPictoIcons(pIcons);
         }
+
       } catch (error) {
         console.error("Failed to load mall config", error);
       }
@@ -882,7 +944,10 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
   // 動的にGENRE_LISTとFACILITY_LISTを生成
   const GENRE_LIST = useMemo(() => {
-    if (mallGenreConfig && Object.keys(genreIcons).length > 0) {
+    // 常に新しいリストを生成する (mallId依存)
+    const currentMallConfig = getMallConfig(mallId);
+
+    if (mallGenreConfig && mallGenreConfig.length > 0 && Object.keys(genreIcons).length > 0) {
       // モール設定から動的に生成
       return mallGenreConfig
         .sort((a, b) => a.order - b.order)
@@ -897,13 +962,33 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           };
         });
     }
-    // フォールバック: デフォルトリストを使用
-    return genres;
-  }, [mallGenreConfig, genreIcons, selectedLanguage, genres]);
+    
+    // フォールバック: Config (malls.ts) から生成
+    return currentMallConfig.genres.map((g) => {
+         const cachedIcon = genreIcons[g.id];
+         
+         // ファイル名の抽出
+         const filename = g.icon.split('/').pop() || `${g.id}.svg`;
+         const highlightFilename = g.highlightIcon.split('/').pop() || `${g.id}-highlight.svg`;
+         
+         const langIcon = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, filename);
+         const langHighlightIcon = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, highlightFilename);
+
+         return {
+            id: g.id,
+            name: selectedLanguage === "ja" ? g.name : (g.name_en || g.name),
+            icon: cachedIcon?.normal || langIcon || g.icon,
+            highlightIcon: cachedIcon?.highlight || langHighlightIcon || g.highlightIcon,
+         };
+    });
+  }, [mallGenreConfig, genreIcons, selectedLanguage, mallId]); // mallId 依存を追加
 
   const FACILITY_LIST = useMemo(() => {
-    if (mallPictoConfig && Object.keys(pictoIcons).length > 0) {
-      // モール設定から動的に生成
+    // 常に新しいリストを生成する (mallId依存)
+    const currentMallConfig = getMallConfig(mallId);
+    
+    if (mallPictoConfig && mallPictoConfig.length > 0 && Object.keys(pictoIcons).length > 0) {
+      // モール設定ファイル(JSON)から動的に生成
       return mallPictoConfig
         .sort((a, b) => a.order - b.order)
         .map((picto) => {
@@ -911,15 +996,28 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           const name = selectedLanguage === "ja" ? picto.name.ja : (picto.name.en || picto.name.ja);
           return {
             id: picto.id,
-            name,
+            name: name, // nameプロパティを文字列として明示的に設定
             icon: icons?.button || "",
             highlightIcon: icons?.buttonHighlight || "",
           };
         });
     }
-    // フォールバック: デフォルトリストを使用
-    return facilityList;
-  }, [mallPictoConfig, pictoIcons, selectedLanguage, facilityList]);
+    
+    // フォールバック: Config (malls.ts) から生成
+    return currentMallConfig.facilities.map((f) => {
+        // アイコンはキャッシュにあればそれを使う、なければデフォルト（getMallAssetUrl）
+        const cachedIcon = pictoIcons[f.id];
+        const langIcon = getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, f.id.replace(/_/g, '-') + '.svg');
+        const langHighlightIcon = getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, f.id.replace(/_/g, '-') + '-highlight.svg');
+        
+        return {
+            id: f.id,
+            name: selectedLanguage === "ja" ? f.name : (f.name_en || f.name), // nameを直接文字列にする
+            icon: cachedIcon?.button || langIcon || f.icon,
+            highlightIcon: cachedIcon?.buttonHighlight || langHighlightIcon || f.highlightIcon,
+        };
+    });
+  }, [mallPictoConfig, pictoIcons, selectedLanguage, mallId]); // mallId 依存を追加
 
   // ピクトメニューの横幅を動的に計算（ボタン数に応じて）
   const pictoMenuWidth = useMemo(() => {
@@ -1413,7 +1511,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               <img
-                src={openTimeImage} // Use dynamic image
+                src={openTimeImage || undefined} // Use dynamic image
                 alt="Open Time Info"
                 style={{
                   maxWidth: "90%", // Add some padding
@@ -1546,7 +1644,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   >
                     {/* Map Image */}
                     <img
-                      src={floorMaps[selectedFloor || "1F"] || ""}
+                      src={floorMaps[selectedFloor || "1F"] || undefined}
                       alt={`${selectedFloor || "1F"} Map`}
                       style={{
                         width: "100%",
@@ -1653,7 +1751,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           {showHint && (
             <motion.img
               key={`hint-${selectedFloor || "1F"}`}
-              src={hint}
+              src={selectedLanguage === "en" ? hintEn : hintJa}
               alt="Hint"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1809,7 +1907,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 zIndex: 2,
               }}
             >
-              <CurrentFloorIcon />
+              <CurrentFloorIcon language={selectedLanguage} />
             </div>
           </div>
 
@@ -1834,7 +1932,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 zIndex: 2,
               }}
             >
-              <CurrentFloorIcon />
+              <CurrentFloorIcon language={selectedLanguage} />
             </div>
           </div>
 
@@ -1859,7 +1957,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 zIndex: 2,
               }}
             >
-              <CurrentFloorIcon />
+              <CurrentFloorIcon language={selectedLanguage} />
             </div>
           </div>
 
@@ -1884,7 +1982,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 zIndex: 2,
               }}
             >
-              <CurrentFloorIcon />
+              <CurrentFloorIcon language={selectedLanguage} />
             </div>
           </div>
         </div>
@@ -2027,7 +2125,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           >
             <input
               type="text"
-              placeholder="店舗名でさがす"
+              placeholder={selectedLanguage === "ja" ? "店舗名でさがす" : "Search by shop name"}
               value=""
               readOnly
               onClick={() => setIsKeyboardOpen(true)}
@@ -2157,7 +2255,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 >
                   {/* Normal Icon (Always rendered for layout, opacity controls visibility) */}
                   <img 
-                    src={genre.icon} 
+                    src={genre.icon || undefined} 
                     alt={genre.name} 
                     style={{ 
                       height: "100%", 
@@ -2170,7 +2268,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   
                   {/* Highlight Icon (Overlay) */}
                   <img 
-                    src={genre.highlightIcon} 
+                    src={genre.highlightIcon || undefined} 
                     alt={`${genre.name} Highlight`} 
                     style={{ 
                       position: "absolute",
@@ -2782,6 +2880,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               onMouseLeave={() => setPressedNewsButton(null)}
               onTouchStart={() => setPressedNewsButton("event")}
               onTouchEnd={() => setPressedNewsButton(null)}
+              language={selectedLanguage}
             />
 
             {/* Shop News Button */}
@@ -2793,6 +2892,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               onMouseLeave={() => setPressedNewsButton(null)}
               onTouchStart={() => setPressedNewsButton("shop")}
               onTouchEnd={() => setPressedNewsButton(null)}
+              language={selectedLanguage}
             />
 
           {/* Open Time Button */}
@@ -2808,6 +2908,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               }
             }}
             isPressed={pressedNewsButton === "openTime"}
+            language={selectedLanguage}
           />
           </div>
 
@@ -2841,6 +2942,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         isOpen={isEventNewsModalOpen}
         onClose={() => setIsEventNewsModalOpen(false)}
         news={eventNews}
+        language={selectedLanguage}
       />
 
       {/* Shop Event Modal */}

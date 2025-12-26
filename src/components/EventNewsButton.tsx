@@ -10,6 +10,7 @@ interface EventNewsButtonProps {
   isPressed?: boolean;
   style?: React.CSSProperties;
   className?: string;
+  language?: "ja" | "en";
 }
 
 export const EventNewsButton: React.FC<EventNewsButtonProps> = ({
@@ -22,6 +23,7 @@ export const EventNewsButton: React.FC<EventNewsButtonProps> = ({
   isPressed = false,
   style,
   className,
+  language = "ja",
 }) => {
   const buttonStyle: React.CSSProperties = {
     position: "relative",
@@ -101,7 +103,7 @@ export const EventNewsButton: React.FC<EventNewsButtonProps> = ({
             lineHeight: "1.2",
           }}
         >
-          イベント
+          {language === "ja" ? "イベント" : "Event"}
         </span>
         <span
           style={{
@@ -113,7 +115,7 @@ export const EventNewsButton: React.FC<EventNewsButtonProps> = ({
             lineHeight: "1.2",
           }}
         >
-          ニュース
+          {language === "ja" ? "ニュース" : "News"}
         </span>
       </div>
     </button>

@@ -11,12 +11,14 @@ interface EventNewsModalProps {
   isOpen: boolean;
   onClose: () => void;
   news: ShopNews[];
+  language?: "ja" | "en";
 }
 
 export const EventNewsModal: React.FC<EventNewsModalProps> = ({
   isOpen,
   onClose,
   news,
+  language = "ja",
 }) => {
   const [isPressed, setIsPressed] = useState(false);
   const [selectedNews, setSelectedNews] = useState<ShopNews | null>(null);
@@ -183,7 +185,7 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                     flexShrink: 0,
                   }}
                 >
-                  イベントニュース
+                  {language === "ja" ? "イベントニュース" : "Event News"}
                 </div>
 
                 {/* Info Section removed from here to move inside Shop News Content */}
