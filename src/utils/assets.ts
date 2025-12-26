@@ -200,19 +200,20 @@ export async function loadPictoIcon(mallId: string, lang: string, name: string, 
         let path = '';
         if (isButton) {
             path = `${mallId}/pictos/${lang}/${filename}`;
+            return await window.electronAPI.readMallAsset(path);
         } else {
-            path = `${mallId}/pictos/${filename}`;
+            // アイコンの場合の優先順位
+            // 1. icon/ フォルダ (マップ用アイコン)
+            let result = await window.electronAPI.readMallAsset(`${mallId}/pictos/icon/${filename}`);
+            if (result) return result;
+
+            // 2. 直下 (旧仕様)
+            result = await window.electronAPI.readMallAsset(`${mallId}/pictos/${filename}`);
+            if (result) return result;
+
+            // 3. ja/ フォルダ (ボタン用をフォールバックとして使用)
+            return await window.electronAPI.readMallAsset(`${mallId}/pictos/${lang}/${filename}`);
         }
-        
-        let result = await window.electronAPI.readMallAsset(path);
-        
-        // アイコンで直下に見つからない場合、jaフォルダを探す
-        if (!result && !isButton) {
-            const fallbackPath = `${mallId}/pictos/${lang}/${filename}`;
-            result = await window.electronAPI.readMallAsset(fallbackPath);
-        }
-        
-        return result;
     }
     
     // Electron環境でない場合のフォールバック（findMallPictoUrlを使用）

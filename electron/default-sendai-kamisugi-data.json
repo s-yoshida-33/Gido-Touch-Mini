@@ -1,0 +1,61 @@
+{
+  "shopPositions": {
+    "positions": {}
+  },
+  "pictoSettings": {
+    "instances": {
+      "570c1da3-808b-4e13-8dc3-3765ccaf5ed0": {
+        "id": "570c1da3-808b-4e13-8dc3-3765ccaf5ed0",
+        "tag": "bus_stop",
+        "iconName": "bus-stop.svg",
+        "floor": "1F",
+        "x": 48.8,
+        "y": 78.82,
+        "size": 50,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "fd08cecd-6020-4a0f-b114-800250136a77": {
+        "id": "fd08cecd-6020-4a0f-b114-800250136a77",
+        "tag": "bus_stop",
+        "iconName": "bus-stop.svg",
+        "floor": "1F",
+        "x": 71.18,
+        "y": 44.13,
+        "size": 50,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      }
+    }
+  }
+}

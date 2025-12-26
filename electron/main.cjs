@@ -168,6 +168,45 @@ function loadDefaultPictoSettings() {
   };
 }
 
+function loadAllDefaultMallData() {
+  const loadedData = {};
+  
+  try {
+    // __dirname (electronフォルダ) 内のファイルを検索
+    const files = fs.readdirSync(__dirname);
+    
+    // default-[mallId]-data.json パターンに一致するファイルを探す
+    files.forEach(file => {
+      const match = file.match(/^default-(.+)-data\.json$/);
+      if (match) {
+        const mallId = match[1];
+        // "mall" という単語が誤ってキャプチャされるのを防ぐため、"mall-data" は除外
+        if (mallId === 'mall') return;
+
+        const filePath = path.join(__dirname, file);
+        
+        try {
+          const raw = fs.readFileSync(filePath, 'utf-8');
+          const parsed = JSON.parse(raw);
+          
+          if (parsed && typeof parsed === 'object') {
+            logger.info(`Loaded default mall data for ${mallId} from ${file}`);
+            loadedData[mallId] = parsed;
+          }
+        } catch (e) {
+          logger.warn(`Failed to parse default mall data from ${file}`, { error: e.message });
+        }
+      }
+    });
+  } catch (error) {
+    logger.warn('Failed to scan for default mall data files', {
+      error: error?.message,
+    });
+  }
+  
+  return loadedData;
+}
+
 // Deep merge function to ensure all nested properties are preserved
 const deepMerge = (target, source) => {
   // If source is missing, return a clone of target (if object) to avoid reference pollution
@@ -200,9 +239,26 @@ const deepMerge = (target, source) => {
 };
 
 function loadSettings() {
-  const defaultShopPositions = loadDefaultShopPositions();
-  const defaultPictoSettings = loadDefaultPictoSettings();
+  // 古い個別読み込み関数は削除済み
+  const defaultMallData = loadAllDefaultMallData();
   
+  // デフォルトデータの構築
+  // 1. 基本的なデータ構造 (空で初期化)
+  const baseDataByMall = {
+      suzaka: { shopPositions: { positions: {} }, pictoSettings: { instances: {} } },
+      "sendai-kamisugi": { shopPositions: { positions: {} }, pictoSettings: { instances: {} } }
+  };
+
+  // 2. defaultMallData をマージ (分割ファイルから読み込んだデータを反映)
+  Object.keys(defaultMallData).forEach(mallId => {
+      // 既存のオブジェクトがあればマージ、なければ新規作成
+      baseDataByMall[mallId] = deepMerge(baseDataByMall[mallId] || {}, defaultMallData[mallId]);
+  });
+
+  // デフォルトのショップ位置などを決定 (suzakaのデータがあればそれを使う)
+  const defaultShopPositions = baseDataByMall.suzaka?.shopPositions || { positions: {} };
+  const defaultPictoSettings = baseDataByMall.suzaka?.pictoSettings || { instances: {} };
+
   const base = {
     mallId: 'suzaka', // デフォルトは須坂
     floor: '1F',
@@ -216,16 +272,7 @@ function loadSettings() {
     mallSettings: {
       mallId: "suzaka"
     },
-    dataByMall: {
-      suzaka: {
-        shopPositions: defaultShopPositions,
-        pictoSettings: defaultPictoSettings
-      },
-      "sendai-kamisugi": {
-        shopPositions: { positions: {} },
-        pictoSettings: { instances: {} }
-      }
-    }
+    dataByMall: baseDataByMall
   };
 
   try {

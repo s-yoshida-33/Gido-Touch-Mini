@@ -210,7 +210,36 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       setMallId(initialMallId);
       setFloor(initialFloor);
       setLocationIconSettings(initialLocationIconSettings);
-      setImageSettings(initialImageSettings);
+      
+      // Check integrity of image settings
+      // Use initialMallSettings.mallId if available, otherwise initialMallId, otherwise fallback
+      const currentMallId = initialMallSettings?.mallId || initialMallId || "suzaka";
+      const config = getMallConfig(currentMallId as any);
+      
+      let settingsToSet = initialImageSettings;
+      let isStale = false;
+      
+      // Check if incoming paths belong to a different mall
+      const incomingMaps = initialImageSettings.floorMaps || {};
+      for (const path of Object.values(incomingMaps)) {
+          if (path && typeof path === 'string') {
+              // Simple heuristic to detect mall mismatch in path
+              if (currentMallId === 'sendai-kamisugi' && path.includes('suzaka')) isStale = true;
+              if (currentMallId === 'suzaka' && path.includes('sendai-kamisugi')) isStale = true;
+          }
+      }
+      
+      if (isStale) {
+          console.log(`UnifiedSettingsScreen: Detected stale image settings for mall ${currentMallId}. Resetting to defaults.`);
+          settingsToSet = {
+              ...initialImageSettings,
+              floorMaps: { ...config.floorMaps } as Record<FloorId, string>,
+              openTimeImage: getMallAssetUrl(currentMallId, "open-time/ja", "open-time.svg")
+          };
+      }
+      
+      setImageSettings(settingsToSet);
+      
       setShopPositions(initialShopPositions);
       setPictoSettings(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
       setMallSettings(initialMallSettings || DEFAULT_MALL_SETTINGS);

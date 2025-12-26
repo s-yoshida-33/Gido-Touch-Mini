@@ -38,25 +38,40 @@ function exportSettings() {
     const raw = fs.readFileSync(settingsPath, 'utf-8');
     const parsed = JSON.parse(raw);
     
-    // 1. shopPositionsをエクスポート
-    const shopPositions = parsed.shopPositions || { positions: {} };
-    fs.writeFileSync(
-      defaultShopPositionsPath,
-      JSON.stringify(shopPositions, null, 2),
-      'utf-8'
-    );
-    console.log('店舗位置設定をエクスポートしました:', defaultShopPositionsPath);
-    console.log('  - 店舗数:', Object.keys(shopPositions.positions || {}).length);
+    // mallSettings.mallId が存在する場合はそれを使用し、なければルートの mallId を使用、それもなければデフォルト('suzaka')
+    const currentMallId = (parsed.mallSettings && parsed.mallSettings.mallId) || parsed.mallId || 'suzaka';
 
-    // 2. pictoSettingsをエクスポート
-    const pictoSettings = parsed.pictoSettings || { instances: {} };
-    fs.writeFileSync(
-      defaultPictoSettingsPath,
-      JSON.stringify(pictoSettings, null, 2),
-      'utf-8'
-    );
-    console.log('ピクトグラム設定をエクスポートしました:', defaultPictoSettingsPath);
-    console.log('  - インスタンス数:', Object.keys(pictoSettings.instances || {}).length);
+    // dataByMall を取得
+    const dataByMall = parsed.dataByMall || {};
+
+    // ルートに shopPositions/pictoSettings が存在する場合のみ、dataByMall にマージする
+    // (通常、main.cjs はルートのプロパティを削除して保存するため、ここは undefined になるはずです。
+    //  以前のコードでは、ここが無条件に空オブジェクトで上書きしていたため、dataByMall 内の保存済みデータが消えていました)
+    if (parsed.shopPositions) {
+        if (!dataByMall[currentMallId]) dataByMall[currentMallId] = {};
+        dataByMall[currentMallId].shopPositions = parsed.shopPositions;
+    }
+    if (parsed.pictoSettings) {
+        if (!dataByMall[currentMallId]) dataByMall[currentMallId] = {};
+        dataByMall[currentMallId].pictoSettings = parsed.pictoSettings;
+    }
+
+    // モールごとにファイルを出力
+    console.log('--- モール別初期設定のエクスポート ---');
+    Object.keys(dataByMall).forEach(mallId => {
+        // 命名規則: default-[mallId]-data.json
+        const fileName = `default-${mallId}-data.json`;
+        const filePath = path.join(__dirname, fileName);
+        
+        fs.writeFileSync(
+            filePath,
+            JSON.stringify(dataByMall[mallId], null, 2),
+            'utf-8'
+        );
+        console.log(`エクスポート完了: ${fileName}`);
+        console.log(`  - Shop Positions: ${Object.keys(dataByMall[mallId].shopPositions?.positions || {}).length}`);
+        console.log(`  - Picto Instances: ${Object.keys(dataByMall[mallId].pictoSettings?.instances || {}).length}`);
+    });
 
   } catch (error) {
     console.error('エクスポートに失敗しました:', error);
