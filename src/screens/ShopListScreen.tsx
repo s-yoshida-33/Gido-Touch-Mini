@@ -2591,16 +2591,17 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       <div style={{
                         fontSize: "14px",
                         color: "#FFFFFF",
-                        width: "37px",
+                        width: "67px",
                         height: "21px",
                         background: "#000000",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                       }}>
-                         {shop.floors && shop.floors.length > 0 ? normalizeFloor(String(shop.floors[0])) : ""}
+                         {shop.floors && shop.floors.length > 0 ? shop.floors.map(f => normalizeFloor(String(f))).join("・") : ""}
                       </div>
                       {/* Number Badge */}
+                      {shop.number && /[0-9-]/.test(shop.number) && (
                       <div style={{
                         fontSize: "14px",
                         color: "#FFFFFF",
@@ -2613,6 +2614,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       }}>
                          {shop.number}
                       </div>
+                      )}
                     </div>
                     {/* Shop Name */}
                     <span style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Rounded Mplus 1c', sans-serif", color: "#333" }}>
@@ -2907,8 +2909,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   {/* Floor Info */}
                   <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
                     <img src={iconLocation} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "12px", height: "12px", flexShrink: 0 }} />
-                    {selectedShopDetail.floors && selectedShopDetail.floors.length > 0 && <span>{normalizeFloor(selectedShopDetail.floors[0])}</span>}
-                    {selectedShopDetail.number && <span>[{selectedShopDetail.number}]</span>}
+                    {selectedShopDetail.floors && selectedShopDetail.floors.length > 0 && <span>{selectedShopDetail.floors.map(f => normalizeFloor(String(f))).join("・")}</span>}
+                    {selectedShopDetail.number && /[0-9-]/.test(selectedShopDetail.number) && <span>[{selectedShopDetail.number}]</span>}
                     {selectedShopDetail.genre && (
                       <>
                         <span>/</span>
