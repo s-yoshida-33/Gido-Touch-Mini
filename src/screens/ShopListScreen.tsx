@@ -78,6 +78,7 @@ const hintJa = getCommonAssetUrl("hint/ja/hint.svg");
 const hintEn = getCommonAssetUrl("hint/en/hint.svg");
 const commingSoon = getCommonAssetUrl("comming-soon.svg");
 const waonPointIcon = getCommonAssetUrl("waonpoint.svg");
+const aeonPayIcon = getCommonAssetUrl("aeonpay.svg");
 // Unused openTime import removed
 // Zoom icons - common but language/state specific (might need more logic if fully dynamic, 
 // for now hardcoding path if they are in common/zoom/[lang]/...)
@@ -404,12 +405,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Map content ref for direct style manipulation (zoom scale)
   const mapContentRef = useRef<HTMLDivElement>(null);
   
-  // Get facility list based on mallId
-  const facilityList = useMemo(() => {
-    // getMallConfig always returns a config object (falls back to suzaka if not found)
-    const config = getMallConfig(mallId);
-    return config.facilities;
-  }, [mallId]);
 
   // Map transform ref
   const transformComponentRef = useRef<ReactZoomPanPinchContentRef>(null);
@@ -417,19 +412,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Ref to track drag start position for click vs drag detection
   const dragStartPosRef = useRef<{ x: number, y: number } | null>(null);
 
-  // Determine current map based on settings or fallback (Unused but kept for reference if needed logic later)
-  // const currentMap = floorMaps[currentFloor] || "";
-
-  // Resolve open time image - use prop or fallback to mall default
-  // 言語に応じてパスを切り替える (英語リソースがない場合は日本語にフォールバックされるよう、getMallAssetUrlでjaを指定)
-  const openTimeImageBase = propOpenTimeImage || getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
-  
-  // もし propOpenTimeImage が渡されていればそれを優先（ただし、言語切り替えに対応するには prop も言語別である必要があるが、
-  // 現状 imageSettings には単一の openTimeImage しかない。
-  // ここでは動的パス解決を行うため、もし propOpenTimeImage が設定されていなければ getMallAssetUrl で言語別パスを生成する。
-  
-  // selectedLanguageState は後で定義されるが、ここで使いたいので、state定義を上に持ってくる必要がある。
-  // しかし、Refなどの定義順序もあるので、openTimeImageの解決ロジックを下（state定義後）に移動する。
   
   // Genre scroll container ref
   const genreScrollContainerRef = useRef<HTMLDivElement>(null);
@@ -2846,38 +2828,45 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   </div>
                 )}
 
-                {/* Border Line above Category Area */}
-                {selectedShopDetail.genreMemo && selectedShopDetail.genreMemo.includes("WAONPOINT加盟店") && (
-                  <div
-                    style={{
-                      width: "calc(100% - 40px)",
-                      height: "1px",
-                      backgroundColor: "#D9D9D9",
-                      marginLeft: "20px",
-                      marginRight: "20px",
-                      marginTop: "20px",
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
+                {/* Payment Icons Section */}
+                {selectedShopDetail.genreMemo && (selectedShopDetail.genreMemo.includes("WAONPOINT加盟店") || selectedShopDetail.genreMemo.includes("AEONPayの使えるお店")) && (
+                  <>
+                    {/* Border Line above Category Area */}
+                    <div
+                      style={{
+                        width: "calc(100% - 40px)",
+                        height: "1px",
+                        backgroundColor: "#D9D9D9",
+                        marginLeft: "20px",
+                        marginRight: "20px",
+                        marginTop: "20px",
+                        flexShrink: 0,
+                      }}
+                    />
 
-                {/* Category Area */}
-                {selectedShopDetail.genreMemo && selectedShopDetail.genreMemo.includes("WAONPOINT加盟店") && (
-                  <div
-                    style={{
-                      width: "100%",
-                      padding: "0 20px",
-                      marginTop: "20px",
-                      marginBottom: "0px",
-                      boxSizing: "border-box",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "flex-start",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <img src={waonPointIcon} alt="WAON POINT" style={{ width: "50px", height: "50px" }} />
-                  </div>
+                    {/* Icons Area */}
+                    <div
+                      style={{
+                        width: "100%",
+                        padding: "0 20px",
+                        marginTop: "20px",
+                        marginBottom: "0px",
+                        boxSizing: "border-box",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-start",
+                        flexShrink: 0,
+                        gap: "20px",
+                      }}
+                    >
+                      {selectedShopDetail.genreMemo.includes("WAONPOINT加盟店") && (
+                        <img src={waonPointIcon} alt="WAON POINT" style={{ height: "50px", width: "auto" }} />
+                      )}
+                      {selectedShopDetail.genreMemo.includes("AEONPayの使えるお店") && (
+                        <img src={aeonPayIcon} alt="AEON Pay" style={{ height: "50px", width: "auto" }} />
+                      )}
+                    </div>
+                  </>
                 )}
 
                 {/* Border Line (Non-shrinkable) */}

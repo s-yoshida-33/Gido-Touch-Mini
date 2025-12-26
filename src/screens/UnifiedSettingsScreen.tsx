@@ -18,9 +18,9 @@ import { DEFAULT_PICTO_SETTINGS } from "../types/picto";
 import type { MallSettings } from "../types/mall";
 import { DEFAULT_MALL_SETTINGS } from "../types/mall";
 import { getMallConfig } from "../config/malls";
-import { getCommonAssetUrl, getMallAssetUrl } from "../utils/assets"; // Import
+import { getMallAssetUrl, getAssetUrl } from "../utils/assets"; // Import
 
-const iconSvg = getCommonAssetUrl("icon.svg"); // Assuming icon.svg moved to common or use getAssetUrl('icon.svg') if root // Import
+const iconSvg = getAssetUrl("icon.svg"); // Assuming icon.svg moved to common or use getAssetUrl('icon.svg') if root // Import
 
 // Remove unused import if any
 // Helper function removed
