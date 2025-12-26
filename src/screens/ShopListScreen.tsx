@@ -338,8 +338,30 @@ function getAlphabetRegex(char: string): RegExp {
   return new RegExp(`^[${c}${c.toUpperCase()}]`);
 }
 
-function getGenreBadgeColor(genre: string | undefined): string {
+function getGenreBadgeColor(genre: string | undefined, mallId: MallId = "suzaka"): string {
   if (!genre) return "#999999";
+
+  if (mallId === "sendai-kamisugi") {
+    switch (genre) {
+      case "ファッション":
+        return "#1AAE48";
+      case "ファッション雑貨":
+      case "ライフスタイル雑貨":
+      case "キッズ":
+        return "#176FC1";
+      case "グルメ":
+        return "#F68712";
+      case "エンターテインメント":
+        return "#EC008C";
+      case "クリニック":
+      case "サービス":
+        return "#633B9F";
+      default:
+        return "#999999";
+    }
+  }
+
+  // Suzaka (default)
   switch (genre) {
     case "ファッション":
     case "ファッション雑貨":
@@ -469,6 +491,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
   // Wrapper for setting selected genre with direction calculation
   const handleSetSelectedGenre = (newGenreId: string) => {
+    console.log(`[GenreSelect] Clicked genre ID: "${newGenreId}"`);
     if (newGenreId === selectedGenre) return;
 
     const currentIndex = genres.findIndex(g => g.id === selectedGenre);
@@ -874,6 +897,27 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             }
           });
           setGenreIcons(iconMap);
+        } else {
+             // フォールバック: Config (malls.ts) から生成
+             // mallGenreConfig が空だとフィルタリング時に参照できないため、ここで初期化する
+             const config = getMallConfig(mallId);
+             const fallbackGenreConfig: GenreItem[] = config.genres.map((g, index) => ({
+                 id: g.id,
+                 order: index,
+                 name: { ja: g.name, en: g.name_en },
+                 iconFile: g.icon.split('/').pop() || `${g.id}.svg`
+             }));
+             setMallGenreConfig(fallbackGenreConfig);
+             
+             // アイコンマップの生成（フォールバック用）
+             const iconMap: Record<string, { normal: string; highlight: string }> = {};
+             config.genres.forEach(g => {
+                 iconMap[g.id] = { 
+                     normal: g.icon, 
+                     highlight: g.highlightIcon 
+                 };
+             });
+             setGenreIcons(iconMap);
         }
 
         // ピクト設定を読み込む
@@ -1197,7 +1241,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     selectedFacility, // Add to dependency array
     currentScale, // Check zoom scale
     selectedFloor, // Check selected floor
-    currentFloor // Check current floor
+    currentFloor, // Check current floor
+    mallId // Added mallId dependency for genre filtering logic
   ]);
 
   // Filter shops by selected floor AND selected genre
@@ -1274,25 +1319,76 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       // Find Japanese name for the selected genre
       let targetGenreName = "";
 
-      if (mallGenreConfig) {
-        // Use loaded mall config (has name.ja)
+      // 1. Try to find in mallGenreConfig (Loaded from JSON)
+      if (mallGenreConfig && mallGenreConfig.length > 0) {
         const genreItem = mallGenreConfig.find(g => g.id === selectedGenre);
         if (genreItem) {
           targetGenreName = genreItem.name.ja;
         }
-      } else {
-        // Fallback to default genres prop (name is string, typically Japanese)
+      } 
+      
+      // 2. If not found, try to find in genres prop (Loaded from malls.ts via props)
+      // Note: genres prop might be passed from parent, containing fallback data
+      if (!targetGenreName) {
         const genreItem = genres.find(g => g.id === selectedGenre);
         if (genreItem) {
           targetGenreName = genreItem.name;
-        }
+        } 
+      }
+
+      // 3. Fallback: If still not found, try to find in current Mall Config (Direct look up)
+      // This covers cases where props might be stale or mallGenreConfig is empty
+      if (!targetGenreName) {
+         const currentConfig = getMallConfig(mallId);
+         const genreItem = currentConfig.genres.find(g => g.id === selectedGenre);
+         if (genreItem) {
+             targetGenreName = genreItem.name;
+         }
+      }
+
+      if (!targetGenreName) {
+           console.log(`[Filter] Warning: Genre ID "${selectedGenre}" not found in any config.`);
       }
       
       if (targetGenreName) {
+        // Debug Log
+        console.log(`[Filter] Filtering for genre: "${targetGenreName}" (Mall: ${mallId})`);
+
         result = result.filter((shop) => {
           if (!shop.genre) return false;
-          // Exact match with genre name
-          return shop.genre === targetGenreName;
+          
+          // Debug Log for non-matching items (sample)
+          // console.log(`[Filter] Checking shop: ${shop.name}, Genre: "${shop.genre}"`);
+
+          // 1. Exact match
+          if (shop.genre === targetGenreName) return true;
+          
+          // 2. Normalize (ignore spaces, dots, ampersands)
+          const normalize = (s: string) => s.replace(/[ 　・&＆]/g, "");
+          if (normalize(shop.genre) === normalize(targetGenreName)) return true;
+
+          // 3. Mall specific variations
+          if (mallId === "sendai-kamisugi") {
+             // Sendai specific mapping
+             // "ライフスタイル雑貨" -> "ライフスタイル" or "雑貨"
+             if (targetGenreName === "ライフスタイル雑貨" && 
+                 (shop.genre === "ライフスタイル" || shop.genre === "雑貨")) {
+                 return true;
+             }
+             // "ファッション雑貨" -> "ファッション" (but differentiate from pure Fashion if needed, though usually safe here as subset)
+             // Careful: if shop.genre is "ファッション", it should match "ファッション" (Fashion) genre, NOT "ファッション雑貨" (Fashion Goods).
+             // But if shop.genre is "ファッション・グッズ", normalize handles it.
+             
+             // "サービス" -> "サービス・その他"
+             if (targetGenreName === "サービス" && shop.genre.includes("サービス")) return true;
+          }
+          
+          if (mallId === "suzaka") {
+             // Suzaka specific mapping
+             // Example: "スポーツ＆アウトドア" vs "スポーツ・アウトドア" (Handled by normalize)
+          }
+
+          return false;
         });
       }
     }
@@ -1334,7 +1430,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     });
 
     return result;
-  }, [shops, selectedFloor, selectedGenre, searchQuery, mallGenreConfig, genres]);
+  }, [shops, selectedFloor, selectedGenre, searchQuery, mallGenreConfig, genres, mallId]);
 
 
   // Add style to hide scrollbar
@@ -2510,7 +2606,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                         color: "#FFFFFF",
                         width: "60px",
                         height: "21px",
-                        background: getGenreBadgeColor(shop.genre),
+                        background: getGenreBadgeColor(shop.genre, mallId),
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
