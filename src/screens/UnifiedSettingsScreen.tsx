@@ -15,18 +15,17 @@ import type { Shop } from "../types/shop";
 import { PictoSettingsTab } from "../components/PictoSettingsTab";
 import type { PictoSettings } from "../types/picto";
 import { DEFAULT_PICTO_SETTINGS } from "../types/picto";
-<<<<<<< HEAD
 import type { MallSettings } from "../types/mall";
 import { DEFAULT_MALL_SETTINGS } from "../types/mall";
 import { getMallConfig } from "../config/malls";
-import { getCommonAssetUrl } from "../utils/assets"; // Import
+import { getCommonAssetUrl, getMallAssetUrl } from "../utils/assets"; // Import
 
 const iconSvg = getCommonAssetUrl("icon.svg"); // Assuming icon.svg moved to common or use getAssetUrl('icon.svg') if root // Import
-=======
-import { MallSelectTab } from "../components/MallSelectTab";
->>>>>>> 66e312072786ae4b23a3125200e9479157f97091
 
-type TabType = "mall" | "image" | "shopPosition" | "floor" | "picto";
+// Remove unused import if any
+// Helper function removed
+
+type TabType = "image" | "shopPosition" | "floor" | "picto";
 
 // Export props interface to ensure visibility
 export interface UnifiedSettingsScreenProps {
@@ -68,7 +67,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   mallSettings: initialMallSettings,
   onSaveMallSettings,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>("mall");
+  const [activeTab, setActiveTab] = useState<TabType>("floor");
   const [mallId, setMallId] = useState<string>(initialMallId);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -107,7 +106,71 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   // Current scale state to control panning (詳細モーダルと同じ仕様)
   const [currentScale, setCurrentScale] = useState(1);
   
+  // Re-calculate config when mallId changes
   const currentMallConfig = getMallConfig(mallSettings.mallId);
+
+  // Update mallId state when mallSettings changes to trigger GidoApp update
+  useEffect(() => {
+    setMallId(mallSettings.mallId);
+    
+    // モール変更時は、そのモールのデフォルト設定で完全にリセットする
+    // これにより、前のモールの画像パスが残るのを防ぐ
+    const config = getMallConfig(mallSettings.mallId as any);
+    const defaultOpenTime = getMallAssetUrl(mallSettings.mallId, "open-time", "open-time.svg");
+    
+    setImageSettings({
+      floorMaps: { ...config.floorMaps } as Record<FloorId, string>, // デフォルトマップ
+      openTimeImage: defaultOpenTime // デフォルト開店時間画像
+    });
+  }, [mallSettings.mallId]);
+
+  // Sync state with props when they change (e.g. after mall change reload)
+  useEffect(() => {
+    setFloor(initialFloor);
+  }, [initialFloor]);
+
+  useEffect(() => {
+    setLocationIconSettings(initialLocationIconSettings);
+  }, [initialLocationIconSettings]);
+
+  useEffect(() => {
+    const currentMallId = mallSettings.mallId;
+    const incomingMaps = initialImageSettings.floorMaps || {};
+    let isStale = false;
+
+    // Check if incoming paths belong to a different mall (heuristic)
+    for (const path of Object.values(incomingMaps)) {
+      if (path && typeof path === 'string') {
+        if (currentMallId === 'sendai-kamisugi' && path.includes('suzaka')) isStale = true;
+        if (currentMallId === 'suzaka' && path.includes('sendai-kamisugi')) isStale = true;
+      }
+    }
+
+    if (isStale) {
+      // If stale, enforce defaults for the current mall
+      const config = getMallConfig(currentMallId);
+      const defaultOpenTime = getMallAssetUrl(currentMallId, "open-time", "open-time.svg");
+      setImageSettings({
+        ...initialImageSettings,
+        floorMaps: { ...config.floorMaps } as Record<FloorId, string>,
+        openTimeImage: defaultOpenTime
+      });
+    } else {
+      setImageSettings(initialImageSettings);
+    }
+  }, [initialImageSettings, mallSettings.mallId]);
+
+  useEffect(() => {
+    setShopPositions(initialShopPositions);
+  }, [initialShopPositions]);
+
+  useEffect(() => {
+    setPictoSettings(initialPictoSettings);
+  }, [initialPictoSettings]);
+
+  useEffect(() => {
+    setMallSettings(initialMallSettings);
+  }, [initialMallSettings]);
 
   // 中央位置を計算する関数（すべてのタブで同じロジックを使用）
   const calculateOtherTabCenterPosition = useCallback(() => {
@@ -143,7 +206,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   useEffect(() => {
     // Only run initialization when isOpen changes from false to true
     if (isOpen && !prevIsOpen.current) {
-      setActiveTab("mall");
+      setActiveTab("floor");
       setMallId(initialMallId);
       setFloor(initialFloor);
       setLocationIconSettings(initialLocationIconSettings);
@@ -383,7 +446,13 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
              <label style={{ display: "block", color: "rgba(255, 255, 255, 0.8)", fontSize: 13, marginBottom: 8, fontWeight: 500 }}>モール設定</label>
              <select
                 value={mallSettings.mallId}
-                onChange={(e) => setMallSettings({ ...mallSettings, mallId: e.target.value as any })}
+                onChange={async (e) => {
+                  const newMallId = e.target.value as any;
+                  const newSettings = { ...mallSettings, mallId: newMallId };
+                  setMallSettings(newSettings);
+                  // モール切り替え時に即座に設定を保存（リロード）して、表示を切り替える
+                  await onSaveMallSettings(newSettings);
+                }}
                 style={{ width: "100%", padding: "8px 12px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 6, color: "#ffffff", fontSize: 14 }}
              >
                 <option value="suzaka" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>須坂</option>
@@ -394,7 +463,6 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
           {/* Tabs */}
           <div style={{ flex: 1, padding: "16px 0" }}>
             {[
-              { id: "mall" as TabType, label: "店舗選択" },
               { id: "floor" as TabType, label: "フロア設定" },
               { id: "image" as TabType, label: "画像" },
               { id: "shopPosition" as TabType, label: "座標設定" },
@@ -484,7 +552,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               >
               {(activeTab === "shopPosition" || activeTab === "picto" || activeTab === "image") && (
                 <GidoApp
-                  mallId={mallId}
+                  mallId={mallSettings.mallId}
                   locationIconSettings={getLocationIconSettingsForFloor(locationIconSettings, floor)}
                   previewFloor={floor}
                   imageSettings={imageSettings}
@@ -494,13 +562,12 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                   showOnlyMap={activeTab === "shopPosition" || activeTab === "picto" || activeTab === "image"}
                   pictoSettings={activeTab === "picto" ? pictoSettings : undefined}
                   selectedPictoId={activeTab === "picto" ? selectedPictoId : undefined}
-                  mallId={mallSettings.mallId}
                   defaultFloorMaps={currentMallConfig.floorMaps}
                 />
               )}
               </div>
             </TransformComponent>
-          </TransformWrapper>
+            </TransformWrapper>
           </div>
 
           {/* Zoom Controls */}
@@ -581,12 +648,6 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
             padding: "24px",
           }}
         >
-          {activeTab === "mall" && (
-            <MallSelectTab
-              selectedMallId={mallId}
-              onSelectMall={setMallId}
-            />
-          )}
           {activeTab === "floor" && (
             <FloorSettingsTab
               floor={floor}
@@ -621,7 +682,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               onSavePictoSettings={setPictoSettings}
               selectedInstanceId={selectedPictoId}
               onSelectedInstanceIdChange={setSelectedPictoId}
-              mallId={mallId}
+              mallId={mallSettings.mallId}
             />
           )}
         </div>

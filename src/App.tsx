@@ -824,6 +824,8 @@ const App: React.FC = () => {
             <summary style={{ cursor: 'pointer', marginBottom: '4px' }}>API Status</summary>
             <div style={{ paddingLeft: '16px', marginBottom: '8px' }}>
               <div>SSE: {sseStatus} (localhost:8090)</div>
+              <div>Main Map: {currentMallConfig.floorMaps[floor] || "N/A"}</div>
+              <div>Settings Map: {isSettingsOpen ? (imageSettings.floorMaps[floor] || currentMallConfig.floorMaps[floor] || "N/A") : "Settings Closed"}</div>
             </div>
           </details>
 

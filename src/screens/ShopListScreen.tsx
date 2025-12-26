@@ -34,6 +34,7 @@ import type { Genre } from "../types/mall"; // Update import
 import type { ShopPositionSettings } from "../types/shopPosition";
 import { logInfo } from "../logs/logging";
 import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from "../config";
+import { getMallConfig } from "../config/malls";
 import { PictoPin } from "../components/PictoPin";
 import type { MallId } from "../types/mall"; // Import
 import { 
@@ -243,33 +244,8 @@ function normalizeFloor(value: string): string {
 
 // Genre data definition removed (imported from types/mall)
 
-// Facility data definition
-type Facility = {
-  id: string;
-  name: string;
-  icon: string;
-  highlightIcon: string;
-};
+  // No local definitions needed as we use config/malls.ts
 
-// Helper function to get facility list based on mallId
-const getFacilityList = (mallId: MallId): Facility[] => {
-  // Button icons are in pictos/ja/ folder
-  const getButtonUrl = (name: string) => getMallAssetUrl(mallId, "pictos/ja", `${name}.svg`);
-  const getButtonHighlightUrl = (name: string) => getMallAssetUrl(mallId, "pictos/ja", `${name}-highlight.svg`);
-  
-  return [
-    { id: "info", name: "Info", icon: getButtonUrl("info"), highlightIcon: getButtonHighlightUrl("info") },
-    { id: "restroom", name: "Restroom", icon: getButtonUrl("restroom"), highlightIcon: getButtonHighlightUrl("restroom") },
-    { id: "priority_restroom", name: "Priority Restroom", icon: getButtonUrl("priority-restroom"), highlightIcon: getButtonHighlightUrl("priority-restroom") },
-    { id: "baby_room", name: "Baby Room", icon: getButtonUrl("baby-room"), highlightIcon: getButtonHighlightUrl("baby-room") },
-    { id: "smoking_room", name: "Smoking Room", icon: getButtonUrl("smoking-room"), highlightIcon: getButtonHighlightUrl("smoking-room") },
-    { id: "free_coin_lockers", name: "Coin Lockers", icon: getButtonUrl("free-coin-lockers"), highlightIcon: getButtonHighlightUrl("free-coin-lockers") },
-    { id: "atm", name: "ATM", icon: getButtonUrl("atm"), highlightIcon: getButtonHighlightUrl("atm") },
-    { id: "elevator", name: "Elevator", icon: getButtonUrl("elevator"), highlightIcon: getButtonHighlightUrl("elevator") },
-    { id: "bus_stop", name: "Bus Stop", icon: getButtonUrl("bus-stop"), highlightIcon: getButtonHighlightUrl("bus-stop") },
-    { id: "taxi_stand", name: "Taxi Stand", icon: getButtonUrl("taxi-stand"), highlightIcon: getButtonHighlightUrl("taxi-stand") },
-  ];
-};
 
 // GENRE_LIST removed - passed via props
 
@@ -406,7 +382,11 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   const mapContentRef = useRef<HTMLDivElement>(null);
   
   // Get facility list based on mallId
-  const facilityList = useMemo(() => getFacilityList(mallId), [mallId]);
+  const facilityList = useMemo(() => {
+    // getMallConfig always returns a config object (falls back to suzaka if not found)
+    const config = getMallConfig(mallId);
+    return config.facilities;
+  }, [mallId]);
 
   // Map transform ref
   const transformComponentRef = useRef<ReactZoomPanPinchContentRef>(null);
@@ -948,9 +928,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     const gap = 20; // ボタン間のギャップ
     const padding = 40; // 左右のパディング
     const minWidth = 400; // 最小幅
-    const maxWidth = 1000; // 最大幅
+    // const maxWidth = 1000; // 最大幅 - ボタン数に合わせて動的にするため制限を解除（または十分大きく）
     const calculatedWidth = buttonCount * buttonWidth + (buttonCount - 1) * gap + padding;
-    return Math.max(minWidth, Math.min(maxWidth, calculatedWidth));
+    return Math.max(minWidth, calculatedWidth);
   }, [FACILITY_LIST.length]);
 
   // Initialize language to Japanese on mount (force reset to Japanese)
@@ -1193,32 +1173,27 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
     // 2. Filter by Genre
     if (selectedGenre && selectedGenre !== "all") {
-      // Mapping based on genrelist.xml provided by user:
-      // fashion -> "ファッション"
-      // fashion_goods -> "ファッション雑貨"
-      // sport -> "スポーツ・アウトドア"
-      // kids -> "キッズ"
-      // lifestyle -> "ライフスタイル"
-      // gourmet -> "グルメ"
-      // entertainment -> "エンターテインメント"
-      // service -> "サービス"
-      const genreMapping: Record<string, string> = {
-        fashion: "ファッション",
-        fashion_goods: "ファッション雑貨",
-        sport: "スポーツ・アウトドア",
-        kids: "キッズ",
-        lifestyle: "ライフスタイル",
-        gourmet: "グルメ",
-        entertainment: "エンターテインメント",
-        service: "サービス",
-      };
+      // Find Japanese name for the selected genre
+      let targetGenreName = "";
 
-      const targetGenreName = genreMapping[selectedGenre];
+      if (mallGenreConfig) {
+        // Use loaded mall config (has name.ja)
+        const genreItem = mallGenreConfig.find(g => g.id === selectedGenre);
+        if (genreItem) {
+          targetGenreName = genreItem.name.ja;
+        }
+      } else {
+        // Fallback to default genres prop (name is string, typically Japanese)
+        const genreItem = genres.find(g => g.id === selectedGenre);
+        if (genreItem) {
+          targetGenreName = genreItem.name;
+        }
+      }
       
       if (targetGenreName) {
         result = result.filter((shop) => {
           if (!shop.genre) return false;
-          // Exact match with genre name from XML/API
+          // Exact match with genre name
           return shop.genre === targetGenreName;
         });
       }
@@ -1261,7 +1236,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     });
 
     return result;
-  }, [shops, selectedFloor, selectedGenre, searchQuery]);
+  }, [shops, selectedFloor, selectedGenre, searchQuery, mallGenreConfig, genres]);
 
 
   // Add style to hide scrollbar

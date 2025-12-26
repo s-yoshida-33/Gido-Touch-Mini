@@ -70,6 +70,16 @@ export function findMallPictoUrl(mallId: string, filename: string): string {
     }
     
     // 1. 直下（pictos/）- アイコン用、最優先
+    // NEW: pictos/icon フォルダを最優先に追加
+    searchPatterns.push(`../assets/malls/${mallId}/pictos/icon/${baseFilename}`);
+    if (normalizedName !== baseFilename) {
+        searchPatterns.push(`../assets/malls/${mallId}/pictos/icon/${nameWithExt}`);
+    }
+    if (kebabName !== baseFilename && kebabName !== normalizedName) {
+        searchPatterns.push(`../assets/malls/${mallId}/pictos/icon/${kebabName}`);
+    }
+
+    // 2. 直下（pictos/）- 旧構造互換
     searchPatterns.push(`../assets/malls/${mallId}/pictos/${baseFilename}`);
     if (normalizedName !== baseFilename) {
         searchPatterns.push(`../assets/malls/${mallId}/pictos/${nameWithExt}`);
@@ -144,7 +154,7 @@ export function findMallPictoUrl(mallId: string, filename: string): string {
     }
     
     // デバッグ用：見つからなかった場合にログ出力（開発時のみ）
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
         const availablePictos = Object.keys(assetModules)
             .filter(p => p.includes(`malls/${mallId}/pictos`))
             .map(p => p.replace(`../assets/malls/${mallId}/pictos/`, ''))

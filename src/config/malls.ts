@@ -1,4 +1,4 @@
-import type { MallConfig, MallId, Genre } from "../types/mall";
+import type { MallConfig, MallId, Genre, Facility } from "../types/mall";
 import { getMallAssetUrl } from "../utils/assets";
 
 // Helper to create genre object
@@ -9,48 +9,76 @@ const createGenre = (mallId: MallId, id: string, name: string, filenameBase: str
   highlightIcon: getMallAssetUrl(mallId, "genres/ja", `${filenameBase}-highlight.svg`),
 });
 
-// Helper to create facility object (pictos/ja or similar)
-// Note: Facilities (bottom buttons) usually use pictos or specific UI assets.
-// Based on current ShopListScreen, they use imports from assets/ (e.g. icon-search.svg).
-// If these are mall-specific, they should be in mall assets.
-// For now, let's assume common assets for some, but if mall specific, use getMallAssetUrl.
-// The current list_dir shows pictos in mall folders.
+// Helper to create facility object
+const createFacility = (mallId: MallId, id: string, name: string, filename: string, mapIconFilename?: string): Facility => {
+  const buttonFile = filename;
+  const mapFile = mapIconFilename || filename;
+  
+  return {
+    id,
+    name,
+    icon: getMallAssetUrl(mallId, "pictos/ja", buttonFile),
+    highlightIcon: getMallAssetUrl(mallId, "pictos/ja", buttonFile.replace(".svg", "-highlight.svg")),
+    iconFile: mapFile,
+  };
+};
 
 // SUZAKA CONFIG
 const suzakaGenres: Genre[] = [
-  createGenre("suzaka", "all", "All", "all"),
-  createGenre("suzaka", "fashion", "Fashion", "fashion"),
-  createGenre("suzaka", "fashion_goods", "Fashion Goods", "fashion-goods"),
-  createGenre("suzaka", "sport", "Sport", "sport"),
-  createGenre("suzaka", "kids", "Kids", "kids"),
-  createGenre("suzaka", "lifestyle", "Lifestyle", "lifestyle"),
-  createGenre("suzaka", "gourmet", "Gourmet", "gourmet"),
-  createGenre("suzaka", "entertainment", "Entertainment", "entertainment"),
-  createGenre("suzaka", "service", "Service", "survice"), // File name is survice
+  createGenre("suzaka", "all", "すべて", "all"),
+  createGenre("suzaka", "fashion", "ファッション", "fashion"),
+  createGenre("suzaka", "fashion_goods", "ファッション雑貨", "fashion-goods"),
+  createGenre("suzaka", "sport", "スポーツ＆アウトドア", "sport"),
+  createGenre("suzaka", "kids", "キッズ", "kids"),
+  createGenre("suzaka", "lifestyle", "ライフスタイル", "lifestyle"),
+  createGenre("suzaka", "gourmet", "グルメ", "gourmet"),
+  createGenre("suzaka", "entertainment", "エンターテインメント", "entertainment"),
+  createGenre("suzaka", "service", "サービス", "survice"),
+];
+
+const suzakaFacilities: Facility[] = [
+  createFacility("suzaka", "info", "インフォメーション", "info.svg"),
+  createFacility("suzaka", "restroom", "トイレ", "restroom.svg"),
+  createFacility("suzaka", "priority_restroom", "優先トイレ", "priority-restroom.svg"),
+  createFacility("suzaka", "baby_room", "ベビールーム", "baby-room.svg"),
+  createFacility("suzaka", "smoking_room", "喫煙所", "smoking-room.svg"),
+  createFacility("suzaka", "free_coin_lockers", "無料コインロッカー", "free-coin-lockers.svg"),
+  createFacility("suzaka", "atm", "ATM", "atm.svg"),
+  createFacility("suzaka", "elevator", "エレベーター", "elevator.svg"),
+  createFacility("suzaka", "bus_stop", "バス乗り場", "bus-stop.svg"),
+  createFacility("suzaka", "taxi_stand", "タクシーのりば", "taxi-stand.svg"),
 ];
 
 // SENDAI CONFIG
 const sendaiGenres: Genre[] = [
-  createGenre("sendai-kamisugi", "all", "All", "all"),
-  createGenre("sendai-kamisugi", "clinic", "Clinic", "clinic"),
-  createGenre("sendai-kamisugi", "entertainment", "Entertainment", "entertainment"),
-  createGenre("sendai-kamisugi", "fashion", "Fashion", "fashion"),
-  createGenre("sendai-kamisugi", "fashion_goods", "Fashion Goods", "fashion-goods"),
-  createGenre("sendai-kamisugi", "gourmet", "Gourmet", "gourmet"),
-  createGenre("sendai-kamisugi", "lifestyle", "Lifestyle Goods", "ifestyle-goods"), // Typo in filename: ifestyle-goods
-  createGenre("sendai-kamisugi", "kids", "Kids", "kids"),
-  createGenre("sendai-kamisugi", "service", "Service", "survice"), // Typo in filename: survice
+  createGenre("sendai-kamisugi", "all", "すべて", "all"),
+  createGenre("sendai-kamisugi", "fashion", "ファッション", "fashion"),
+  createGenre("sendai-kamisugi", "fashion_goods", "ファッション雑貨", "fashion-goods"),
+  createGenre("sendai-kamisugi", "lifestyle_goods", "ライフスタイル雑貨", "lifestyle-goods"),
+  createGenre("sendai-kamisugi", "kids", "キッズ", "kids"),
+  createGenre("sendai-kamisugi", "gourmet", "グルメ", "gourmet"),
+  createGenre("sendai-kamisugi", "entertainment", "エンターテインメント", "entertainment"),
+  createGenre("sendai-kamisugi", "clinic", "クリニック", "clinic"),
+  createGenre("sendai-kamisugi", "service", "サービス", "survice"),
 ];
 
-// Facilities definitions if needed per mall, or use common one.
-// For now, keeping facility definitions simple or empty if not strictly required to change yet.
+const sendaiFacilities: Facility[] = [
+  createFacility("sendai-kamisugi", "info", "インフォメーション", "info.svg"),
+  createFacility("sendai-kamisugi", "restroom", "トイレ", "restroom.svg"),
+  createFacility("sendai-kamisugi", "priority_restroom", "多機能トイレ", "priority-restroom.svg"),
+  createFacility("sendai-kamisugi", "baby_room", "赤ちゃんルーム", "baby-room.svg"),
+  createFacility("sendai-kamisugi", "smoking_room", "喫煙所", "smoking-room.svg"),
+  createFacility("sendai-kamisugi", "atm", "ATM", "atm.svg"),
+  createFacility("sendai-kamisugi", "elevator", "エレベーター", "elevator.svg"),
+  createFacility("sendai-kamisugi", "bus_stop", "バスのりば", "bus-stop.svg"),
+];
 
 export const MALL_CONFIGS: Record<MallId, MallConfig> = {
   suzaka: {
     id: "suzaka",
     name: "須坂",
     genres: suzakaGenres,
-    facilities: [], // To be populated if needed
+    facilities: suzakaFacilities,
     floorMaps: {
       "1F": getMallAssetUrl("suzaka", "maps", "1F.svg"),
       "2F": getMallAssetUrl("suzaka", "maps", "2F.svg"),
@@ -62,7 +90,7 @@ export const MALL_CONFIGS: Record<MallId, MallConfig> = {
     id: "sendai-kamisugi",
     name: "仙台上杉",
     genres: sendaiGenres,
-    facilities: [],
+    facilities: sendaiFacilities,
     floorMaps: {
       "1F": getMallAssetUrl("sendai-kamisugi", "maps", "1F.svg"),
       "2F": getMallAssetUrl("sendai-kamisugi", "maps", "2F.svg"),

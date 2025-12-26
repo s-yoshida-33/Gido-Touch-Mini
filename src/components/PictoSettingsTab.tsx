@@ -2,21 +2,11 @@ import React, { useState, useMemo, useEffect } from "react";
 import type { FloorId } from "../types/floorLayout";
 import type { PictoSettings, PictoInstance, PictoTag } from "../types/picto";
 import type { AnimationConfig, AnimationType, ShadowConfig } from "../types/locationIcon";
-import { findMallPictoUrl, loadMallPictoConfig, loadPictoIcon } from "../utils/assets"; // Import
-import type { MallId } from "../types/mall"; // Import
+import { findMallPictoUrl, loadMallPictoConfig, loadPictoIcon, getMallAssetPaths } from "../utils/assets";
+import { getMallConfig } from "../config/malls"; // Import getMallConfig
+import type { MallId } from "../types/mall";
 
-const PICTO_TAGS: { id: PictoTag; label: string }[] = [
-  { id: "info", label: "Info" },
-  { id: "restroom", label: "Restroom" },
-  { id: "priority_restroom", label: "Priority Restroom" },
-  { id: "baby_room", label: "Baby Room" },
-  { id: "smoking_room", label: "Smoking Room" },
-  { id: "free_coin_lockers", label: "Coin Lockers" },
-  { id: "atm", label: "ATM" },
-  { id: "elevator", label: "Elevator" },
-  { id: "bus_stop", label: "Bus Stop" },
-  { id: "taxi_stand", label: "Taxi Stand" },
-];
+// PICTO_TAGS moved to dynamic generation based on mall config
 
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -83,25 +73,77 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
 
   
   // Load picto config and icons dynamically
-  const [iconOptions, setIconOptions] = useState<Array<{ path: string; name: string }>>([]);
+  const [iconOptions, setIconOptions] = useState<Array<{ fileName: string; url: string }>>([]);
+
+  // Generate tags dynamically based on mall config
+  const pictoTags = useMemo(() => {
+    const config = getMallConfig(mallId);
+    if (!config) return [];
+    
+    // Convert facilities to tags
+    // Map facility ID (e.g. "free_coin_lockers") to label (e.g. "無料コインロッカー")
+    // If you prefer English labels in settings, you might need to map them back or use keys
+    // For now, let's use the Japanese name as label for clarity in settings
+    return config.facilities.map(f => ({
+      id: f.id as PictoTag,
+      label: f.name
+    }));
+  }, [mallId]);
 
   useEffect(() => {
     const loadIcons = async () => {
       try {
-        const config = await loadMallPictoConfig(mallId);
+        // Method 1: Load from "pictos/icon" directory (Priority)
+        const iconFiles = getMallAssetPaths(mallId, "pictos/icon");
+        
+        if (iconFiles && iconFiles.length > 0) {
+          const options = iconFiles.map(fileName => {
+             return {
+               fileName: fileName,
+               url: findMallPictoUrl(mallId, fileName) // findMallPictoUrl now searches pictos/icon first
+             };
+          });
+          setIconOptions(options);
+          return;
+        }
+
+        // Method 2: Fallback to Config (Legacy behavior)
+        let config = await loadMallPictoConfig(mallId);
+        
+        // Fallback if loadMallPictoConfig returns null (e.g. in browser)
+        if (!config || !config.pictos) {
+            const staticConfig = getMallConfig(mallId);
+            // Convert static config facilities to PictoItem format
+            config = {
+                pictos: staticConfig.facilities.map((f, index) => ({
+                    id: f.id,
+                    order: index,
+                    name: { ja: f.name },
+                    // Use iconFile if available (added in type), otherwise fallback to id + .svg or guess
+                    iconFile: f.iconFile || `${f.id.replace(/_/g, '-')}.svg`,
+                    buttonFile: `button-${f.id.replace(/_/g, '-')}.svg` // Estimation
+                }))
+            };
+        }
+
         if (config && config.pictos) {
           // Load icon options from config (exclude button files)
           // ピクトアイコンは常に日本語版を使用
           const options = await Promise.all(
             config.pictos.map(async (picto: any) => {
-              const iconUrl = await loadPictoIcon(mallId, "ja", picto.iconFile.replace('.svg', ''), false, false);
+              // Get clean filename
+              const fileName = picto.iconFile;
+              // Remove .svg to create filename base for search
+              const nameWithoutExt = fileName.replace('.svg', '');
+              
+              const iconUrl = await loadPictoIcon(mallId, "ja", nameWithoutExt, false, false);
               return {
-                path: iconUrl || "",
-                name: picto.iconFile
+                fileName: fileName,
+                url: iconUrl || findMallPictoUrl(mallId, fileName) || ""
               };
             })
           );
-          setIconOptions(options.filter(opt => opt.path && !opt.name.startsWith('button-')));
+          setIconOptions(options.filter(opt => opt.url && !opt.fileName.startsWith('button-')));
         }
       } catch (error) {
         console.error("Failed to load picto config", error);
@@ -227,17 +269,22 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
               >
                 <option value="" style={{ backgroundColor: "#2C2C2C" }}>選択してください</option>
                 {iconOptions.map(opt => (
-                    <option key={opt.path} value={opt.path} style={{ backgroundColor: "#2C2C2C" }}>{opt.name}</option>
+                    <option key={opt.fileName} value={opt.fileName} style={{ backgroundColor: "#2C2C2C" }}>{opt.fileName}</option>
                 ))}
               </select>
               
               {selectedIconPath && (
                  <div style={{ marginTop: 10, width: 60, height: 60, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 6, padding: 4, display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    <img 
-                        src={findMallPictoUrl(mallId, selectedIconPath)} 
-                        alt="preview" 
-                        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
-                    />
+                    {(() => {
+                        const url = iconOptions.find(opt => opt.fileName === selectedIconPath)?.url;
+                        return url ? (
+                            <img 
+                                src={url} 
+                                alt="preview" 
+                                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
+                            />
+                        ) : null;
+                    })()}
                  </div>
               )}
             </div>
@@ -249,7 +296,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
                 onChange={(e) => setSelectedTag(e.target.value as PictoTag)}
                 style={{ width: "100%", padding: "8px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 6, color: "#ffffff", fontSize: 14 }}
               >
-                {PICTO_TAGS.map(t => (
+                {pictoTags.map(t => (
                   <option key={t.id} value={t.id} style={{ backgroundColor: "#2C2C2C" }}>{t.label}</option>
                 ))}
                 <option value="other" style={{ backgroundColor: "#2C2C2C" }}>Other</option>
@@ -275,29 +322,33 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
           <div style={{ flex: "0 0 auto", maxHeight: "300px", overflowY: "auto" }}>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 8 }}>配置済み ({floorInstances.length})</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {floorInstances.map(inst => (
-                <div
-                  key={inst.id}
-                  onClick={() => setSelectedInstanceId(inst.id)}
-                  style={{
-                    padding: 10,
-                    backgroundColor: selectedInstanceId === inst.id ? "rgba(0,122,255,0.2)" : "rgba(255,255,255,0.05)",
-                    border: selectedInstanceId === inst.id ? "1px solid #007aff" : "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    display: "flex", alignItems: "center", gap: 10
-                  }}
-                >
-                  <div style={{ width: 30, height: 30, backgroundColor: "#fff", borderRadius: 4, padding: 2 }}>
-                    {/* Find URL from helper */}
-                    <img src={findMallPictoUrl(mallId, inst.iconName)} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              {floorInstances.map(inst => {
+                // Find URL from options (fallback to findMallPictoUrl for development/defaults)
+                const iconUrl = iconOptions.find(opt => opt.fileName === inst.iconName)?.url || findMallPictoUrl(mallId, inst.iconName);
+                
+                return (
+                  <div
+                    key={inst.id}
+                    onClick={() => setSelectedInstanceId(inst.id)}
+                    style={{
+                      padding: 10,
+                      backgroundColor: selectedInstanceId === inst.id ? "rgba(0,122,255,0.2)" : "rgba(255,255,255,0.05)",
+                      border: selectedInstanceId === inst.id ? "1px solid #007aff" : "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      display: "flex", alignItems: "center", gap: 10
+                    }}
+                  >
+                    <div style={{ width: 30, height: 30, backgroundColor: "#fff", borderRadius: 4, padding: 2 }}>
+                      {iconUrl && <img src={iconUrl} style={{ width: "100%", height: "100%", objectFit: "contain" }} />}
+                    </div>
+                    <div style={{ flex: 1, overflow: "hidden" }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{inst.tag}</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{inst.iconName}</div>
+                    </div>
                   </div>
-                  <div style={{ flex: 1, overflow: "hidden" }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{inst.tag}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{inst.iconName}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -313,7 +364,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
                     onChange={(e) => updateInstance({ tag: e.target.value as PictoTag })}
                     style={{ width: "100%", padding: "8px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 6, color: "#ffffff", fontSize: 14 }}
                   >
-                     {PICTO_TAGS.map(t => (
+                     {pictoTags.map(t => (
                       <option key={t.id} value={t.id} style={{ backgroundColor: "#2C2C2C" }}>{t.label}</option>
                     ))}
                      <option value="other" style={{ backgroundColor: "#2C2C2C" }}>Other</option>

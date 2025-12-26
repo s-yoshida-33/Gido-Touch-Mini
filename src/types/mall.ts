@@ -20,6 +20,7 @@ export interface Facility {
   name: string;
   icon: string;
   highlightIcon: string;
+  iconFile: string; // Added for reference in settings
 }
 
 export interface MallConfig {
