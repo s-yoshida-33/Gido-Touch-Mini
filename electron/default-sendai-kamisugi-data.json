@@ -55,6 +55,1219 @@
           "rippleSize": 3,
           "rippleCenterSize": 0.8
         }
+      },
+      "0a94cbc3-8ce7-4b92-b08d-fc7377d00119": {
+        "id": "0a94cbc3-8ce7-4b92-b08d-fc7377d00119",
+        "tag": "info",
+        "iconName": "info.svg",
+        "floor": "1F",
+        "x": 58.05,
+        "y": 56.53,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "07a4cf39-6f00-47a8-b3c4-019c45e1edff": {
+        "id": "07a4cf39-6f00-47a8-b3c4-019c45e1edff",
+        "tag": "restroom",
+        "iconName": "restroom.svg",
+        "floor": "1F",
+        "x": 52.65,
+        "y": 65.98,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "d9fbf0a4-be56-42f2-b4e9-9067d6d0fd54": {
+        "id": "d9fbf0a4-be56-42f2-b4e9-9067d6d0fd54",
+        "tag": "restroom",
+        "iconName": "restroom.svg",
+        "floor": "1F",
+        "x": 51.37,
+        "y": 29.47,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "0791cd13-eb74-433f-8ce5-acb3c47ed020": {
+        "id": "0791cd13-eb74-433f-8ce5-acb3c47ed020",
+        "tag": "restroom",
+        "iconName": "wheelchair-restroom.svg",
+        "floor": "1F",
+        "x": 53.83,
+        "y": 65.98,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "14104dac-ad98-46ae-89ad-ab5f1c3cd229": {
+        "id": "14104dac-ad98-46ae-89ad-ab5f1c3cd229",
+        "tag": "priority_restroom",
+        "iconName": "priority-restroom.svg",
+        "floor": "1F",
+        "x": 53.83,
+        "y": 67.54,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "fd11f05f-7523-4d7d-957f-eb5199ba8d1a": {
+        "id": "fd11f05f-7523-4d7d-957f-eb5199ba8d1a",
+        "tag": "baby_room",
+        "iconName": "baby-room.svg",
+        "floor": "1F",
+        "x": 52.65,
+        "y": 67.54,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 30,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "10792aa1-8821-48ac-93c8-3b005406ad97": {
+        "id": "10792aa1-8821-48ac-93c8-3b005406ad97",
+        "tag": "atm",
+        "iconName": "atm.svg",
+        "floor": "1F",
+        "x": 50.71,
+        "y": 47.86,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "09ebdac6-ecb3-49cf-b068-2e23cdb8b036": {
+        "id": "09ebdac6-ecb3-49cf-b068-2e23cdb8b036",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "1F",
+        "x": 54.96,
+        "y": 65.98,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "8ca9f3ff-1f81-4b08-93df-47e82afe60b3": {
+        "id": "8ca9f3ff-1f81-4b08-93df-47e82afe60b3",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "1F",
+        "x": 48.32,
+        "y": 44.49,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "5996b4b2-62ac-4dbd-af35-63a08adb1dba": {
+        "id": "5996b4b2-62ac-4dbd-af35-63a08adb1dba",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "1F",
+        "x": 48.32,
+        "y": 25.2,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "22259123-b1e1-4b3a-b6de-fb68eb36da07": {
+        "id": "22259123-b1e1-4b3a-b6de-fb68eb36da07",
+        "tag": "elevator",
+        "iconName": "elevator-multi-floor.svg",
+        "floor": "1F",
+        "x": 51.37,
+        "y": 24.54,
+        "size": 20.3,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "6d151a0a-2961-4cbb-a9fa-b710356f927c": {
+        "id": "6d151a0a-2961-4cbb-a9fa-b710356f927c",
+        "tag": "restroom",
+        "iconName": "restroom.svg",
+        "floor": "2F",
+        "x": 54.26,
+        "y": 75.78,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "8518da13-0dca-484b-9a2f-906d610aee20": {
+        "id": "8518da13-0dca-484b-9a2f-906d610aee20",
+        "tag": "restroom",
+        "iconName": "restroom.svg",
+        "floor": "2F",
+        "x": 44.71,
+        "y": 25.66,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "922cf0ef-214c-4e6d-a298-964763dda840": {
+        "id": "922cf0ef-214c-4e6d-a298-964763dda840",
+        "tag": "restroom",
+        "iconName": "wheelchair-restroom.svg",
+        "floor": "2F",
+        "x": 44.71,
+        "y": 27.68,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "6c68a4c4-a0cf-442e-844f-1fa903cbc315": {
+        "id": "6c68a4c4-a0cf-442e-844f-1fa903cbc315",
+        "tag": "restroom",
+        "iconName": "wheelchair-restroom.svg",
+        "floor": "2F",
+        "x": 59.44,
+        "y": 75.78,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "df8de0a6-fa0e-4d49-bdaa-6200f2938ab5": {
+        "id": "df8de0a6-fa0e-4d49-bdaa-6200f2938ab5",
+        "tag": "priority_restroom",
+        "iconName": "priority-restroom.svg",
+        "floor": "2F",
+        "x": 60.97,
+        "y": 75.78,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "f222e0ce-cbe5-4eec-87d2-147050f1b08b": {
+        "id": "f222e0ce-cbe5-4eec-87d2-147050f1b08b",
+        "tag": "priority_restroom",
+        "iconName": "priority-restroom.svg",
+        "floor": "2F",
+        "x": 44.71,
+        "y": 29.73,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "127c09a7-2a11-4826-9183-dd5a20992e66": {
+        "id": "127c09a7-2a11-4826-9183-dd5a20992e66",
+        "tag": "baby_room",
+        "iconName": "baby-room.svg",
+        "floor": "2F",
+        "x": 56.73,
+        "y": 75.78,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "bd5a83fe-21fc-4229-8ff1-4d52ce7dfaf2": {
+        "id": "bd5a83fe-21fc-4229-8ff1-4d52ce7dfaf2",
+        "tag": "smoking_room",
+        "iconName": "smoking-room.svg",
+        "floor": "2F",
+        "x": 44.71,
+        "y": 23.66,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "b1154097-4994-4d82-b17d-497b04406406": {
+        "id": "b1154097-4994-4d82-b17d-497b04406406",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "2F",
+        "x": 50.52,
+        "y": 75.78,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "c084852b-b9cb-406d-8c45-c2ee58926e78": {
+        "id": "c084852b-b9cb-406d-8c45-c2ee58926e78",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "2F",
+        "x": 41.92,
+        "y": 44.65,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "e4dcae25-b038-4d13-acf7-99a875fa7f71": {
+        "id": "e4dcae25-b038-4d13-acf7-99a875fa7f71",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "2F",
+        "x": 41.92,
+        "y": 19.45,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "3d0fe525-5601-4cb2-9137-d2bb750c474c": {
+        "id": "3d0fe525-5601-4cb2-9137-d2bb750c474c",
+        "tag": "elevator",
+        "iconName": "elevator-multi-floor.svg",
+        "floor": "2F",
+        "x": 44.71,
+        "y": 16.06,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "5b7dc78b-d296-4d34-a8fa-3162b430fb91": {
+        "id": "5b7dc78b-d296-4d34-a8fa-3162b430fb91",
+        "tag": "restroom",
+        "iconName": "restroom.svg",
+        "floor": "3F",
+        "x": 46.19,
+        "y": 44.16,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "a659ac63-47fb-40cd-b256-f8e912911625": {
+        "id": "a659ac63-47fb-40cd-b256-f8e912911625",
+        "tag": "restroom",
+        "iconName": "restroom.svg",
+        "floor": "3F",
+        "x": 44.72,
+        "y": 23.62,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "22f2c365-a55a-4450-af23-9e0d44058bb2": {
+        "id": "22f2c365-a55a-4450-af23-9e0d44058bb2",
+        "tag": "restroom",
+        "iconName": "kids-restroom.svg",
+        "floor": "3F",
+        "x": 46.19,
+        "y": 50.13,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "4761e471-c4ca-4591-a945-f84e988eb9fd": {
+        "id": "4761e471-c4ca-4591-a945-f84e988eb9fd",
+        "tag": "priority_restroom",
+        "iconName": "priority-restroom.svg",
+        "floor": "3F",
+        "x": 46.19,
+        "y": 46.13,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "eb69bb5c-0221-4ca0-9d43-790b40ebd40f": {
+        "id": "eb69bb5c-0221-4ca0-9d43-790b40ebd40f",
+        "tag": "baby_room",
+        "iconName": "baby-room.svg",
+        "floor": "3F",
+        "x": 44.69,
+        "y": 50.13,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "ff3e1f12-6ddb-4044-9fbf-90c258ad6ba3": {
+        "id": "ff3e1f12-6ddb-4044-9fbf-90c258ad6ba3",
+        "tag": "atm",
+        "iconName": "aeon-atm.svg",
+        "floor": "3F",
+        "x": 44.79,
+        "y": 62.38,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "61c8a250-694e-489a-87e7-538992c04442": {
+        "id": "61c8a250-694e-489a-87e7-538992c04442",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "3F",
+        "x": 50.29,
+        "y": 72.73,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "92b2c6ed-4ea4-480a-ad82-6b6c5062d064": {
+        "id": "92b2c6ed-4ea4-480a-ad82-6b6c5062d064",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "3F",
+        "x": 41.86,
+        "y": 44.63,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "871909b8-6771-4f77-b1ce-0009f30e5a5c": {
+        "id": "871909b8-6771-4f77-b1ce-0009f30e5a5c",
+        "tag": "elevator",
+        "iconName": "elevator-multi-floor.svg",
+        "floor": "3F",
+        "x": 44.61,
+        "y": 17.62,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "cdf08356-b22c-454c-9334-2bd6c1feb9c7": {
+        "id": "cdf08356-b22c-454c-9334-2bd6c1feb9c7",
+        "tag": "restroom",
+        "iconName": "restroom.svg",
+        "floor": "4F",
+        "x": 57.59,
+        "y": 75.42,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "bd3dae6d-5a75-4c15-8b7e-3d715df59391": {
+        "id": "bd3dae6d-5a75-4c15-8b7e-3d715df59391",
+        "tag": "restroom",
+        "iconName": "restroom.svg",
+        "floor": "4F",
+        "x": 47.61,
+        "y": 45.5,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "13a7911a-e7db-4970-aa66-a7b9c1d6f89d": {
+        "id": "13a7911a-e7db-4970-aa66-a7b9c1d6f89d",
+        "tag": "restroom",
+        "iconName": "wheelchair-restroom.svg",
+        "floor": "4F",
+        "x": 59.15,
+        "y": 75.42,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "cfb8138d-c60c-4553-9913-840cec749625": {
+        "id": "cfb8138d-c60c-4553-9913-840cec749625",
+        "tag": "smoking_room",
+        "iconName": "e-smoking-room.svg",
+        "floor": "4F",
+        "x": 48.64,
+        "y": 25.62,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "aef2bf8a-2344-4983-835e-e153ecdeec3f": {
+        "id": "aef2bf8a-2344-4983-835e-e153ecdeec3f",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "4F",
+        "x": 52.12,
+        "y": 73.36,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "c4807365-aa7d-4881-870b-8f3dfcc95370": {
+        "id": "c4807365-aa7d-4881-870b-8f3dfcc95370",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "4F",
+        "x": 42.69,
+        "y": 43.98,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "7a3844d0-7d68-4712-888c-38c6e72d827f": {
+        "id": "7a3844d0-7d68-4712-888c-38c6e72d827f",
+        "tag": "elevator",
+        "iconName": "elevator.svg",
+        "floor": "4F",
+        "x": 42.69,
+        "y": 17.6,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      },
+      "fd68f1fb-ddb4-4d5f-a76e-a2d0a89580cc": {
+        "id": "fd68f1fb-ddb4-4d5f-a76e-a2d0a89580cc",
+        "tag": "restroom",
+        "iconName": "wheelchair-restroom.svg",
+        "floor": "3F",
+        "x": 46.19,
+        "y": 48.11,
+        "size": 26,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8
+        }
+      }
+    }
+  },
+  "locationIcons": {
+    "1F": {
+      "speechBubble": {
+        "enabled": true,
+        "xPercent": 61.5,
+        "yPercent": 57.6,
+        "size": 50,
+        "rotation": 0,
+        "shadow": {
+          "enabled": true,
+          "offsetX": 2,
+          "offsetY": 2,
+          "blur": 2,
+          "opacity": 0.3
+        },
+        "animation": {
+          "enabled": true,
+          "type": "floating",
+          "duration": 2.2,
+          "amplitude": 10
+        }
+      },
+      "location": {
+        "enabled": true,
+        "xPercent": 61.5,
+        "yPercent": 59.9,
+        "size": 36,
+        "rotation": 0,
+        "shadow": {
+          "enabled": true,
+          "offsetX": 2,
+          "offsetY": 2,
+          "blur": 2,
+          "opacity": 0.3
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleColor": "#E63B93",
+          "rippleSize": 1.6,
+          "rippleCenterSize": 0.8
+        }
+      }
+    },
+    "2F": {
+      "speechBubble": {
+        "enabled": false,
+        "xPercent": 50,
+        "yPercent": 40,
+        "size": 96,
+        "rotation": 0,
+        "shadow": {
+          "enabled": true,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "floating",
+          "duration": 2.2,
+          "amplitude": 18
+        }
+      },
+      "location": {
+        "enabled": false,
+        "xPercent": 50,
+        "yPercent": 50,
+        "size": 72,
+        "rotation": 0,
+        "shadow": {
+          "enabled": true,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": false,
+          "type": "floating",
+          "duration": 2.2,
+          "amplitude": 18
+        }
+      }
+    },
+    "3F": {
+      "speechBubble": {
+        "enabled": false,
+        "xPercent": 50,
+        "yPercent": 40,
+        "size": 96,
+        "rotation": 0,
+        "shadow": {
+          "enabled": true,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "floating",
+          "duration": 2.2,
+          "amplitude": 18
+        }
+      },
+      "location": {
+        "enabled": false,
+        "xPercent": 50,
+        "yPercent": 50,
+        "size": 72,
+        "rotation": 0,
+        "shadow": {
+          "enabled": true,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": false,
+          "type": "floating",
+          "duration": 2.2,
+          "amplitude": 18
+        }
+      }
+    },
+    "4F": {
+      "speechBubble": {
+        "enabled": false,
+        "xPercent": 50,
+        "yPercent": 40,
+        "size": 96,
+        "rotation": 0,
+        "shadow": {
+          "enabled": true,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "floating",
+          "duration": 2.2,
+          "amplitude": 18
+        }
+      },
+      "location": {
+        "enabled": false,
+        "xPercent": 50,
+        "yPercent": 50,
+        "size": 72,
+        "rotation": 0,
+        "shadow": {
+          "enabled": true,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": false,
+          "type": "floating",
+          "duration": 2.2,
+          "amplitude": 18
+        }
       }
     }
   }

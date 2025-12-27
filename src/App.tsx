@@ -737,6 +737,50 @@ const App: React.FC = () => {
               logError("app", "Failed to reload shop positions", { error: e });
             }
           }
+
+          // Reload location settings for the new mall
+          if (api.getLocationIconSettings) {
+            try {
+              const newLocationSettings = await api.getLocationIconSettings();
+              if (newLocationSettings) {
+                // Check if saved is per-floor format or old single format
+                const isPerFloor = '1F' in newLocationSettings || '2F' in newLocationSettings;
+                
+                if (!isPerFloor && 'speechBubble' in newLocationSettings) {
+                   // Convert old format to per-floor
+                   const oldSettings = newLocationSettings as LocationIconSettings;
+                   const mergedSettings: LocationIconSettings = {
+                     speechBubble: {
+                       ...DEFAULT_LOCATION_ICON_SETTINGS.speechBubble,
+                       ...oldSettings.speechBubble,
+                       enabled: oldSettings.speechBubble?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.enabled,
+                       shadow: oldSettings.speechBubble?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.shadow,
+                       animation: oldSettings.speechBubble?.animation ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.animation,
+                     },
+                     location: {
+                       ...DEFAULT_LOCATION_ICON_SETTINGS.location,
+                       ...oldSettings.location,
+                       enabled: oldSettings.location?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.location.enabled,
+                       shadow: oldSettings.location?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.location.shadow,
+                     },
+                   };
+                   const perFloorSettings: LocationIconSettingsPerFloor = {
+                     "1F": mergedSettings,
+                     "2F": mergedSettings,
+                     "3F": mergedSettings,
+                     "4F": mergedSettings,
+                   };
+                   setLocationSettings(perFloorSettings);
+                } else {
+                   // Per floor format
+                   setLocationSettings(newLocationSettings as LocationIconSettingsPerFloor);
+                }
+                logInfo("app", "Location settings reloaded for new mall", { mallId: saved.mallId });
+              }
+            } catch (e) {
+              logError("app", "Failed to reload location settings", { error: e });
+            }
+          }
           
           // Reload picto settings for the new mall
           if (api.getPictoSettings) {

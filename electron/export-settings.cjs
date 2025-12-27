@@ -55,10 +55,34 @@ function exportSettings() {
         if (!dataByMall[currentMallId]) dataByMall[currentMallId] = {};
         dataByMall[currentMallId].pictoSettings = parsed.pictoSettings;
     }
+    if (parsed.locationIcons) {
+        if (!dataByMall[currentMallId]) dataByMall[currentMallId] = {};
+        dataByMall[currentMallId].locationIcons = parsed.locationIcons;
+    }
 
     // モールごとにファイルを出力
     console.log('--- モール別初期設定のエクスポート ---');
     Object.keys(dataByMall).forEach(mallId => {
+        // Sanitize before export to prevent recursion
+        // shopPositions
+        if (dataByMall[mallId].shopPositions) {
+            const cleanPositions = {
+                positions: dataByMall[mallId].shopPositions.positions || {}
+            };
+            dataByMall[mallId].shopPositions = cleanPositions;
+        }
+        
+        // pictoSettings
+        if (dataByMall[mallId].pictoSettings) {
+            const cleanInstances = {
+                instances: dataByMall[mallId].pictoSettings.instances || {}
+            };
+            dataByMall[mallId].pictoSettings = cleanInstances;
+        }
+
+        // locationIcons (optional sanitize if needed, currently just passing through)
+        // No strict structure enforcement needed here as it's just copying what's in memory/file
+
         // 命名規則: default-[mallId]-data.json
         const fileName = `default-${mallId}-data.json`;
         const filePath = path.join(__dirname, fileName);
@@ -71,6 +95,7 @@ function exportSettings() {
         console.log(`エクスポート完了: ${fileName}`);
         console.log(`  - Shop Positions: ${Object.keys(dataByMall[mallId].shopPositions?.positions || {}).length}`);
         console.log(`  - Picto Instances: ${Object.keys(dataByMall[mallId].pictoSettings?.instances || {}).length}`);
+        console.log(`  - Location Icons: ${dataByMall[mallId].locationIcons ? 'Present' : 'None'}`);
     });
 
   } catch (error) {

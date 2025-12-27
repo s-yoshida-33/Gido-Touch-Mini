@@ -258,11 +258,12 @@ function loadSettings() {
   // デフォルトのショップ位置などを決定 (suzakaのデータがあればそれを使う)
   const defaultShopPositions = baseDataByMall.suzaka?.shopPositions || { positions: {} };
   const defaultPictoSettings = baseDataByMall.suzaka?.pictoSettings || { instances: {} };
+  const defaultLocationIcons = baseDataByMall.suzaka?.locationIcons || createDefaultPerFloorSettings();
 
   const base = {
     mallId: 'suzaka', // デフォルトは須坂
     floor: '1F',
-    locationIcons: createDefaultPerFloorSettings(),
+    locationIcons: defaultLocationIcons,
     shopPositions: defaultShopPositions,
     pictoSettings: defaultPictoSettings,
     imageSettings: {
@@ -285,17 +286,19 @@ function loadSettings() {
     const raw = fs.readFileSync(settingsPath, 'utf-8');
     const parsed = JSON.parse(raw);
 
-    // Migration: Move root shopPositions/pictoSettings to dataByMall if not present
+    // Migration: Move root shopPositions/pictoSettings/locationIcons to dataByMall if not present
     if (!parsed.dataByMall) {
       logger.info('Migrating settings to dataByMall structure');
       parsed.dataByMall = {
         suzaka: {
           shopPositions: parsed.shopPositions || defaultShopPositions,
-          pictoSettings: parsed.pictoSettings || defaultPictoSettings
+          pictoSettings: parsed.pictoSettings || defaultPictoSettings,
+          locationIcons: parsed.locationIcons || defaultLocationIcons
         },
         "sendai-kamisugi": {
           shopPositions: { positions: {} },
-          pictoSettings: { instances: {} }
+          pictoSettings: { instances: {} },
+          locationIcons: createDefaultPerFloorSettings()
         }
       };
     }
@@ -346,12 +349,51 @@ function loadSettings() {
       };
     }
 
-    // Populate root shopPositions and pictoSettings based on current mallId for backward compatibility
+    // Populate root shopPositions, pictoSettings and locationIcons based on current mallId
     const currentMallId = merged.mallSettings.mallId;
     const currentMallData = merged.dataByMall[currentMallId] || merged.dataByMall.suzaka;
     
     merged.shopPositions = currentMallData.shopPositions || { positions: {} };
     merged.pictoSettings = currentMallData.pictoSettings || { instances: {} };
+    
+    // locationIcons merge handling
+    let locationIconsSource = currentMallData.locationIcons;
+    
+    // Fallback logic if mall-specific locationIcons are missing/empty but root ones exist (during migration)
+    if (!locationIconsSource && mergedLocationIcons) {
+        locationIconsSource = mergedLocationIcons;
+    } else if (!locationIconsSource) {
+        locationIconsSource = createDefaultPerFloorSettings();
+    }
+    
+    // Ensure we have the correct structure (per-floor)
+    if (locationIconsSource && 'speechBubble' in locationIconsSource) {
+         // Convert old single format to per-floor if needed
+         const oldSettings = {
+          speechBubble: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.speechBubble, locationIconsSource.speechBubble || {}),
+          location: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.location, locationIconsSource.location || {}),
+        };
+        merged.locationIcons = {
+          "1F": JSON.parse(JSON.stringify(oldSettings)),
+          "2F": JSON.parse(JSON.stringify(oldSettings)),
+          "3F": JSON.parse(JSON.stringify(oldSettings)),
+          "4F": JSON.parse(JSON.stringify(oldSettings)),
+        };
+    } else {
+        // Deep merge with defaults to ensure all fields exist
+        merged.locationIcons = {};
+        const floors = ['1F', '2F', '3F', '4F'];
+        floors.forEach(floorId => {
+          const floorSettings = (locationIconsSource && locationIconsSource[floorId]) || {};
+          // Use base default as target
+          const baseSettings = createDefaultPerFloorSettings()[floorId];
+          
+          merged.locationIcons[floorId] = {
+            speechBubble: deepMerge(baseSettings.speechBubble, floorSettings.speechBubble || {}),
+            location: deepMerge(baseSettings.location, floorSettings.location || {}),
+          };
+        });
+    }
 
     // Ensure imageSettings has correct structure
     if (!merged.imageSettings) {
@@ -430,10 +472,26 @@ function saveSettings(partial) {
 
   // If partial contained data updates, apply them to the target mall in dataByMall
   if (partial.shopPositions) {
-      next.dataByMall[targetMallId].shopPositions = next.shopPositions;
+      // Sanitize: Ensure only valid properties are saved to prevent nesting recursion or pollution
+      // dataByMall 内に suzaka などのキーで自己参照が紛れ込むのを防ぐため、positions のみを抽出して再構築する
+      const cleanShopPositions = {
+        positions: next.shopPositions?.positions || {}
+      };
+      // next オブジェクト内の参照も更新
+      next.shopPositions = cleanShopPositions;
+      next.dataByMall[targetMallId].shopPositions = cleanShopPositions;
   }
   if (partial.pictoSettings) {
-      next.dataByMall[targetMallId].pictoSettings = next.pictoSettings;
+      // Sanitize for pictoSettings as well
+      const cleanPictoSettings = {
+        instances: next.pictoSettings?.instances || {}
+      };
+      next.pictoSettings = cleanPictoSettings;
+      next.dataByMall[targetMallId].pictoSettings = cleanPictoSettings;
+  }
+  if (partial.locationIcons) {
+      // locationIcons update
+      next.dataByMall[targetMallId].locationIcons = next.locationIcons;
   }
 
   try {
@@ -444,7 +502,8 @@ function saveSettings(partial) {
     const toSave = {
         ...next,
         shopPositions: undefined,
-        pictoSettings: undefined
+        pictoSettings: undefined,
+        locationIcons: undefined
     };
 
     fs.writeFileSync(settingsPath, JSON.stringify(toSave, null, 2), 'utf-8');
@@ -480,6 +539,7 @@ function saveSettings(partial) {
             logger.info('Broadcasting new mall data', { newMallId });
             mainWindow.webContents.send('shop-positions-updated', newSettings.shopPositions);
             mainWindow.webContents.send('picto-settings-updated', newSettings.pictoSettings);
+            mainWindow.webContents.send('location-icon-settings-updated', newSettings.locationIcons);
         }
         
         return newSettings;

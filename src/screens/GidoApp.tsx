@@ -624,11 +624,11 @@ const ShopPinsOverlay: React.FC<{
                  top: 0,
                  left: 0,
                  width: "100%",
-                 height: "100%",
-                 pointerEvents: "none",
-                 zIndex: 5 // Icon layer - higher z-index
-               }}
-             >
+                height: "100%",
+                pointerEvents: "none",
+                zIndex: instance.id === selectedPictoId ? 200 : 5 // Icon layer - higher z-index if selected
+              }}
+            >
                <PictoPin
                  instance={scaledInstance}
                  iconUrl={iconUrl}

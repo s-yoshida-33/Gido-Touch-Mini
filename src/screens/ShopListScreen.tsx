@@ -1765,36 +1765,59 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       </div>
                     )}
 
-                    {/* Picto Pins - part of the map */}
-                    {pictoSettings && Object.values(pictoSettings.instances)
-                      .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
-                      .map(instance => {
-                        // Find URL from assets utility based on filename
-                        const iconUrl = findMallPictoUrl(mallId, instance.iconName);
-                        if (!iconUrl) return null;
+                    {/* Picto Pins - Split into Ripple and Icon layers for proper z-indexing */}
+                    {(() => {
+                      if (!pictoSettings) return null;
+                      
+                      const items = Object.values(pictoSettings.instances)
+                        .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
+                        .map(instance => {
+                          const iconUrl = findMallPictoUrl(mallId, instance.iconName);
+                          if (!iconUrl) return null;
 
-                        const scaledInstance = {
-                          ...instance,
-                          size: (instance.size ?? 80) * scaleRatio
-                        };
+                          const scaledInstance = {
+                            ...instance,
+                            size: (instance.size ?? 80) * scaleRatio
+                          };
+                          
+                          const isHighlighted = selectedFacility === instance.tag;
+                          
+                          return { instance, scaledInstance, iconUrl, isHighlighted };
+                        })
+                        .filter((item): item is NonNullable<typeof item> => item !== null);
 
-                        const isHighlighted = selectedFacility === instance.tag;
+                      return (
+                        <>
+                          {/* Ripple Layer (z-index: 190) - Below highlighted icons but above normal icons/map */}
+                          {items.map(({ instance, scaledInstance, iconUrl, isHighlighted }) => (
+                            isHighlighted ? (
+                              <div key={`picto-ripple-${instance.id}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 190 }}>
+                                <PictoPin
+                                  instance={scaledInstance}
+                                  iconUrl={iconUrl}
+                                  usePixelPosition={false}
+                                  isSelected={true}
+                                  renderMode="ripple"
+                                />
+                              </div>
+                            ) : null
+                          ))}
 
-                        // Picto position is already in percentage, use it directly
-                        // Since picto is inside the same motion.div as the map, it will move together
-                        return (
-                          <div key={`picto-${instance.id}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 5 }}>
-                            <PictoPin
-                              instance={scaledInstance}
-                              iconUrl={iconUrl}
-                              usePixelPosition={false}
-                              isSelected={isHighlighted}
-                              renderMode="default"
-                            />
-                          </div>
-                        );
-                      })
-                    }
+                          {/* Icon Layer (z-index: 200 for highlighted, 5 for normal) */}
+                          {items.map(({ instance, scaledInstance, iconUrl, isHighlighted }) => (
+                            <div key={`picto-icon-${instance.id}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: isHighlighted ? 200 : 5 }}>
+                              <PictoPin
+                                instance={scaledInstance}
+                                iconUrl={iconUrl}
+                                usePixelPosition={false}
+                                isSelected={isHighlighted}
+                                renderMode="icon"
+                              />
+                            </div>
+                          ))}
+                        </>
+                      );
+                    })()}
                   </motion.div>
                 </AnimatePresence>
 
