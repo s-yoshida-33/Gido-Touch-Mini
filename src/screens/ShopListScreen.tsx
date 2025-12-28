@@ -22,6 +22,7 @@ import { KeyboardModal } from "../components/KeyboardModal";
 import { EventNewsModal } from "../components/EventNewsModal";
 import { ShopNewsModal } from "../components/ShopNewsModal";
 import { ShopLogoImage } from "../components/ShopLogoImage";
+import { AutoScaleText } from "../components/AutoScaleText";
 import { buildImagePath, toFileUrl } from "../utils/imageUtils";
 // Unused variables removed
 import { getCommonAssetUrl } from "../utils/assets"; // Import common assets helper
@@ -184,54 +185,9 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
   );
 };
 
-/**
- * Shop name display component that scales text to fit width
- */
-const ShopNameDisplay: React.FC<{ name: string }> = ({ name }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    if (containerRef.current && textRef.current) {
-      const containerWidth = containerRef.current.clientWidth;
-      const textWidth = textRef.current.scrollWidth;
-      
-      if (textWidth > containerWidth) {
-        const scale = containerWidth / textWidth;
-        textRef.current.style.transform = `scaleX(${Math.max(scale, 0.5)})`;
-      } else {
-        textRef.current.style.transform = "scaleX(1)";
-      }
-    }
-  }, [name]);
-
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        fontSize: "16px",
-        fontWeight: "bold",
-        lineHeight: "1.4",
-        width: "100%",
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        transformOrigin: "left center",
-      }}
-    >
-      <div
-        ref={textRef}
-        style={{
-          display: "inline-block",
-          transform: "scaleX(1)",
-          whiteSpace: "nowrap",
-          transformOrigin: "left center",
-        }}
-      >
-        {name}
-      </div>
-    </div>
-  );
-};
+// ShopNameDisplay was removed and replaced by AutoScaleText usage
+// const ShopNameDisplay: React.FC<{ name: string }> = ({ name }) => {
+// ...
 
 // toFileUrl moved to src/utils/imageUtils.ts
 
@@ -2622,9 +2578,18 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       )}
                     </div>
                     {/* Shop Name */}
-                    <span style={{ fontSize: "16px", fontWeight: "bold", fontFamily: "'Rounded Mplus 1c', sans-serif", color: "#333" }}>
-                      {selectedLanguage === "en" && shop.nameEn ? shop.nameEn : shop.name}
-                    </span>
+                    <div style={{ width: "320px" }}>
+                      <AutoScaleText
+                        style={{ 
+                          fontSize: "16px", 
+                          fontWeight: "bold", 
+                          fontFamily: "'Rounded Mplus 1c', sans-serif", 
+                          color: "#333" 
+                        }}
+                      >
+                        {selectedLanguage === "en" && shop.nameEn ? shop.nameEn : shop.name}
+                      </AutoScaleText>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -2757,11 +2722,18 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     alignItems: "center",
                   }}
                 >
-                   <ShopNameDisplay name={
-                     selectedLanguage === "en" && selectedShopDetail.nameEn 
-                       ? selectedShopDetail.nameEn 
-                       : selectedShopDetail.name
-                   } />
+                   <AutoScaleText
+                     style={{
+                       fontSize: "16px",
+                       fontWeight: "bold",
+                     }}
+                   >
+                     {
+                       selectedLanguage === "en" && selectedShopDetail.nameEn 
+                         ? selectedShopDetail.nameEn 
+                         : selectedShopDetail.name
+                     }
+                   </AutoScaleText>
                 </div>
               </div>
 
@@ -2851,46 +2823,49 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   </div>
                 )}
 
-                {/* Payment Icons Section */}
-                {selectedShopDetail.genreMemo && (selectedShopDetail.genreMemo.includes("WAONPOINT加盟店") || selectedShopDetail.genreMemo.includes("AEONPayの使えるお店")) && (
-                  <>
-                    {/* Border Line above Category Area */}
-                    <div
-                      style={{
-                        width: "calc(100% - 40px)",
-                        height: "1px",
-                        backgroundColor: "#D9D9D9",
-                        marginLeft: "20px",
-                        marginRight: "20px",
-                        marginTop: "20px",
-                        flexShrink: 0,
-                      }}
-                    />
+                    {/* Payment Icons Section */}
+                    {(selectedShopDetail.genreMemo && (
+                      selectedShopDetail.genreMemo.toLowerCase().includes("waonpoint加盟店") ||
+                      selectedShopDetail.genreMemo.toLowerCase().includes("aeonpayの使えるお店")
+                    )) && (
+                      <>
+                        {/* Border Line above Category Area */}
+                        <div
+                          style={{
+                            width: "calc(100% - 40px)",
+                            height: "1px",
+                            backgroundColor: "#D9D9D9",
+                            marginLeft: "20px",
+                            marginRight: "20px",
+                            marginTop: "20px",
+                            flexShrink: 0,
+                          }}
+                        />
 
-                    {/* Icons Area */}
-                    <div
-                      style={{
-                        width: "100%",
-                        padding: "0 20px",
-                        marginTop: "20px",
-                        marginBottom: "0px",
-                        boxSizing: "border-box",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-start",
-                        flexShrink: 0,
-                        gap: "20px",
-                      }}
-                    >
-                      {selectedShopDetail.genreMemo.includes("WAONPOINT加盟店") && (
-                        <img src={waonPointIcon} alt="WAON POINT" style={{ height: "50px", width: "auto" }} />
-                      )}
-                      {selectedShopDetail.genreMemo.includes("AEONPayの使えるお店") && (
-                        <img src={aeonPayIcon} alt="AEON Pay" style={{ height: "50px", width: "auto" }} />
-                      )}
-                    </div>
-                  </>
-                )}
+                        {/* Icons Area */}
+                        <div
+                          style={{
+                            width: "100%",
+                            padding: "0 20px",
+                            marginTop: "20px",
+                            marginBottom: "0px",
+                            boxSizing: "border-box",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-start",
+                            flexShrink: 0,
+                            gap: "20px",
+                          }}
+                        >
+                          {selectedShopDetail.genreMemo.toLowerCase().includes("waonpoint加盟店") && (
+                            <img src={waonPointIcon} alt="WAON POINT" style={{ height: "50px", width: "auto" }} />
+                          )}
+                          {selectedShopDetail.genreMemo.toLowerCase().includes("aeonpayの使えるお店") && (
+                            <img src={aeonPayIcon} alt="AEON Pay" style={{ height: "50px", width: "auto" }} />
+                          )}
+                        </div>
+                      </>
+                    )}
 
                 {/* Border Line (Non-shrinkable) */}
                 <div
@@ -2919,7 +2894,15 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   }}
                 >
                   {/* Floor Info */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 400, color: "#000000" }}>
+                  <AutoScaleText
+                    style={{ 
+                      fontSize: "14px", 
+                      fontFamily: "'Rounded Mplus 1c', sans-serif", 
+                      fontWeight: 400, 
+                      color: "#000000",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                     <img src={iconLocation} alt="" draggable={false} onDragStart={(e) => e.preventDefault()} style={{ width: "12px", height: "12px", flexShrink: 0 }} />
                     {selectedShopDetail.floors && selectedShopDetail.floors.length > 0 && <span>{selectedShopDetail.floors.map(f => normalizeFloor(String(f))).join("・")}</span>}
                     {selectedShopDetail.number && /[0-9-]/.test(selectedShopDetail.number) && <span>[{selectedShopDetail.number}]</span>}
@@ -2931,17 +2914,35 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     )}
                     {/* Genre Memo (switches to English if available) */}
                     {(selectedLanguage === "en" && selectedShopDetail.genreMemoEn) || selectedShopDetail.genreMemo ? (
-                      <>
-                        <span>/</span>
-                        <span>
-                          {selectedLanguage === "en" && selectedShopDetail.genreMemoEn
-                            ? selectedShopDetail.genreMemoEn.split(/[|]+/).map(s => s.trim()).filter(s => s.length > 0)[0]
-                            : selectedShopDetail.genreMemo.split(/[|]+/).map(s => s.trim()).filter(s => s.length > 0)[0]
-                          }
-                        </span>
-                      </>
+                      (() => {
+                        const rawMemos = selectedLanguage === "en" && selectedShopDetail.genreMemoEn
+                          ? selectedShopDetail.genreMemoEn.split(/[|]+/)
+                          : selectedShopDetail.genreMemo.split(/[|]+/);
+                        
+                        const filteredMemos = rawMemos
+                          .map(s => s.trim())
+                          .filter(s => s.length > 0)
+                          // Exclude specific keywords and floor patterns
+                          .filter(s => 
+                            !s.toLowerCase().includes("waonpoint加盟店") && 
+                            !s.toLowerCase().includes("aeonpayの使えるお店") &&
+                            !/^\d+(?:F|階|層)$/i.test(s)
+                          )
+                          // Take first 3 items
+                          .slice(0, 3);
+
+                        if (filteredMemos.length === 0) return null;
+
+                        return (
+                          <>
+                            <span>/</span>
+                            <span>{filteredMemos.join(" / ")}</span>
+                          </>
+                        );
+                      })()
                     ) : null}
-                  </div>
+                    </div>
+                  </AutoScaleText>
                   
                   {/* Open Time */}
                   {selectedShopDetail.openTime && (
