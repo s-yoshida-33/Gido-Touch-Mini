@@ -44,7 +44,8 @@ import {
   loadMallGenreConfig, 
   loadGenreIcon, 
   loadMallPictoConfig, 
-  loadPictoIcon 
+  loadPictoIcon,
+  loadOpenTimeImage // Import
 } from "../utils/assets"; // Import
 
 interface GenreItem {
@@ -780,19 +781,23 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     }
   };
 
-  const openTimeImage = useMemo(() => {
-     if (propOpenTimeImage) return propOpenTimeImage;
-     
-     // 1. 英語の場合
-     if (selectedLanguage === "en") {
-        const enPath = getMallAssetUrl(mallId, "open-time/en", "open-time.svg");
-        if (enPath) return enPath;
-        // フォールバック: 日本語
-        return getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
+  // 営業時間の画像
+  const [openTimeImage, setOpenTimeImage] = useState<string>("");
+
+  useEffect(() => {
+     if (propOpenTimeImage) {
+        setOpenTimeImage(propOpenTimeImage);
+        return;
      }
+
+     const loadOpenTime = async () => {
+        const image = await loadOpenTimeImage(mallId, selectedLanguage);
+        if (image) {
+           setOpenTimeImage(image);
+        }
+     };
      
-     // 2. 日本語 (デフォルト)
-     return getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
+     loadOpenTime();
   }, [mallId, selectedLanguage, propOpenTimeImage]);
 
   // モール設定の状態
@@ -850,9 +855,16 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
              // アイコンマップの生成（フォールバック用）
              const iconMap: Record<string, { normal: string; highlight: string }> = {};
              config.genres.forEach(g => {
+                 // 言語に応じたパスを動的に生成
+                 const iconFilename = g.icon.split('/').pop() || `${g.id}.svg`;
+                 const highlightFilename = g.highlightIcon.split('/').pop() || `${g.id}-highlight.svg`;
+                 
+                 const langIcon = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, iconFilename);
+                 const langHighlight = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, highlightFilename);
+
                  iconMap[g.id] = { 
-                     normal: g.icon, 
-                     highlight: g.highlightIcon 
+                     normal: langIcon || g.icon, 
+                     highlight: langHighlight || g.highlightIcon 
                  };
              });
              setGenreIcons(iconMap);

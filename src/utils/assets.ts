@@ -226,7 +226,17 @@ export async function loadPictoIcon(mallId: string, lang: string, name: string, 
 
 export async function loadGenreIcon(mallId: string, lang: string, name: string, isHighlight: boolean) {
      let filename = name;
-     if (isHighlight) filename += '-highlight';
+     
+     if (isHighlight) {
+        // 拡張子の前に -highlight を挿入
+        const dotIndex = filename.lastIndexOf('.');
+        if (dotIndex !== -1) {
+            filename = filename.slice(0, dotIndex) + '-highlight' + filename.slice(dotIndex);
+        } else {
+            filename += '-highlight';
+        }
+     }
+     
      if (!filename.endsWith('.svg')) filename += '.svg';
      
      const path = `${mallId}/genres/${lang}/${filename}`;
@@ -237,4 +247,30 @@ export async function loadGenreIcon(mallId: string, lang: string, name: string, 
      
      // Fallback
      return getMallAssetUrl(mallId, `genres/${lang}`, filename);
+}
+
+export async function loadOpenTimeImage(mallId: string, lang: string) {
+    const filename = "open-time.svg";
+    
+    // 1. Try external file via Electron API
+    if (window.electronAPI?.readMallAsset) {
+        // Try English if lang is en
+        if (lang === "en") {
+            const path = `${mallId}/open-time/en/${filename}`;
+            const result = await window.electronAPI.readMallAsset(path);
+            if (result) return result;
+        }
+        
+        // Fallback to Japanese (or if lang is ja)
+        const path = `${mallId}/open-time/ja/${filename}`;
+        return await window.electronAPI.readMallAsset(path);
+    }
+    
+    // 2. Fallback to bundled assets
+    if (lang === "en") {
+        const enPath = getMallAssetUrl(mallId, "open-time/en", filename);
+        if (enPath) return enPath;
+    }
+    
+    return getMallAssetUrl(mallId, "open-time/ja", filename);
 }
