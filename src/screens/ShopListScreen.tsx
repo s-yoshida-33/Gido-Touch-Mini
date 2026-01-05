@@ -781,7 +781,21 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   };
 
   const openTimeImage = useMemo(() => {
-     if (propOpenTimeImage) return propOpenTimeImage;
+     // If propOpenTimeImage is provided, prioritize it unless it's likely a stale default from another mall
+     if (propOpenTimeImage) {
+        // Simple heuristic: if we are in 'sendai-kamisugi' but the image is 'suzaka', ignore the prop
+        // This handles cases where App.tsx might pass a stale imageSettings value before it fully updates
+        const isSuzakaAsset = propOpenTimeImage.includes("malls/suzaka");
+        const isSendaiAsset = propOpenTimeImage.includes("malls/sendai-kamisugi");
+        
+        if (mallId === "sendai-kamisugi" && isSuzakaAsset) {
+            // Fallthrough to recalculate based on current mallId
+        } else if (mallId === "suzaka" && isSendaiAsset) {
+            // Fallthrough to recalculate based on current mallId
+        } else {
+            return propOpenTimeImage;
+        }
+     }
      
      // 1. 英語の場合
      if (selectedLanguage === "en") {

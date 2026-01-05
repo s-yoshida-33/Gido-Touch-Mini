@@ -49,6 +49,33 @@ const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageS
   // Default open time image path based on mallId
   const defaultOpenTime = getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
   
+  let openTimeImage = settings.openTimeImage;
+
+  // Check if the current openTimeImage belongs to a different mall's default asset
+  // This prevents showing Suzaka's open time when switched to Sendai, and vice versa.
+  if (openTimeImage) {
+    // Check known mall IDs in the path
+    const isSuzakaAsset = openTimeImage.includes("malls/suzaka");
+    const isSendaiAsset = openTimeImage.includes("malls/sendai-kamisugi");
+    
+    // If current mall is Suzaka but image is from Sendai -> Reset to default
+    if (mallId === "suzaka" && isSendaiAsset) {
+      openTimeImage = defaultOpenTime;
+    } 
+    // If current mall is Sendai but image is from Suzaka -> Reset to default
+    else if (mallId === "sendai-kamisugi" && isSuzakaAsset) {
+      openTimeImage = defaultOpenTime;
+    }
+    // Fallback: If current mall ID is not in path but another mall ID is -> Reset
+    else if (mallId === "suzaka" && !isSuzakaAsset && openTimeImage.includes("malls/")) {
+        // e.g. some other mall
+        openTimeImage = defaultOpenTime;
+    }
+    else if (mallId === "sendai-kamisugi" && !isSendaiAsset && openTimeImage.includes("malls/")) {
+        openTimeImage = defaultOpenTime;
+    }
+  }
+
   return {
     ...settings,
     floorMaps: {
@@ -57,8 +84,8 @@ const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageS
       "3F": settings.floorMaps["3F"] || config.floorMaps["3F"],
       "4F": settings.floorMaps["4F"] || config.floorMaps["4F"],
     },
-    // Use settings value if present, otherwise use default
-    openTimeImage: settings.openTimeImage || defaultOpenTime,
+    // Use validated settings value or default
+    openTimeImage: openTimeImage || defaultOpenTime,
   };
 };
 
@@ -626,8 +653,22 @@ const App: React.FC = () => {
       await api.setMallId(nextMallId);
       // setMallIdはvoidを返すので、成功した場合はnextMallIdを使用
       setMallId(nextMallId);
-      // モールIDが変更されたら、フロアマップのデフォルトパスも更新
-      setImageSettings(mergeWithDefaultImages(imageSettings, nextMallId));
+      
+      // モールIDが変更されたら、画像設定をリセットして新しいモールのデフォルトを適用
+      // openTimeImage を空にすることで mergeWithDefaultImages が新しいモールのデフォルト値を設定する
+      const resetSettings = {
+        ...imageSettings,
+        openTimeImage: "", 
+      };
+      const newImageSettings = mergeWithDefaultImages(resetSettings, nextMallId);
+      
+      setImageSettings(newImageSettings);
+      
+      // 画像設定も保存しておく（次回起動時のため）
+      if (api.saveImageSettings) {
+        await api.saveImageSettings(newImageSettings);
+      }
+
       logInfo("app", "Mall ID saved successfully", { mallId: nextMallId });
     } catch (e) {
       logError("app", "Failed to save mall ID", { error: e });

@@ -19,7 +19,7 @@ import { PictoPin } from "../components/PictoPin";
 
 
 // Placeholder for openTimeImage if not in settings (optional fallback)
-const openTimeImageDefault = getMallAssetUrl("suzaka", "open-time/ja", "open-time.svg");
+// const openTimeImageDefault = getMallAssetUrl("suzaka", "open-time/ja", "open-time.svg");
 
 const LIST_HEIGHT_VH = APP_CONFIG.listHeightVh;
 const TOP_HEIGHT_VH = 100 - LIST_HEIGHT_VH;
@@ -110,6 +110,11 @@ const GidoApp: React.FC<GidoAppProps> = ({
       ? getLocationIconSettingsForFloor(locationIconSettings as LocationIconSettingsPerFloor, floor as FloorId)
       : locationIconSettings as LocationIconSettings;
   }, [locationIconSettings, floor]);
+
+  // Calculate default open time image based on current mallId
+  const defaultOpenTimeImage = useMemo(() => {
+    return getMallAssetUrl(mallId || "suzaka", "open-time/ja", "open-time.svg");
+  }, [mallId]);
 
   if (showOnlyMap) {
     return (
@@ -209,7 +214,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
           }}
         >
           <img
-            src={imageSettings?.openTimeImage || openTimeImageDefault}
+            src={imageSettings?.openTimeImage || defaultOpenTimeImage}
             alt="Open Time"
             style={{
               maxWidth: "100%",
@@ -219,12 +224,12 @@ const GidoApp: React.FC<GidoAppProps> = ({
             }}
             onLoad={() => {
               logInfo("openTime", "Open-time image loaded", {
-                src: imageSettings?.openTimeImage || openTimeImageDefault,
+                src: imageSettings?.openTimeImage || defaultOpenTimeImage,
               });
             }}
             onError={(event) => {
               logError("openTime", "Failed to load open-time image", {
-                src: imageSettings?.openTimeImage || openTimeImageDefault,
+                src: imageSettings?.openTimeImage || defaultOpenTimeImage,
               });
               (event.target as HTMLImageElement).style.visibility = "hidden";
             }}

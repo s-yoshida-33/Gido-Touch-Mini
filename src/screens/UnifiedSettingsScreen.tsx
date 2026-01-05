@@ -116,7 +116,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     // モール変更時は、そのモールのデフォルト設定で完全にリセットする
     // これにより、前のモールの画像パスが残るのを防ぐ
     const config = getMallConfig(mallSettings.mallId as any);
-    const defaultOpenTime = getMallAssetUrl(mallSettings.mallId, "open-time", "open-time.svg");
+    const defaultOpenTime = getMallAssetUrl(mallSettings.mallId, "open-time/ja", "open-time.svg");
     
     setImageSettings({
       floorMaps: { ...config.floorMaps } as Record<FloorId, string>, // デフォルトマップ
@@ -491,6 +491,9 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
 
                   // モール切り替え時に即座に設定を保存（リロード）して、表示を切り替える
                   await onSaveMallSettings(newSettings);
+                  
+                  // モールIDを親に通知 (App.tsxでの画像リセット処理をトリガー)
+                  await onSaveMallId(newMallId);
                 }}
                 style={{ width: "100%", padding: "8px 12px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 6, color: "#ffffff", fontSize: 14 }}
              >
