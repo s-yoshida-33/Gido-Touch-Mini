@@ -655,9 +655,10 @@ const App: React.FC = () => {
       setMallId(nextMallId);
       
       // モールIDが変更されたら、画像設定をリセットして新しいモールのデフォルトを適用
-      // openTimeImage を空にすることで mergeWithDefaultImages が新しいモールのデフォルト値を設定する
+      // openTimeImage と floorMaps を空にすることで mergeWithDefaultImages が新しいモールのデフォルト値を設定する
       const resetSettings = {
         ...imageSettings,
+        floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
         openTimeImage: "", 
       };
       const newImageSettings = mergeWithDefaultImages(resetSettings, nextMallId);
