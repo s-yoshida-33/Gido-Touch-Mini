@@ -225,7 +225,7 @@ export async function loadPictoIcon(mallId: string, lang: string, name: string, 
 }
 
 export async function loadGenreIcon(mallId: string, lang: string, name: string, isHighlight: boolean) {
-     let filename = name;
+     let filename = name.split('?')[0];
      
      if (isHighlight) {
         // 拡張子の前に -highlight を挿入
