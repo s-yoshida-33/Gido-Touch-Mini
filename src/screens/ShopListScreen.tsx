@@ -863,21 +863,21 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                  id: g.id,
                  order: index,
                  name: { ja: g.name, en: g.name_en },
-                 iconFile: (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0]
+                 iconFile: g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0]
              }));
              setMallGenreConfig(fallbackGenreConfig);
-
+             
              // アイコンマップの生成（フォールバック用）
              const iconMap: Record<string, { normal: string; highlight: string }> = {};
              config.genres.forEach(g => {
                  // 言語に応じたパスを動的に生成
-                 const iconFilename = g.icon.split('/').pop() || `${g.id}.svg`;
-                 // Remove query parameters if any
-                 const cleanIconFilename = iconFilename.split('?')[0];
-                 const cleanHighlightFilename = (g.highlightIcon.split('/').pop() || `${g.id}-highlight.svg`).split('?')[0];
+                 const iconFilename = g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0];
+                 const highlightFilename = g.iconFile 
+                    ? g.iconFile.replace('.svg', '-highlight.svg')
+                    : (g.highlightIcon.split('/').pop() || `${g.id}-highlight.svg`).split('?')[0];
 
-                 const langIcon = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, cleanIconFilename);
-                 const langHighlight = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, cleanHighlightFilename);
+                 const langIcon = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, iconFilename);
+                 const langHighlight = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, highlightFilename);
 
                  iconMap[g.id] = { 
                      normal: langIcon || g.icon, 
@@ -979,8 +979,10 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
          const cachedIcon = genreIcons[g.id];
          
          // ファイル名の抽出
-         const filename = (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0];
-         const highlightFilename = (g.highlightIcon.split('/').pop() || `${g.id}-highlight.svg`).split('?')[0];
+         const filename = g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0];
+         const highlightFilename = g.iconFile
+            ? g.iconFile.replace('.svg', '-highlight.svg')
+            : (g.highlightIcon.split('/').pop() || `${g.id}-highlight.svg`).split('?')[0];
          
          const langIcon = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, filename);
          const langHighlightIcon = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, highlightFilename);

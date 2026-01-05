@@ -8,6 +8,7 @@ const createGenre = (mallId: MallId, id: string, name: string, name_en: string, 
   name_en, // 英語名を設定
   icon: getMallAssetUrl(mallId, "genres/ja", `${filenameBase}.svg`),
   highlightIcon: getMallAssetUrl(mallId, "genres/ja", `${filenameBase}-highlight.svg`),
+  iconFile: `${filenameBase}.svg` // ファイル名を保持
 });
 
 // Helper to create facility object

@@ -14,6 +14,7 @@ export interface Genre {
   name_en?: string; // 英語名を追加
   icon: string;
   highlightIcon: string;
+  iconFile?: string; // ファイル名解決用に追加
 }
 
 export interface Facility {
