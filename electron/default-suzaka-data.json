@@ -4138,7 +4138,7 @@
       "928f9ff0-6a5f-41b7-8885-155cb48cf67b": {
         "id": "928f9ff0-6a5f-41b7-8885-155cb48cf67b",
         "tag": "priority_restroom",
-        "iconName": "priorityRestroom.svg",
+        "iconName": "priority-restroom.svg",
         "floor": "2F",
         "x": 67.03,
         "y": 43.27,
@@ -4320,7 +4320,7 @@
       "06de2272-ae13-47af-82c7-4b5c684d08f5": {
         "id": "06de2272-ae13-47af-82c7-4b5c684d08f5",
         "tag": "smoking_room",
-        "iconName": "smokingArea.svg",
+        "iconName": "smoking-room.svg",
         "floor": "4F",
         "x": 58.36,
         "y": 42.96,
@@ -4372,7 +4372,7 @@
       "c13d08d8-0415-4b53-920d-1aaedd5aa5ad": {
         "id": "c13d08d8-0415-4b53-920d-1aaedd5aa5ad",
         "tag": "priority_restroom",
-        "iconName": "priorityRestroom.svg",
+        "iconName": "priority-restroom.svg",
         "floor": "4F",
         "x": 78.79,
         "y": 54.04,
@@ -4760,7 +4760,7 @@
       "84c226b5-40af-4b05-835b-bb1458828be8": {
         "id": "84c226b5-40af-4b05-835b-bb1458828be8",
         "tag": "restroom",
-        "iconName": "sharedRestroom.svg",
+        "iconName": "restroom.svg",
         "floor": "3F",
         "x": 23.02,
         "y": 49.88,
@@ -4786,7 +4786,7 @@
       "71904209-a843-42c8-8bff-3e03abfd57d0": {
         "id": "71904209-a843-42c8-8bff-3e03abfd57d0",
         "tag": "restroom",
-        "iconName": "sharedRestroom.svg",
+        "iconName": "restroom.svg",
         "floor": "3F",
         "x": 65.71,
         "y": 39.56,
@@ -4992,7 +4992,7 @@
       "2f03e442-c260-4639-a2c7-45c804d80013": {
         "id": "2f03e442-c260-4639-a2c7-45c804d80013",
         "tag": "restroom",
-        "iconName": "sharedRestroom.svg",
+        "iconName": "restroom.svg",
         "floor": "2F",
         "x": 23.3,
         "y": 50.2,
@@ -5122,7 +5122,7 @@
       "c69211da-2652-4fa0-b4a3-8d2f5c87a411": {
         "id": "c69211da-2652-4fa0-b4a3-8d2f5c87a411",
         "tag": "free_coin_lockers",
-        "iconName": "freeCoinLocker.svg",
+        "iconName": "free-coin-lockers.svg",
         "floor": "1F",
         "x": 21.9,
         "y": 49.9,
@@ -5148,7 +5148,7 @@
       "fd3842cf-315b-4b05-98f6-0c366661f5bd": {
         "id": "fd3842cf-315b-4b05-98f6-0c366661f5bd",
         "tag": "priority_restroom",
-        "iconName": "priorityRestroom.svg",
+        "iconName": "priority-restroom.svg",
         "floor": "1F",
         "x": 24,
         "y": 51.5,
@@ -5174,7 +5174,7 @@
       "76b3f92e-5bc8-4010-a194-05011c8a1858": {
         "id": "76b3f92e-5bc8-4010-a194-05011c8a1858",
         "tag": "priority_restroom",
-        "iconName": "priorityRestroom.svg",
+        "iconName": "priority-restroom.svg",
         "floor": "1F",
         "x": 41.19,
         "y": 39.5,
@@ -5200,7 +5200,7 @@
       "eef0f643-35e2-472d-8c93-4e57c55a470a": {
         "id": "eef0f643-35e2-472d-8c93-4e57c55a470a",
         "tag": "restroom",
-        "iconName": "sharedRestroom.svg",
+        "iconName": "restroom.svg",
         "floor": "1F",
         "x": 25.56,
         "y": 51.5,
@@ -5226,7 +5226,7 @@
       "aa06c1d4-73e1-4c81-ad89-b5818b4512c8": {
         "id": "aa06c1d4-73e1-4c81-ad89-b5818b4512c8",
         "tag": "restroom",
-        "iconName": "sharedRestroom.svg",
+        "iconName": "restroom.svg",
         "floor": "1F",
         "x": 41.83,
         "y": 37.8,
@@ -5460,7 +5460,7 @@
       "b38b2090-b135-4f11-a3fb-63fb3bf8c9bd": {
         "id": "b38b2090-b135-4f11-a3fb-63fb3bf8c9bd",
         "tag": "smoking_room",
-        "iconName": "smokingArea.svg",
+        "iconName": "smoking-room.svg",
         "floor": "1F",
         "x": 33.8,
         "y": 54.8,
@@ -5486,7 +5486,7 @@
       "e686a7a1-3a8f-48c2-8777-99ca3f39b16c": {
         "id": "e686a7a1-3a8f-48c2-8777-99ca3f39b16c",
         "tag": "smoking_room",
-        "iconName": "smokingArea.svg",
+        "iconName": "smoking-room.svg",
         "floor": "1F",
         "x": 85.4,
         "y": 31.4,
@@ -5590,7 +5590,7 @@
       "b77b1540-c368-4475-be4f-9d759ef336ec": {
         "id": "b77b1540-c368-4475-be4f-9d759ef336ec",
         "tag": "free_coin_lockers",
-        "iconName": "freeCoinLocker.svg",
+        "iconName": "free-coin-lockers.svg",
         "floor": "1F",
         "x": 67.1,
         "y": 39.3,
@@ -5642,7 +5642,7 @@
       "29a6defc-714a-42be-97aa-90e9fd6d9d80": {
         "id": "29a6defc-714a-42be-97aa-90e9fd6d9d80",
         "tag": "free_coin_lockers",
-        "iconName": "freeCoinLocker.svg",
+        "iconName": "free-coin-lockers.svg",
         "floor": "2F",
         "x": 41.58,
         "y": 39.12,
@@ -5720,7 +5720,7 @@
       "bbfc7f4f-4a20-4cd7-92b8-a96450e8b9c8": {
         "id": "bbfc7f4f-4a20-4cd7-92b8-a96450e8b9c8",
         "tag": "restroom",
-        "iconName": "priorityRestroom.svg",
+        "iconName": "priority-restroom.svg",
         "floor": "3F",
         "x": 67.92,
         "y": 41.55,
@@ -5746,7 +5746,7 @@
       "c59571b5-0b71-4e89-aca3-7dca01efd35b": {
         "id": "c59571b5-0b71-4e89-aca3-7dca01efd35b",
         "tag": "free_coin_lockers",
-        "iconName": "freeCoinLocker.svg",
+        "iconName": "free-coin-lockers.svg",
         "floor": "3F",
         "x": 41.22,
         "y": 39.43,

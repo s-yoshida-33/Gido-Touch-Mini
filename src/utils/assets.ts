@@ -203,15 +203,46 @@ export async function loadPictoIcon(mallId: string, lang: string, name: string, 
             return await window.electronAPI.readMallAsset(path);
         } else {
             // アイコンの場合の優先順位
-            // 1. icon/ フォルダ (マップ用アイコン)
+            // 1. icon/ フォルダ (マップ用アイコン) - Electron API
             let result = await window.electronAPI.readMallAsset(`${mallId}/pictos/icon/${filename}`);
             if (result) return result;
+            
+            // 1.1. icon/ フォルダ (マップ用アイコン) - Vite Asset Modules (Fallback)
+            // Electron APIで読めない場合（パーミッションやパスの問題）でも、バンドルされたアセットがあればそれを使う
+            const iconPath = `../assets/malls/${mallId}/pictos/icon/${filename}`;
+            if (assetModules[iconPath]) {
+                 return (assetModules[iconPath] as { default: string }).default;
+            }
+
+            // 1.5. icon/ フォルダでの単数形/複数形フォールバック
+            // 設定上の名前と実際のファイル名で単数/複数が異なる場合に対応 (例: free-coin-locker <-> free-coin-lockers)
+            let altFilename = '';
+            if (filename.endsWith('s.svg')) {
+                 // 複数形 -> 単数形
+                 altFilename = filename.replace(/s\.svg$/, '.svg');
+            } else {
+                 // 単数形 -> 複数形
+                 altFilename = filename.replace(/\.svg$/, 's.svg');
+            }
+            
+            if (altFilename && altFilename !== filename) {
+                 // Electron API
+                 result = await window.electronAPI.readMallAsset(`${mallId}/pictos/icon/${altFilename}`);
+                 if (result) return result;
+                 
+                 // Vite Asset Modules
+                 const altIconPath = `../assets/malls/${mallId}/pictos/icon/${altFilename}`;
+                 if (assetModules[altIconPath]) {
+                      return (assetModules[altIconPath] as { default: string }).default;
+                 }
+            }
 
             // 2. 直下 (旧仕様)
             result = await window.electronAPI.readMallAsset(`${mallId}/pictos/${filename}`);
             if (result) return result;
 
             // 3. ja/ フォルダ (ボタン用をフォールバックとして使用)
+            if (import.meta.env.DEV) console.log(`loadPictoIcon debug: fallback to lang folder ${lang} for ${filename}`);
             return await window.electronAPI.readMallAsset(`${mallId}/pictos/${lang}/${filename}`);
         }
     }
