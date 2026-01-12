@@ -2954,11 +2954,26 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                           .map(s => s.trim())
                           .filter(s => s.length > 0)
                           // Exclude specific keywords and floor patterns
-                          .filter(s => 
-                            !s.toLowerCase().includes("waonpoint加盟店") && 
-                            !s.toLowerCase().includes("aeonpayの使えるお店") &&
-                            !/^\d+(?:F|階|層)$/i.test(s)
-                          )
+                          .filter(s => {
+                            const lower = s.toLowerCase();
+                            // Exclude specific keywords
+                            if (lower.includes("waonpoint加盟店") || 
+                                lower.includes("aeonpayの使えるお店") ||
+                                lower.includes("グルメ") ||
+                                lower.includes("フード") ||
+                                lower.includes("フードコート") ||
+                                lower.includes("レストラン") ||
+                                lower.includes("グルメアリーナ") ||
+                                lower.includes("suzaka蔵") ||
+                                lower.includes("suzuka蔵")) {
+                              return false;
+                            }
+                            // Exclude floor patterns
+                            if (/^\d+(?:F|階|層)$/i.test(s)) {
+                              return false;
+                            }
+                            return true;
+                          })
                           // Take first 3 items
                           .slice(0, 3);
 
