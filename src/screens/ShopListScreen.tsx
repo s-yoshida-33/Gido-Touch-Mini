@@ -1117,6 +1117,14 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         // - No shop detail modal
         // - No keyboard
         // - No language modal
+
+        // Check scroll positions
+        const isGenreScrolled = genreScrollContainerRef.current ? genreScrollContainerRef.current.scrollLeft > 5 : false;
+        
+        // Find shop list scroll container
+        const shopListScrollElement = shopListScrollContainerRef.current?.querySelector('.shop-list-scroll-container');
+        const isShopListScrolled = shopListScrollElement ? shopListScrollElement.scrollTop > 5 : false;
+
         const isDefaultState = 
           searchQuery === "" && 
           selectedGenre === "all" && 
@@ -1125,10 +1133,12 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           !isShopNewsModalOpen &&
           !selectedShopDetail && 
           !isKeyboardOpen &&
-          !isLanguageModalOpen &&
+          !isLanguageModalOpen && 
           !selectedFacility && // ピクトメニューが選択されていない
           Math.abs(currentScale - 1) < 0.01 && // Scale check: if zoomed, not default state
-          normalizeFloor(selectedFloor || "1F") === normalizeFloor(currentFloor || "1F"); // Floor check
+          normalizeFloor(selectedFloor || "1F") === normalizeFloor(currentFloor || "1F") && // Floor check
+          !isGenreScrolled && // Genre scroll check
+          !isShopListScrolled; // Shop list scroll check
 
         if (isDefaultState) {
           // Already in default state, just update timestamp to check again later
@@ -1172,6 +1182,12 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           // Reset genre scroll position
           if (genreScrollContainerRef.current) {
             genreScrollContainerRef.current.scrollTo({ left: 0, behavior: "auto" });
+          }
+          
+          // Reset shop list scroll position
+          const shopListScrollElement = shopListScrollContainerRef.current?.querySelector('.shop-list-scroll-container');
+          if (shopListScrollElement) {
+            shopListScrollElement.scrollTo({ top: 0, behavior: "auto" });
           }
 
           // After state reset, fade out (another 500ms delay for visibility)
