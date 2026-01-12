@@ -22,6 +22,7 @@ import { KeyboardModal } from "../components/KeyboardModal";
 import { EventNewsModal } from "../components/EventNewsModal";
 import { ShopNewsModal } from "../components/ShopNewsModal";
 import { ShopLogoImage } from "../components/ShopLogoImage";
+import { TwoLineAutoScaleText } from "../components/TwoLineAutoScaleText";
 import { AutoScaleText } from "../components/AutoScaleText";
 import { buildImagePath, toFileUrl } from "../utils/imageUtils";
 // Unused variables removed
@@ -2578,7 +2579,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
                   {/* Name and Floor Container */}
                   <div style={{ display: "flex", flexDirection: "column", marginLeft: "20px", justifyContent: "flex-start", height: "100%" }}>
-                    <div style={{ display: "flex", flexDirection: "row", gap: "0px", marginBottom: "10px", marginTop: "0px" }}>
+                    <div style={{ display: "flex", flexDirection: "row", gap: "0px", marginBottom: "5px", marginTop: "0px" }}>
                       {/* Floor Badge */}
                       <div style={{
                         fontSize: "14px",
@@ -2610,16 +2611,18 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     </div>
                     {/* Shop Name */}
                     <div style={{ width: "320px" }}>
-                      <AutoScaleText
+                      <div
                         style={{ 
                           fontSize: "16px", 
                           fontWeight: "bold", 
                           fontFamily: "'Rounded Mplus 1c', sans-serif", 
-                          color: "#333" 
+                          color: "#333",
                         }}
                       >
-                        {selectedLanguage === "en" && shop.nameEn ? shop.nameEn : shop.name}
-                      </AutoScaleText>
+                         <TwoLineAutoScaleText>
+                           {selectedLanguage === "en" && shop.nameEn ? shop.nameEn : shop.name}
+                         </TwoLineAutoScaleText>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2748,15 +2751,17 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 <div
                   style={{
                     width: "300px",
-                    height: "24px", // Fixed height for text
+                    minHeight: "24px",
                     display: "flex",
                     alignItems: "center",
                   }}
                 >
-                   <AutoScaleText
+                   <div
                      style={{
                        fontSize: "16px",
                        fontWeight: "bold",
+                       wordWrap: "break-word",
+                       width: "100%"
                      }}
                    >
                      {
@@ -2764,7 +2769,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                          ? selectedShopDetail.nameEn 
                          : selectedShopDetail.name
                      }
-                   </AutoScaleText>
+                   </div>
                 </div>
               </div>
 

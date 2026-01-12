@@ -11,7 +11,7 @@ export const AutoScaleText: React.FC<{ children: React.ReactNode; width?: string
 
       if (textWidth > containerWidth) {
         const scale = containerWidth / textWidth;
-        textRef.current.style.transform = `scaleX(${Math.max(scale, 0.5)})`; // Limit min scale to 0.5
+        textRef.current.style.transform = `scaleX(${scale})`;
       } else {
         textRef.current.style.transform = "scaleX(1)";
       }

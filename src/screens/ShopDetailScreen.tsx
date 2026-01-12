@@ -1,5 +1,5 @@
 // src/screens/ShopDetailScreen.tsx
-import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { CloseButton } from "../components/CloseButton";
 import floor1FMap from "../assets/floor-1F-map.svg";
@@ -277,25 +277,9 @@ const MapWithPinsComponent: React.FC<{
 };
 
 const ShopNameDisplay: React.FC<{ name: string; width: string; fontSize: string }> = ({ name, width, fontSize }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    if (containerRef.current && textRef.current) {
-      const containerWidth = containerRef.current.clientWidth;
-      const textWidth = textRef.current.scrollWidth;
-      if (textWidth > containerWidth) {
-        const scale = containerWidth / textWidth;
-        textRef.current.style.transform = `scaleX(${Math.max(scale, 0.5)})`;
-      } else {
-        textRef.current.style.transform = "scaleX(1)";
-      }
-    }
-  }, [name]);
-
   return (
-    <div ref={containerRef} style={{ fontSize: fontSize, fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 700, lineHeight: "1.4", width: width, whiteSpace: "nowrap", overflow: "hidden", transformOrigin: "left center", flexShrink: 0 }}>
-      <div ref={textRef} style={{ display: "inline-block", transform: "scaleX(1)", whiteSpace: "nowrap", transformOrigin: "left center" }}>{name}</div>
+    <div style={{ fontSize: fontSize, fontFamily: "'Rounded Mplus 1c', sans-serif", fontWeight: 700, lineHeight: "1.4", width: width, flexShrink: 0, wordWrap: "break-word" }}>
+      {name}
     </div>
   );
 };

@@ -117,6 +117,8 @@ const GenreHeader = React.memo(({ genre }: { genre: string }) => {
   );
 });
 
+import { TwoLineAutoScaleText } from "./TwoLineAutoScaleText";
+
 const ShopRow = React.memo(({ shop, genre, index }: { shop: Shop; genre: string; index: number }) => {
   const isFashion = genre === "ファッション";
   const isFashionGoods = genre === "ファッション雑貨";
@@ -152,7 +154,7 @@ const ShopRow = React.memo(({ shop, genre, index }: { shop: Shop; genre: string;
       style={{
         display: "flex",
         justifyContent: "space-between",
-        whiteSpace: "nowrap",
+        alignItems: "center",
         width: "100%",
       }}
     >
@@ -161,6 +163,7 @@ const ShopRow = React.memo(({ shop, genre, index }: { shop: Shop; genre: string;
           marginLeft: "0.5em",
           display: "inline-flex",
           alignItems: "center",
+          flexShrink: 0,
         }}
       >
         <span
@@ -187,14 +190,17 @@ const ShopRow = React.memo(({ shop, genre, index }: { shop: Shop; genre: string;
         )}
       </span>
 
-      <span
+      <div
         style={{
           marginLeft: "12px",
           marginRight: "0.5em",
+          flex: 1,
+          textAlign: "right",
+          minWidth: 0, // Flex child truncation fix
         }}
       >
-        {shop.name}
-      </span>
+        <TwoLineAutoScaleText align="right">{shop.name}</TwoLineAutoScaleText>
+      </div>
     </div>
   );
 });
@@ -444,10 +450,10 @@ const ShopList: React.FC<ShopListProps> = ({
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                whiteSpace: "nowrap",
+                alignItems: "center",
               }}
             >
-              <span>
+              <span style={{ flexShrink: 0 }}>
                 <span
                   style={{
                     display: "inline-block",
@@ -470,7 +476,16 @@ const ShopList: React.FC<ShopListProps> = ({
                   </span>
                 )}
               </span>
-              <span>{s.name}</span>
+              <div
+                style={{
+                  marginLeft: "12px",
+                  flex: 1,
+                  textAlign: "right",
+                  minWidth: 0,
+                }}
+              >
+                <TwoLineAutoScaleText align="right">{s.name}</TwoLineAutoScaleText>
+              </div>
             </div>
           ))}
         </div>
