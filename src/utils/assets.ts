@@ -9,7 +9,14 @@ export function getAssetUrl(path: string): string {
   // 例: common/search.svg -> ../assets/common/search.svg
   const fullPath = `../assets/${path}`;
   const module = assetModules[fullPath] as { default: string } | undefined;
-  return module?.default || "";
+  
+  if (!module) {
+      if (import.meta.env.DEV) {
+          console.warn(`[getAssetUrl] Asset not found in glob: ${fullPath}`);
+      }
+      return "";
+  }
+  return module.default;
 }
 
 export function getMallAssetUrl(mallId: string, category: string, filename: string): string {
@@ -288,15 +295,26 @@ export async function loadOpenTimeImage(mallId: string, lang: string) {
         // Try English if lang is en
         if (lang === "en") {
             const path = `${mallId}/open-time/en/${filename}`;
-            const result = await window.electronAPI.readMallAsset(path);
-            if (result) return result;
+            try {
+                const result = await window.electronAPI.readMallAsset(path);
+                if (result) return result;
+            } catch (e) {
+                console.warn(`[loadOpenTimeImage] Failed to read en asset: ${path}`, e);
+            }
         }
         
         // Fallback to Japanese (or if lang is ja)
         const path = `${mallId}/open-time/ja/${filename}`;
-        return await window.electronAPI.readMallAsset(path);
+        try {
+            const result = await window.electronAPI.readMallAsset(path);
+            if (result) return result;
+        } catch (e) {
+            console.warn(`[loadOpenTimeImage] Failed to read ja asset: ${path}`, e);
+        }
     }
     
+    console.warn(`[loadOpenTimeImage] Fallback to bundled assets for ${mallId} (${lang})`);
+
     // 2. Fallback to bundled assets
     if (lang === "en") {
         const enPath = getMallAssetUrl(mallId, "open-time/en", filename);
