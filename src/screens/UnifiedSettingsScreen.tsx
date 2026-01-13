@@ -18,7 +18,7 @@ import { DEFAULT_PICTO_SETTINGS } from "../types/picto";
 import type { MallSettings } from "../types/mall";
 import { DEFAULT_MALL_SETTINGS } from "../types/mall";
 import { getMallConfig } from "../config/malls";
-import { getMallAssetUrl, getAssetUrl } from "../utils/assets"; // Import
+import { getAssetUrl } from "../utils/assets"; // Import
 
 const iconSvg = getAssetUrl("icon.svg"); // Assuming icon.svg moved to common or use getAssetUrl('icon.svg') if root // Import
 
@@ -116,7 +116,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     // モール変更時は、そのモールのデフォルト設定で完全にリセットする
     // これにより、前のモールの画像パスが残るのを防ぐ
     const config = getMallConfig(mallSettings.mallId as any);
-    const defaultOpenTime = getMallAssetUrl(mallSettings.mallId, "open-time/ja", "open-time.svg");
+    // const defaultOpenTime = getMallAssetUrl(mallSettings.mallId, "open-time/ja", "open-time.svg");
     
     setImageSettings({
       floorMaps: { ...config.floorMaps } as Record<FloorId, string>, // デフォルトマップ

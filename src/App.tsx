@@ -21,7 +21,7 @@ import { DEFAULT_PICTO_SETTINGS } from "./types/picto";
 import type { MallSettings, MallId } from "./types/mall";
 import { DEFAULT_MALL_SETTINGS } from "./types/mall";
 import { getMallConfig } from "./config/malls";
-import { getMallAssetUrl } from "./utils/assets";
+// import { getMallAssetUrl } from "./utils/assets";
 import type { Shop } from "./types/shop";
 import { fetchShops, loadShopsFromCache, saveShopsToCache } from "./repositories/shopRepository";
 import { 
@@ -47,7 +47,7 @@ type FloorId = "1F" | "2F" | "3F" | "4F";
 const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageSettings => {
   const config = getMallConfig(mallId as any);
   // Default open time image path based on mallId
-  const defaultOpenTime = getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
+  // const defaultOpenTime = getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
   
   let openTimeImage = settings.openTimeImage;
 
