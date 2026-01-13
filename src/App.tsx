@@ -60,19 +60,19 @@ const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageS
     
     // If current mall is Suzaka but image is from Sendai -> Reset to default
     if (mallId === "suzaka" && isSendaiAsset) {
-      openTimeImage = defaultOpenTime;
+      openTimeImage = "";
     } 
     // If current mall is Sendai but image is from Suzaka -> Reset to default
     else if (mallId === "sendai-kamisugi" && isSuzakaAsset) {
-      openTimeImage = defaultOpenTime;
+      openTimeImage = "";
     }
     // Fallback: If current mall ID is not in path but another mall ID is -> Reset
     else if (mallId === "suzaka" && !isSuzakaAsset && openTimeImage.includes("malls/")) {
         // e.g. some other mall
-        openTimeImage = defaultOpenTime;
+        openTimeImage = "";
     }
     else if (mallId === "sendai-kamisugi" && !isSendaiAsset && openTimeImage.includes("malls/")) {
-        openTimeImage = defaultOpenTime;
+        openTimeImage = "";
     }
   }
 
@@ -85,7 +85,7 @@ const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageS
       "4F": settings.floorMaps["4F"] || config.floorMaps["4F"],
     },
     // Use validated settings value or default
-    openTimeImage: openTimeImage || defaultOpenTime,
+    openTimeImage: openTimeImage || "",
   };
 };
 
@@ -970,7 +970,7 @@ const App: React.FC = () => {
       eventNews={eventNews}
       pictoSettings={pictoSettings}
       genres={currentMallConfig.genres}
-      floorMaps={currentMallConfig.floorMaps}
+      floorMaps={imageSettings.floorMaps}
       openTimeImage={imageSettings.openTimeImage} // Pass openTimeImage
     />
     <UnifiedSettingsScreen

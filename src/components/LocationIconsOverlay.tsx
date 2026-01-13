@@ -20,14 +20,27 @@ function buildWrapperStyle(config: IconPositionConfig): React.CSSProperties {
   };
 }
 
-function buildImageStyle(config: IconPositionConfig): React.CSSProperties {
+// アイコン自体のスタイル（回転は含まない）
+function buildStaticImageStyle(config: IconPositionConfig): React.CSSProperties {
   return {
     width: `${config.size}px`,
     height: "auto",
     display: "block",
-    transform: `rotate(${config.rotation}deg)`,
-    transformOrigin: "center center",
     overflow: "visible",
+  };
+}
+
+// 回転を制御するコンテナのスタイル
+function buildRotationContainerStyle(rotation: number): React.CSSProperties {
+  return {
+    position: "relative",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    height: "100%",
+    transform: `rotate(${rotation}deg)`,
+    transformOrigin: "center center",
   };
 }
 
@@ -108,6 +121,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
     const rippleCenterSize = animation.rippleCenterSize ?? 0.95;
     const size = config.size;
     // 現在地アイコンの場合、波紋を少し下に移動（視覚的な中心に合わせる）
+    // 回転コンテナ内で相対配置されるため、アイコンの下方向へのオフセットとして機能する
     const topOffset = isLocationIcon ? "52%" : "50%";
 
     return (
@@ -206,10 +220,13 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
 
               return (
                 <div className={animClass} style={animStyle}>
-                  {renderRippleAnimation(speechBubble, "speech-bubble")}
-                  <UserLocationIcon
-                    style={buildImageStyle(speechBubble)}
-                  />
+                  {/* 回転コンテナを追加 */}
+                  <div style={buildRotationContainerStyle(speechBubble.rotation)}>
+                    {renderRippleAnimation(speechBubble, "speech-bubble")}
+                    <UserLocationIcon
+                      style={buildStaticImageStyle(speechBubble)}
+                    />
+                  </div>
                 </div>
               );
             })()}
@@ -249,10 +266,13 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
 
               return (
                 <div className={animClass} style={animStyle}>
-                  {renderRippleAnimation(location, "location", true)}
-                  <LocationIcon
-                    style={buildImageStyle(location)}
-                  />
+                   {/* 回転コンテナを追加 */}
+                   <div style={buildRotationContainerStyle(location.rotation)}>
+                    {renderRippleAnimation(location, "location", true)}
+                    <LocationIcon
+                      style={buildStaticImageStyle(location)}
+                    />
+                  </div>
                 </div>
               );
             })()}

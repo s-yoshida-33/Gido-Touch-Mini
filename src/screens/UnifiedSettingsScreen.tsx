@@ -120,7 +120,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     
     setImageSettings({
       floorMaps: { ...config.floorMaps } as Record<FloorId, string>, // デフォルトマップ
-      openTimeImage: defaultOpenTime // デフォルト開店時間画像
+      openTimeImage: "" // デフォルト開店時間画像（空にすることで言語別自動読み込みを有効化）
     });
   }, [mallSettings.mallId]);
 
@@ -149,11 +149,11 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     if (isStale) {
       // If stale, enforce defaults for the current mall
       const config = getMallConfig(currentMallId);
-      const defaultOpenTime = getMallAssetUrl(currentMallId, "open-time/ja", "open-time.svg");
+      // const defaultOpenTime = getMallAssetUrl(currentMallId, "open-time/ja", "open-time.svg");
       setImageSettings({
         ...initialImageSettings,
         floorMaps: { ...config.floorMaps } as Record<FloorId, string>,
-        openTimeImage: defaultOpenTime
+        openTimeImage: ""
       });
     } else {
       setImageSettings(initialImageSettings);
@@ -234,7 +234,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
           settingsToSet = {
               ...initialImageSettings,
               floorMaps: { ...config.floorMaps } as Record<FloorId, string>,
-              openTimeImage: getMallAssetUrl(currentMallId, "open-time/ja", "open-time.svg")
+              openTimeImage: ""
           };
       }
       
