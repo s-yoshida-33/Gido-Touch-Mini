@@ -2594,7 +2594,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                   </div>
 
                   {/* Name and Floor Container */}
-                  <div style={{ display: "flex", flexDirection: "column", marginLeft: "20px", justifyContent: "flex-start", height: "100%" }}>
+                  <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-start", height: "100%" }}>
                     <div style={{ display: "flex", flexDirection: "row", gap: "0px", marginBottom: "5px", marginTop: "0px" }}>
                       {/* Floor Badge */}
                       <div style={{
@@ -2626,7 +2626,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       )}
                     </div>
                     {/* Shop Name */}
-                    <div style={{ width: "320px" }}>
+                    <div style={{ width: "350px", marginLeft: "5px" }}>
                       <div
                         style={{ 
                           fontSize: "16px", 

@@ -14,16 +14,33 @@ export const TwoLineAutoScaleText: React.FC<TwoLineAutoScaleTextProps> = ({ chil
   useLayoutEffect(() => {
     if (containerRef.current && textRef.current && measureRef.current) {
       const containerWidth = containerRef.current.clientWidth;
+      const containerHeight = containerRef.current.clientHeight;
       const textFullWidth = measureRef.current.scrollWidth;
 
-      // 2行に収めるための理想幅。
-      // 単純な1/2だと、文字幅の偏りで2行目からはみ出る可能性があるため、
-      // 安全マージンとして幅を広めに見積もる (1.1倍)。
-      const idealWidth = Math.ceil(textFullWidth / 2 * 1.1);
+      // 1. 初期推定: 全体幅の半分 * マージン
+      // 少し余裕(1.05倍)を持たせてスタート
+      let currentWidth = Math.ceil((textFullWidth / 2) * 1.05);
 
-      if (idealWidth > containerWidth) {
-        const scale = containerWidth / idealWidth;
-        textRef.current.style.width = `${idealWidth}px`;
+      // いったん幅を設定してレイアウトさせる
+      textRef.current.style.width = `${currentWidth}px`;
+
+      // 2. 高さが収まるまで幅を広げるループ
+      // 中身の高さ(scrollHeight)が表示領域の高さ(containerHeight)を超えている間は幅を足す
+      const MAX_RETRIES = 20;
+      let retries = 0;
+
+      // 多少の誤差(1px程度)は許容する
+      while (textRef.current.scrollHeight > containerHeight + 1 && retries < MAX_RETRIES) {
+        // 幅を少しずつ広げる (全体の5%ずつ追加)
+        currentWidth += Math.ceil(textFullWidth * 0.05);
+        textRef.current.style.width = `${currentWidth}px`;
+        retries++;
+      }
+
+      // 3. 最終的な幅でスケーリング判定
+      if (currentWidth > containerWidth) {
+        const scale = containerWidth / currentWidth;
+        textRef.current.style.width = `${currentWidth}px`;
         textRef.current.style.transform = `scaleX(${scale})`;
       } else {
         textRef.current.style.width = "100%";
@@ -32,9 +49,10 @@ export const TwoLineAutoScaleText: React.FC<TwoLineAutoScaleTextProps> = ({ chil
     }
   }, [children]);
 
+  // アライメント設定
   const justifyContent = align === "right" ? "flex-end" : align === "center" ? "center" : "flex-start";
+  // scaleXの基点（右寄せなら右端から縮小）
   const transformOrigin = align === "right" ? "right center" : align === "center" ? "center center" : "left center";
-  const textAlign = align;
 
   return (
     <div
@@ -42,14 +60,14 @@ export const TwoLineAutoScaleText: React.FC<TwoLineAutoScaleTextProps> = ({ chil
       style={{
         ...style,
         width: "100%",
-        height: "2.8em", // line-height 1.4 * 2行分
+        height: "2.8em",
         overflow: "hidden",
         display: "flex",
-        alignItems: "center", // 上下中央揃え
+        alignItems: "center",
         justifyContent: justifyContent,
       }}
     >
-      {/* 幅計測用の不可視要素 (1行での幅を測る) */}
+      {/* 計測用（不可視・改行なし） */}
       <div
         ref={measureRef}
         style={{
@@ -57,8 +75,7 @@ export const TwoLineAutoScaleText: React.FC<TwoLineAutoScaleTextProps> = ({ chil
           visibility: "hidden",
           whiteSpace: "nowrap",
           width: "auto",
-          height: "auto",
-          fontFamily: style?.fontFamily, // フォントスタイルも継承させる
+          fontFamily: style?.fontFamily,
           fontSize: style?.fontSize,
           fontWeight: style?.fontWeight,
         }}
@@ -67,16 +84,16 @@ export const TwoLineAutoScaleText: React.FC<TwoLineAutoScaleTextProps> = ({ chil
         {children}
       </div>
 
-      {/* 実際に表示する要素 */}
+      {/* 表示用 */}
       <div
         ref={textRef}
         style={{
           display: "block",
-          wordBreak: "break-all",
-          whiteSpace: "normal",
+          wordBreak: "break-all", // 任意の位置で改行可能にする
           lineHeight: "1.4",
           transformOrigin: transformOrigin,
-          textAlign: textAlign,
+          textAlign: align,
+          flexShrink: 0,
         }}
       >
         {children}
