@@ -1214,10 +1214,36 @@ ipcMain.handle('read-mall-config', async (_event, mallId, configType) => {
 ipcMain.handle('read-mall-asset', async (_event, relativePath) => {
   try {
     const basePath = getMallAssetsBasePath();
-    const fullPath = path.join(basePath, relativePath);
+    // Normalize path separators to system default
+    const normalizedRelativePath = relativePath.split('/').join(path.sep);
+    const fullPath = path.join(basePath, normalizedRelativePath);
     
     if (!fs.existsSync(fullPath)) {
-      logger.warn('Mall asset not found', { relativePath, fullPath });
+      // ログに詳細を出力してデバッグしやすくする
+      logger.warn('Mall asset not found', { 
+        relativePath, 
+        normalizedRelativePath,
+        fullPath, 
+        basePath 
+      });
+      
+      // 大文字小文字の違いで失敗している可能性を考慮して、ディレクトリ内を検索する（Windowsでは不要だが念のため）
+      try {
+        const dir = path.dirname(fullPath);
+        const filename = path.basename(fullPath);
+        if (fs.existsSync(dir)) {
+            const files = fs.readdirSync(dir);
+            const found = files.find(f => f.toLowerCase() === filename.toLowerCase());
+            if (found) {
+                const correctedPath = path.join(dir, found);
+                logger.info('Found file with case mismatch', { original: filename, found: found });
+                return readImageFileAsDataUrl(correctedPath);
+            }
+        }
+      } catch (e) {
+        // ignore
+      }
+
       return null;
     }
     

@@ -289,12 +289,13 @@ export async function loadGenreIcon(mallId: string, lang: string, name: string, 
 
 export async function loadOpenTimeImage(mallId: string, lang: string) {
     const filename = "open-time.svg";
+    const safeMallId = mallId.trim();
     
     // 1. Try external file via Electron API
     if (window.electronAPI?.readMallAsset) {
         // Try English if lang is en
         if (lang === "en") {
-            const path = `${mallId}/open-time/en/${filename}`;
+            const path = `${safeMallId}/open-time/en/${filename}`;
             try {
                 const result = await window.electronAPI.readMallAsset(path);
                 if (result) return result;
@@ -304,7 +305,7 @@ export async function loadOpenTimeImage(mallId: string, lang: string) {
         }
         
         // Fallback to Japanese (or if lang is ja)
-        const path = `${mallId}/open-time/ja/${filename}`;
+        const path = `${safeMallId}/open-time/ja/${filename}`;
         try {
             const result = await window.electronAPI.readMallAsset(path);
             if (result) return result;
@@ -313,13 +314,15 @@ export async function loadOpenTimeImage(mallId: string, lang: string) {
         }
     }
     
-    console.warn(`[loadOpenTimeImage] Fallback to bundled assets for ${mallId} (${lang})`);
+    console.warn(`[loadOpenTimeImage] Fallback to bundled assets for ${safeMallId} (${lang})`);
 
     // 2. Fallback to bundled assets
+    // Electron APIでの読み込みが失敗した場合、Viteバンドルアセットを使用する
     if (lang === "en") {
-        const enPath = getMallAssetUrl(mallId, "open-time/en", filename);
+        const enPath = getMallAssetUrl(safeMallId, "open-time/en", filename);
+        // Viteバンドルにアセットが含まれているか確認（getMallAssetUrlは存在しない場合空文字を返すように修正済み）
         if (enPath) return enPath;
     }
     
-    return getMallAssetUrl(mallId, "open-time/ja", filename);
+    return getMallAssetUrl(safeMallId, "open-time/ja", filename);
 }
