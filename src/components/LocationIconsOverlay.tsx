@@ -120,9 +120,9 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
     const rippleSize = animation.rippleSize || 1.5;
     const rippleCenterSize = animation.rippleCenterSize ?? 0.95;
     const size = config.size;
-    // 現在地アイコンの場合、波紋を少し下に移動（視覚的な中心に合わせる）
-    // 回転コンテナ内で相対配置されるため、アイコンの下方向へのオフセットとして機能する
-    const topOffset = isLocationIcon ? "52%" : "50%";
+    // 波紋の位置は常に中心（50%）に設定
+    // 回転時に中心からずれないようにするため
+    const topOffset = "50%";
 
     return (
       <>

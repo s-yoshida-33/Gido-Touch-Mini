@@ -4722,6 +4722,32 @@
           "rippleSize": 3,
           "rippleCenterSize": 0.8
         }
+      },
+      "c7547c48-43bc-4e59-aae2-cb1e144e3e1f": {
+        "id": "c7547c48-43bc-4e59-aae2-cb1e144e3e1f",
+        "tag": "bus_stop",
+        "iconName": "bus-stop.svg",
+        "floor": "1F",
+        "x": 26.48,
+        "y": 59.45,
+        "size": 50,
+        "rotation": 0,
+        "shadow": {
+          "enabled": false,
+          "offsetX": 4,
+          "offsetY": 4,
+          "blur": 4,
+          "opacity": 0.5
+        },
+        "animation": {
+          "enabled": true,
+          "type": "blink",
+          "duration": 2,
+          "amplitude": 20,
+          "rippleSize": 3,
+          "rippleCenterSize": 0.8,
+          "rippleColor": "#E63B93"
+        }
       }
     }
   },
