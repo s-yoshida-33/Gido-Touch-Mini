@@ -185,7 +185,7 @@ const ShopRow = React.memo(({ shop, genre, index }: { shop: Shop; genre: string;
               fontSize: "0.7em",
             }}
           >
-            {`[${shop.genreMemo}]`}
+            {`[${Array.from(new Set(shop.genreMemo.split(/[|]+/).map(s => s.trim()).filter(Boolean))).join(" / ")}]`}
           </span>
         )}
       </span>
@@ -472,7 +472,7 @@ const ShopList: React.FC<ShopListProps> = ({
                       fontSize: "0.7em",
                     }}
                   >
-                    {`[${s.genreMemo}]`}
+                    {`[${Array.from(new Set(s.genreMemo.split(/[|]+/).map(k => k.trim()).filter(Boolean))).join(" / ")}]`}
                   </span>
                 )}
               </span>

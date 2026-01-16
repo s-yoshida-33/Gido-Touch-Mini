@@ -310,10 +310,14 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
   
   const displayGenreMemo = React.useMemo(() => {
     if (language === "en" && shop.genreMemoEn) {
-      return shop.genreMemoEn;
+      const memos = shop.genreMemoEn.split(/[|]+/).map(s => s.trim()).filter(s => s.length > 0);
+      const uniqueMemos = Array.from(new Set(memos));
+      return uniqueMemos.join(" / ");
     }
     if (shop.genreMemo) {
-      return shop.genreMemo.split(/[|]+/).map(s => s.trim()).filter(s => s.length > 0).slice(0, 2).join(" / ");
+      const memos = shop.genreMemo.split(/[|]+/).map(s => s.trim()).filter(s => s.length > 0);
+      const uniqueMemos = Array.from(new Set(memos));
+      return uniqueMemos.slice(0, 2).join(" / ");
     }
     return "";
   }, [shop, language]);

@@ -3009,16 +3009,18 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                               return false;
                             }
                             return true;
-                          })
+                          });
+                        
+                        const uniqueMemos = Array.from(new Set(filteredMemos))
                           // Take configured number of items (default 3)
                           .slice(0, mallSettings?.maxDisplayCount ?? 3);
 
-                        if (filteredMemos.length === 0) return null;
+                        if (uniqueMemos.length === 0) return null;
 
                         return (
                           <>
                             <span>/</span>
-                            <span>{filteredMemos.join(" / ")}</span>
+                            <span>{uniqueMemos.join(" / ")}</span>
                           </>
                         );
                       })()
