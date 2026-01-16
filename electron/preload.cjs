@@ -46,8 +46,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       callback(floor);
     });
   },
-  getLocationIconSettings() {
-    return ipcRenderer.invoke('get-location-icon-settings');
+  getLocationIconSettings(mallId) {
+    return ipcRenderer.invoke('get-location-icon-settings', mallId);
   },
   saveLocationIconSettings(settings) {
     return ipcRenderer.invoke('save-location-icon-settings', settings);
@@ -93,8 +93,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('open-settings', listener);
     };
   },
-  getImageSettings() {
-    return ipcRenderer.invoke('get-image-settings');
+  getImageSettings(mallId) {
+    return ipcRenderer.invoke('get-image-settings', mallId);
   },
   saveImageSettings(settings) {
     return ipcRenderer.invoke('save-image-settings', settings);
@@ -107,8 +107,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('image-settings-updated', listener);
     };
   },
-  getMallSettings() {
-    return ipcRenderer.invoke('get-mall-settings');
+  getMallSettings(mallId) {
+    return ipcRenderer.invoke('get-mall-settings', mallId);
   },
   saveMallSettings(settings) {
     return ipcRenderer.invoke('save-mall-settings', settings);
@@ -133,8 +133,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getShopImage(filePath) {
     return ipcRenderer.invoke('get-shop-image', filePath);
   },
-  getShopPositions() {
-    return ipcRenderer.invoke('get-shop-positions');
+  getShopPositions(mallId) {
+    return ipcRenderer.invoke('get-shop-positions', mallId);
   },
   saveShopPositions(settings) {
     return ipcRenderer.invoke('save-shop-positions', settings);
@@ -147,8 +147,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('shop-positions-updated', listener);
     };
   },
-  getPictoSettings() {
-    return ipcRenderer.invoke('get-picto-settings');
+  getPictoSettings(mallId) {
+    return ipcRenderer.invoke('get-picto-settings', mallId);
   },
   savePictoSettings(settings) {
     return ipcRenderer.invoke('save-picto-settings', settings);

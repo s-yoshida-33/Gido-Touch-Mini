@@ -14,7 +14,7 @@ interface ElectronAPI {
   setFloor: (floor: string) => void;
   onFloorChanged: (cb: (floor: string) => void) => void;
 
-  getLocationIconSettings: () => Promise<LocationIconSettings | LocationIconSettingsPerFloor>;
+  getLocationIconSettings: (mallId?: string) => Promise<LocationIconSettings | LocationIconSettingsPerFloor>;
   saveLocationIconSettings: (
     settings: LocationIconSettings | LocationIconSettingsPerFloor
   ) => Promise<LocationIconSettings | LocationIconSettingsPerFloor>;
@@ -26,21 +26,21 @@ interface ElectronAPI {
   onOpenFloorSettings: (cb: () => void) => () => void;
   onOpenVersionInfo: (cb: () => void) => () => void;
   onOpenSettings: (cb: () => void) => () => void;
-  getImageSettings: () => Promise<ImageSettings>;
+  getImageSettings: (mallId?: string) => Promise<ImageSettings>;
   saveImageSettings: (settings: ImageSettings) => Promise<ImageSettings>;
   onImageSettingsUpdated: (cb: (settings: ImageSettings) => void) => () => void;
   getShopImage: (filePath: string) => Promise<string | null>;
-  getShopPositions: () => Promise<ShopPositionSettings>;
+  getShopPositions: (mallId?: string) => Promise<ShopPositionSettings>;
   saveShopPositions: (settings: ShopPositionSettings) => Promise<ShopPositionSettings>;
   onShopPositionsUpdated: (cb: (settings: ShopPositionSettings) => void) => () => void;
 
   // Picto Settings
-  getPictoSettings: () => Promise<PictoSettings>;
+  getPictoSettings: (mallId?: string) => Promise<PictoSettings>;
   savePictoSettings: (settings: PictoSettings) => Promise<PictoSettings>;
   onPictoSettingsUpdated: (cb: (settings: PictoSettings) => void) => () => void;
 
   // Mall Settings
-  getMallSettings: () => Promise<MallSettings>;
+  getMallSettings: (mallId?: string) => Promise<MallSettings>;
   saveMallSettings: (settings: MallSettings) => Promise<MallSettings>;
   onMallSettingsUpdated: (cb: (settings: MallSettings) => void) => () => void;
   getMallId: () => Promise<string>;

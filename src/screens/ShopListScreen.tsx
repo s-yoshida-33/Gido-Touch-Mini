@@ -259,6 +259,10 @@ const REFERENCE_MAP_WIDTH = 1920;
 // Current map display width in ShopListScreen
 const CURRENT_MAP_WIDTH = 1460;
 
+import type { MallSettings } from "../types/mall"; // Added import
+
+// ...
+
 interface ShopListScreenProps {
   isSettingsOpen?: boolean;
   locationIconSettings?: LocationIconSettingsPerFloor;
@@ -272,6 +276,7 @@ interface ShopListScreenProps {
   mallId?: MallId; // Added prop
   floorMaps?: Record<string, string>; // Added prop
   openTimeImage?: string; // Add prop
+  mallSettings?: MallSettings; // Added prop
 }
 
 // 五十音行マッピング
@@ -358,6 +363,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   mallId = "suzaka",
   floorMaps = {},
   openTimeImage: propOpenTimeImage, // Add prop
+  mallSettings,
 }) => {
 
   // Map content ref for direct style manipulation (zoom scale)
@@ -2977,8 +2983,16 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                           // Exclude specific keywords and floor patterns
                           .filter(s => {
                             const lower = s.toLowerCase();
-                            // Exclude specific keywords
-                            if (lower.includes("waonpoint加盟店") || 
+                            const ignoreKeywords = mallSettings?.genreMemoIgnoreKeywords || [];
+                            
+                            // Exclude specific keywords from settings
+                            if (ignoreKeywords.some(keyword => lower.includes(keyword.toLowerCase()))) {
+                              return false;
+                            }
+                            
+                            // Also exclude legacy hardcoded keywords if settings are not loaded (fallback)
+                            if (!mallSettings?.genreMemoIgnoreKeywords && (
+                                lower.includes("waonpoint加盟店") || 
                                 lower.includes("aeonpayの使えるお店") ||
                                 lower.includes("グルメ") ||
                                 lower.includes("フード") ||
@@ -2986,17 +3000,18 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                                 lower.includes("レストラン") ||
                                 lower.includes("グルメアリーナ") ||
                                 lower.includes("suzaka蔵") ||
-                                lower.includes("suzuka蔵")) {
+                                lower.includes("suzuka蔵"))) {
                               return false;
                             }
+
                             // Exclude floor patterns
                             if (/^\d+(?:F|階|層)$/i.test(s)) {
                               return false;
                             }
                             return true;
                           })
-                          // Take first 3 items
-                          .slice(0, 3);
+                          // Take configured number of items (default 3)
+                          .slice(0, mallSettings?.maxDisplayCount ?? 3);
 
                         if (filteredMemos.length === 0) return null;
 

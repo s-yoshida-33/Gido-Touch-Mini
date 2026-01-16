@@ -96,7 +96,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
   const speechBubbleWrapperStyle = {
     ...buildWrapperStyle(speechBubbleAnchor),
     ...buildShadowStyle(speechBubble.shadow),
-    zIndex: 5,
+    zIndex: 7,
   };
 
   const locationWrapperStyle = {
@@ -108,8 +108,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
   // 波紋アニメーション用のスタイルとコンテンツを生成
   const renderRippleAnimation = (
     config: IconPositionConfig,
-    uniqueId: string,
-    isLocationIcon: boolean = false
+    uniqueId: string
   ) => {
     const animation = config.animation;
     if (!animation || !animation.enabled || animation.type !== "blink") {
@@ -268,7 +267,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
                 <div className={animClass} style={animStyle}>
                    {/* 回転コンテナを追加 */}
                    <div style={buildRotationContainerStyle(location.rotation)}>
-                    {renderRippleAnimation(location, "location", true)}
+                    {renderRippleAnimation(location, "location")}
                     <LocationIcon
                       style={buildStaticImageStyle(location)}
                     />

@@ -244,9 +244,40 @@ function loadSettings() {
   
   // デフォルトデータの構築
   // 1. 基本的なデータ構造 (空で初期化)
+  const defaultGenreMemoKeywords = [
+    "waonpoint加盟店",
+    "aeonpayの使えるお店",
+    "グルメ",
+    "フード",
+    "フードコート",
+    "レストラン",
+    "グルメアリーナ",
+    "suzaka蔵",
+    "suzuka蔵",
+    "レストラン・カフェ",
+    "レストラン・グルメ"
+  ];
+  const defaultMaxDisplayCount = 3;
+
   const baseDataByMall = {
-      suzaka: { shopPositions: { positions: {} }, pictoSettings: { instances: {} } },
-      "sendai-kamisugi": { shopPositions: { positions: {} }, pictoSettings: { instances: {} } }
+      suzaka: { 
+        shopPositions: { positions: {} }, 
+        pictoSettings: { instances: {} }, 
+        imageSettings: null, 
+        locationIcons: null,
+        genreMemoIgnoreKeywords: defaultGenreMemoKeywords,
+        maxDisplayCount: defaultMaxDisplayCount,
+        keywordsInitialized: true
+      },
+      "sendai-kamisugi": { 
+        shopPositions: { positions: {} }, 
+        pictoSettings: { instances: {} }, 
+        imageSettings: null, 
+        locationIcons: null,
+        genreMemoIgnoreKeywords: defaultGenreMemoKeywords,
+        maxDisplayCount: defaultMaxDisplayCount,
+        keywordsInitialized: true
+      }
   };
 
   // 2. defaultMallData をマージ (分割ファイルから読み込んだデータを反映)
@@ -259,6 +290,11 @@ function loadSettings() {
   const defaultShopPositions = baseDataByMall.suzaka?.shopPositions || { positions: {} };
   const defaultPictoSettings = baseDataByMall.suzaka?.pictoSettings || { instances: {} };
   const defaultLocationIcons = baseDataByMall.suzaka?.locationIcons || createDefaultPerFloorSettings();
+  // 画像設定のデフォルトは空ではなく、アセットパスから自動解決する形が望ましいが、ここでは構造のみ定義
+  const defaultImageSettings = {
+    floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
+    openTimeImage: ""
+  };
 
   const base = {
     mallId: 'suzaka', // デフォルトは須坂
@@ -266,102 +302,138 @@ function loadSettings() {
     locationIcons: defaultLocationIcons,
     shopPositions: defaultShopPositions,
     pictoSettings: defaultPictoSettings,
-    imageSettings: {
-      floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
-      openTimeImage: ""
-    },
+    imageSettings: defaultImageSettings,
     mallSettings: {
-      mallId: "suzaka"
+      mallId: "suzaka",
+      genreMemoIgnoreKeywords: defaultGenreMemoKeywords,
+      maxDisplayCount: defaultMaxDisplayCount,
+      keywordsInitialized: true
     },
     dataByMall: baseDataByMall
   };
 
   try {
     const settingsPath = getSettingsPath();
-    if (!fs.existsSync(settingsPath)) {
-      logger.debug('Settings file does not exist, using defaults');
-      return base;
-    }
+    let merged = base;
+    let parsed = {};
 
-    const raw = fs.readFileSync(settingsPath, 'utf-8');
-    const parsed = JSON.parse(raw);
+    if (fs.existsSync(settingsPath)) {
+      const raw = fs.readFileSync(settingsPath, 'utf-8');
+      parsed = JSON.parse(raw);
 
-    // Migration: Move root shopPositions/pictoSettings/locationIcons to dataByMall if not present
-    if (!parsed.dataByMall) {
-      logger.info('Migrating settings to dataByMall structure');
-      parsed.dataByMall = {
-        suzaka: {
-          shopPositions: parsed.shopPositions || defaultShopPositions,
-          pictoSettings: parsed.pictoSettings || defaultPictoSettings,
-          locationIcons: parsed.locationIcons || defaultLocationIcons
-        },
-        "sendai-kamisugi": {
-          shopPositions: { positions: {} },
-          pictoSettings: { instances: {} },
-          locationIcons: createDefaultPerFloorSettings()
-        }
-      };
-    }
-
-    // Check if locationIcons is per-floor (has "1F", "2F" etc) or single (has "speechBubble")
-    let mergedLocationIcons = base.locationIcons;
-    if (parsed.locationIcons) {
-      if ('speechBubble' in parsed.locationIcons) {
-        // Old single format - apply to all floors
-        const oldSettings = {
-          speechBubble: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.speechBubble, parsed.locationIcons.speechBubble || {}),
-          location: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.location, parsed.locationIcons.location || {}),
-        };
-        
-        mergedLocationIcons = {
-          "1F": JSON.parse(JSON.stringify(oldSettings)),
-          "2F": JSON.parse(JSON.stringify(oldSettings)),
-          "3F": JSON.parse(JSON.stringify(oldSettings)),
-          "4F": JSON.parse(JSON.stringify(oldSettings)),
-        };
-      } else {
-        // New per-floor format
-        mergedLocationIcons = {};
-        const floors = ['1F', '2F', '3F', '4F'];
-        floors.forEach(floorId => {
-          const floorSettings = parsed.locationIcons[floorId] || {};
-          // Use base (default) as target for merge
-          const baseSettings = base.locationIcons[floorId];
-          
-          mergedLocationIcons[floorId] = {
-            speechBubble: deepMerge(baseSettings.speechBubble, floorSettings.speechBubble || {}),
-            location: deepMerge(baseSettings.location, floorSettings.location || {}),
-          };
-        });
+      // Migration: Move root shopPositions/pictoSettings/locationIcons to dataByMall if not present
+      if (!parsed.dataByMall) {
+        logger.info('Migrating settings to dataByMall structure');
+        parsed.dataByMall = {
+          suzaka: {
+            shopPositions: parsed.shopPositions || defaultShopPositions,
+            pictoSettings: parsed.pictoSettings || defaultPictoSettings,
+            locationIcons: parsed.locationIcons || defaultLocationIcons,
+            imageSettings: parsed.imageSettings || defaultImageSettings
+          },
+      "sendai-kamisugi": {
+        shopPositions: { positions: {} },
+        pictoSettings: { instances: {} },
+        locationIcons: createDefaultPerFloorSettings(),
+        imageSettings: null,
+        genreMemoIgnoreKeywords: defaultGenreMemoKeywords,
+        maxDisplayCount: defaultMaxDisplayCount,
+        keywordsInitialized: true
       }
-    }
+    };
+  }
 
-    // Merge base with parsed using deepMerge to ensure no data loss
-    const merged = deepMerge(base, parsed);
-    
-    // Explicitly set processed fields
-    merged.locationIcons = mergedLocationIcons;
+      // Check if locationIcons is per-floor (has "1F", "2F" etc) or single (has "speechBubble")
+      let mergedLocationIcons = base.locationIcons;
+      if (parsed.locationIcons) {
+        if ('speechBubble' in parsed.locationIcons) {
+          // Old single format - apply to all floors
+          const oldSettings = {
+            speechBubble: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.speechBubble, parsed.locationIcons.speechBubble || {}),
+            location: deepMerge(DEFAULT_LOCATION_ICON_SETTINGS.location, parsed.locationIcons.location || {}),
+          };
+          
+          mergedLocationIcons = {
+            "1F": JSON.parse(JSON.stringify(oldSettings)),
+            "2F": JSON.parse(JSON.stringify(oldSettings)),
+            "3F": JSON.parse(JSON.stringify(oldSettings)),
+            "4F": JSON.parse(JSON.stringify(oldSettings)),
+          };
+        } else {
+          // New per-floor format
+          mergedLocationIcons = {};
+          const floors = ['1F', '2F', '3F', '4F'];
+          floors.forEach(floorId => {
+            const floorSettings = parsed.locationIcons[floorId] || {};
+            // Use base (default) as target for merge
+            const baseSettings = base.locationIcons[floorId];
+            
+            mergedLocationIcons[floorId] = {
+              speechBubble: deepMerge(baseSettings.speechBubble, floorSettings.speechBubble || {}),
+              location: deepMerge(baseSettings.location, floorSettings.location || {}),
+            };
+          });
+        }
+      }
+
+      // Merge base with parsed using deepMerge to ensure no data loss
+      merged = deepMerge(base, parsed);
+      
+      // Explicitly set processed fields
+      merged.locationIcons = mergedLocationIcons;
+    } else {
+      logger.debug('Settings file does not exist, using defaults');
+      merged = base;
+    }
     
     // Ensure mallSettings has correct structure
     if (!merged.mallSettings) {
       merged.mallSettings = {
-        mallId: "suzaka"
+        mallId: merged.mallId || "suzaka"
       };
+    } else if (!merged.mallSettings.mallId) {
+      // If mallSettings exists but mallId is missing, sync from root
+      merged.mallSettings.mallId = merged.mallId || "suzaka";
+    }
+    // Inject default values if missing (migration)
+    // keywordsInitialized フラグがなければ初期化を行う（既存の空配列も上書きする）
+    // NOTE: This logic is now handled per-mall via dataByMall above, but keeping a fallback for safety
+    if (!merged.mallSettings.keywordsInitialized && (!merged.mallSettings.genreMemoIgnoreKeywords || merged.mallSettings.genreMemoIgnoreKeywords.length === 0)) {
+       // Only inject if really missing and not initialized
+       // But since we load from dataByMall now, this might be redundant or just a final safety net
     }
 
-    // Populate root shopPositions, pictoSettings and locationIcons based on current mallId
+    // Populate root shopPositions, pictoSettings, locationIcons AND imageSettings based on current mallId
     const currentMallId = merged.mallSettings.mallId;
     const currentMallData = merged.dataByMall[currentMallId] || merged.dataByMall.suzaka;
     
+    // Inject Mall Specific Settings (Genre/MaxCount)
+    // Always use the current mall's data for these settings when loading
+    // This ensures that when we switch malls, we get that mall's specific values
+    merged.mallSettings.genreMemoIgnoreKeywords = currentMallData.genreMemoIgnoreKeywords || defaultGenreMemoKeywords;
+    merged.mallSettings.maxDisplayCount = currentMallData.maxDisplayCount ?? defaultMaxDisplayCount;
+
+    // Set initialization flag from mall data
+    if (currentMallData.keywordsInitialized) {
+       merged.mallSettings.keywordsInitialized = true;
+    } else {
+       // If not initialized in dataByMall but we just injected defaults, consider it initialized for runtime
+       // (Saving will persist it to dataByMall)
+       merged.mallSettings.keywordsInitialized = true;
+    }
+
     merged.shopPositions = currentMallData.shopPositions || { positions: {} };
     merged.pictoSettings = currentMallData.pictoSettings || { instances: {} };
-    
+
     // locationIcons merge handling
+    // ロード時は現在のモールの設定を優先的に読み込む
     let locationIconsSource = currentMallData.locationIcons;
     
     // Fallback logic if mall-specific locationIcons are missing/empty but root ones exist (during migration)
-    if (!locationIconsSource && mergedLocationIcons) {
-        locationIconsSource = mergedLocationIcons;
+    if (!locationIconsSource && merged.locationIcons && Object.keys(merged.locationIcons).length > 0 && fs.existsSync(settingsPath)) {
+        // If we just loaded from disk and mall-specific data is missing, use the loaded root data (migration scenario)
+        // Note: This might cause "shared" settings behavior initially until saved per-mall
+        locationIconsSource = merged.locationIcons;
     } else if (!locationIconsSource) {
         locationIconsSource = createDefaultPerFloorSettings();
     }
@@ -395,13 +467,52 @@ function loadSettings() {
         });
     }
 
-    // Ensure imageSettings has correct structure
-    if (!merged.imageSettings) {
-        merged.imageSettings = {
-            floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
-            openTimeImage: ""
-        };
+    // --- Image Settings Handling ---
+    // Try to get from mall data
+    let imageSettingsSource = currentMallData.imageSettings;
+    
+    // If not in mall data, check root (migration or first load)
+    if (!imageSettingsSource && parsed.imageSettings) {
+        imageSettingsSource = parsed.imageSettings;
     }
+    
+    // If still empty/invalid, generate defaults from assets
+    if (!imageSettingsSource || !imageSettingsSource.floorMaps || Object.values(imageSettingsSource.floorMaps).every(v => !v)) {
+        // Generate default paths based on mallId
+        const basePath = isDev 
+            ? path.join(process.cwd(), 'src', 'assets', 'malls')
+            : path.join(process.resourcesPath, 'assets', 'malls');
+            
+        const floorMaps = {};
+        ['1F', '2F', '3F', '4F'].forEach(floor => {
+            const mapPath = path.join(basePath, currentMallId, 'maps', `${floor}.svg`);
+            if (fs.existsSync(mapPath)) {
+                floorMaps[floor] = toFileUrl(mapPath);
+            } else {
+                floorMaps[floor] = "";
+            }
+        });
+        
+        // Open time image default
+        let openTimeImage = "";
+        const openTimePathEn = path.join(basePath, currentMallId, 'open-time', 'en', 'open-time.svg');
+        const openTimePathJa = path.join(basePath, currentMallId, 'open-time', 'ja', 'open-time.svg');
+        if (fs.existsSync(openTimePathJa)) {
+            openTimeImage = toFileUrl(openTimePathJa);
+        } else if (fs.existsSync(openTimePathEn)) {
+            openTimeImage = toFileUrl(openTimePathEn);
+        }
+
+        imageSettingsSource = {
+            floorMaps,
+            openTimeImage
+        };
+        
+        logger.info(`Generated default image settings for ${currentMallId}`);
+    }
+    
+    merged.imageSettings = imageSettingsSource;
+
 
     logger.debug('Settings loaded', {
       floor: merged.floor,
@@ -414,8 +525,8 @@ function loadSettings() {
     // DEBUG: Record internal state
     lastLoadSettingsDebug = {
       timestamp: new Date().toISOString(),
-      rawPreview: raw.substring(0, 100),
-      parsedValue: parsed.currentFloorSetting, // Note: currentFloorSetting might not exist in parsed structure based on code, but following user request
+      rawPreview: fs.existsSync(settingsPath) ? fs.readFileSync(settingsPath, 'utf-8').substring(0, 100) : "No File",
+      parsedValue: parsed.currentFloorSetting, 
       parsedType: typeof parsed.currentFloorSetting,
       checkResult: typeof parsed.currentFloorSetting === 'string',
       finalValue: merged,
@@ -451,10 +562,6 @@ function saveSettings(partial) {
      next.pictoSettings.instances = partial.pictoSettings.instances;
   }
 
-  // Update dataByMall based on what was changed.
-  // Note: 'next' has updated root props (shopPositions, etc.) from 'partial'.
-  // We need to sync these back to the appropriate mall in dataByMall.
-  
   // Determine target mall ID. 
   // If partial updated mallSettings.mallId, we are switching malls.
   // In that case, we usually don't update data simultaneously.
@@ -462,23 +569,35 @@ function saveSettings(partial) {
   // The 'current' object has shopPositions populated from the mall that was active when loaded.
   
   // Use the new mall ID if it's being changed, otherwise use current
-  const targetMallId = (partial.mallSettings && partial.mallSettings.mallId) 
-    ? partial.mallSettings.mallId 
-    : current.mallSettings.mallId;
+  // Also check if 'mallId' was passed directly in partial (from new set-mall-id handler)
+  const targetMallId = partial.mallId 
+    ? partial.mallId 
+    : (partial.mallSettings && partial.mallSettings.mallId) 
+      ? partial.mallSettings.mallId 
+      : current.mallSettings.mallId;
   
   // Ensure dataByMall exists
   if (!next.dataByMall) next.dataByMall = {};
   if (!next.dataByMall[targetMallId]) next.dataByMall[targetMallId] = {};
 
+  // Preserve existing settings for the target mall if they exist
+  // deepMerge might not have merged them correctly if partial didn't have dataByMall
+  // But wait, 'next' is deepMerged from 'current'. 'current' has 'dataByMall'.
+  // So next.dataByMall[targetMallId] should have the current settings.
+  // However, if we are switching malls (targetMallId != current.mallSettings.mallId),
+  // we want to make sure we are not overwriting the target mall's data with current root data.
+  // But root data is separate from dataByMall.
+
+
   // If partial contained data updates, apply them to the target mall in dataByMall
   if (partial.shopPositions) {
       // Sanitize: Ensure only valid properties are saved to prevent nesting recursion or pollution
-      // dataByMall 内に suzaka などのキーで自己参照が紛れ込むのを防ぐため、positions のみを抽出して再構築する
       const cleanShopPositions = {
         positions: next.shopPositions?.positions || {}
       };
-      // next オブジェクト内の参照も更新
+      // next オブジェクト内の参照も更新 (for root)
       next.shopPositions = cleanShopPositions;
+      // dataByMall 内の該当モールデータも更新
       next.dataByMall[targetMallId].shopPositions = cleanShopPositions;
   }
   if (partial.pictoSettings) {
@@ -491,7 +610,24 @@ function saveSettings(partial) {
   }
   if (partial.locationIcons) {
       // locationIcons update
+      // dataByMallには常に最新の状態を保存する（現在地設定はモールごとに保持）
       next.dataByMall[targetMallId].locationIcons = next.locationIcons;
+  }
+  if (partial.imageSettings) {
+      // imageSettings update
+      next.dataByMall[targetMallId].imageSettings = next.imageSettings;
+  }
+
+  // Update mall specific settings (genre keywords / max count) in dataByMall
+  // Check if partial has mallSettings updates related to these fields
+  if (partial.mallSettings) {
+    if (partial.mallSettings.genreMemoIgnoreKeywords !== undefined) {
+      next.dataByMall[targetMallId].genreMemoIgnoreKeywords = partial.mallSettings.genreMemoIgnoreKeywords;
+      next.dataByMall[targetMallId].keywordsInitialized = true;
+    }
+    if (partial.mallSettings.maxDisplayCount !== undefined) {
+      next.dataByMall[targetMallId].maxDisplayCount = partial.mallSettings.maxDisplayCount;
+    }
   }
 
   try {
@@ -503,7 +639,13 @@ function saveSettings(partial) {
         ...next,
         shopPositions: undefined,
         pictoSettings: undefined,
-        locationIcons: undefined
+        locationIcons: undefined,
+        imageSettings: undefined, // Do not save root imageSettings to force load from dataByMall or default
+        // Remove root mallSettings properties to prevent pollution/priority issues
+        mallSettings: {
+            mallId: next.mallSettings.mallId
+            // Do not save genreMemoIgnoreKeywords or maxDisplayCount here
+        }
     };
 
     fs.writeFileSync(settingsPath, JSON.stringify(toSave, null, 2), 'utf-8');
@@ -523,14 +665,18 @@ function saveSettings(partial) {
          mallId: targetMallId
        });
     }
+    
+    if (partial.imageSettings) {
+       logger.info('Image settings saved to disk', { mallId: targetMallId });
+    }
 
     logger.info('Settings saved', {
       floor: next.floor,
       mallId: next.mallSettings.mallId
     });
 
-    // If mall ID changed, we need to broadcast new data to renderer
-    if (partial.mallSettings && partial.mallSettings.mallId !== current.mallSettings.mallId) {
+        // If mall ID changed, we need to broadcast new data to renderer
+    if (partial.mallSettings && partial.mallSettings.mallId && partial.mallSettings.mallId !== current.mallSettings.mallId) {
         const newMallId = partial.mallSettings.mallId;
         // Re-load settings to get fresh data for the new mall
         const newSettings = loadSettings(); // This will populate root props from new mall
@@ -540,6 +686,8 @@ function saveSettings(partial) {
             mainWindow.webContents.send('shop-positions-updated', newSettings.shopPositions);
             mainWindow.webContents.send('picto-settings-updated', newSettings.pictoSettings);
             mainWindow.webContents.send('location-icon-settings-updated', newSettings.locationIcons);
+            mainWindow.webContents.send('image-settings-updated', newSettings.imageSettings); // Broadcast image settings too
+            mainWindow.webContents.send('mall-settings-updated', newSettings.mallSettings); // Broadcast updated mall settings (with new keywords etc)
         }
         
         return newSettings;
@@ -913,8 +1061,15 @@ ipcMain.handle('get-mall-id', () => {
 
 ipcMain.handle('set-mall-id', async (_event, mallId) => {
   const current = loadSettings();
-  const updated = { ...current, mallId };
-  saveSettings({ mallId });
+  // mallSettings内のmallIdも更新して保存する
+  // これにより loadSettings 内で currentMallId が正しく解決され、適切なモールデータがロードされる
+  saveSettings({ 
+    mallId, 
+    mallSettings: { 
+      mallId,
+      // 既存の設定があれば引き継ぐ（通常はUI側で切り替え時にリロードされるためここはID変更だけで良い）
+    } 
+  });
   logger.info('Mall ID updated', { mallId });
   return mallId;
 });
@@ -934,9 +1089,18 @@ ipcMain.handle('get-latest-version-info', async () => {
 /**
  * IPC handlers for location icon settings.
  */
-ipcMain.handle('get-location-icon-settings', () => {
+ipcMain.handle('get-location-icon-settings', (_event, mallId) => {
   const settings = loadSettings();
-  logger.debug('IPC get-location-icon-settings');
+  logger.debug('IPC get-location-icon-settings', { mallId });
+  
+  if (mallId) {
+      const mallData = settings.dataByMall[mallId];
+      if (mallData && mallData.locationIcons) {
+          return mallData.locationIcons;
+      }
+      return createDefaultPerFloorSettings();
+  }
+  
   return settings.locationIcons;
 });
 
@@ -953,9 +1117,18 @@ ipcMain.handle('save-location-icon-settings', (_event, locationIcons) => {
 /**
  * IPC handlers for Picto Settings (merged into settings.json)
  */
-ipcMain.handle('get-picto-settings', () => {
-  logger.info('IPC get-picto-settings');
+ipcMain.handle('get-picto-settings', (_event, mallId) => {
+  logger.info('IPC get-picto-settings', { mallId });
   const settings = loadSettings();
+  
+  if (mallId) {
+      const mallData = settings.dataByMall[mallId];
+      if (mallData && mallData.pictoSettings) {
+          return mallData.pictoSettings;
+      }
+      return { instances: {} };
+  }
+
   return settings.pictoSettings || { instances: {} };
 });
 
@@ -974,9 +1147,23 @@ ipcMain.handle('save-picto-settings', (_event, pictoSettings) => {
 /**
  * IPC handlers for Image Settings
  */
-ipcMain.handle('get-image-settings', () => {
-  logger.info('IPC get-image-settings');
+ipcMain.handle('get-image-settings', (_event, mallId) => {
+  logger.info('IPC get-image-settings', { mallId });
   const settings = loadSettings();
+  
+  if (mallId) {
+      const mallData = settings.dataByMall[mallId];
+      if (mallData && mallData.imageSettings) {
+          return mallData.imageSettings;
+      }
+      // If no image settings for this mall, return defaults
+      // (Simplified default generation for IPC response without deep logic duplication)
+      return {
+        floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
+        openTimeImage: ""
+      };
+  }
+
   return settings.imageSettings || {
     floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
     openTimeImage: ""
@@ -1061,9 +1248,36 @@ ipcMain.handle('save-image-settings', (_event, imageSettings) => {
 /**
  * IPC handlers for Mall Settings
  */
-ipcMain.handle('get-mall-settings', () => {
-  logger.info('IPC get-mall-settings');
+ipcMain.handle('get-mall-settings', (_event, mallId) => {
+  logger.info('IPC get-mall-settings', { mallId });
   const settings = loadSettings();
+  
+  // If mallId provided, construct settings for that mall from dataByMall
+  if (mallId) {
+      const mallData = settings.dataByMall[mallId] || {};
+      const defaultGenreMemoKeywords = [
+        "waonpoint加盟店",
+        "aeonpayの使えるお店",
+        "グルメ",
+        "フード",
+        "フードコート",
+        "レストラン",
+        "グルメアリーナ",
+        "suzaka蔵",
+        "suzuka蔵",
+        "レストラン・カフェ",
+        "レストラン・グルメ"
+      ];
+      const defaultMaxDisplayCount = 3;
+
+      return {
+          mallId: mallId,
+          genreMemoIgnoreKeywords: mallData.genreMemoIgnoreKeywords || defaultGenreMemoKeywords,
+          maxDisplayCount: mallData.maxDisplayCount ?? defaultMaxDisplayCount,
+          keywordsInitialized: !!mallData.keywordsInitialized
+      };
+  }
+
   return settings.mallSettings || { mallId: "suzaka" };
 });
 
@@ -1125,9 +1339,18 @@ function readImageFileAsDataUrl(filePath) {
   }
 }
 
-ipcMain.handle('get-shop-positions', () => {
-  logger.info('IPC get-shop-positions');
+ipcMain.handle('get-shop-positions', (_event, mallId) => {
+  logger.info('IPC get-shop-positions', { mallId });
   const settings = loadSettings();
+  
+  if (mallId) {
+      const mallData = settings.dataByMall[mallId];
+      if (mallData && mallData.shopPositions) {
+          return mallData.shopPositions;
+      }
+      return { positions: {} };
+  }
+  
   return settings.shopPositions || { positions: {} };
 });
 

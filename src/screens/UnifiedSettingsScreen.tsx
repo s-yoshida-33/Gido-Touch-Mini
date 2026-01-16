@@ -13,6 +13,7 @@ import type { ImageSettings } from "../types/imageSettings";
 import type { ShopPositionSettings } from "../types/shopPosition";
 import type { Shop } from "../types/shop";
 import { PictoSettingsTab } from "../components/PictoSettingsTab";
+import { MallSettingsTab } from "../components/MallSettingsTab";
 import type { PictoSettings } from "../types/picto";
 import { DEFAULT_PICTO_SETTINGS } from "../types/picto";
 import type { MallSettings } from "../types/mall";
@@ -25,7 +26,7 @@ const iconSvg = getAssetUrl("icon.svg"); // Assuming icon.svg moved to common or
 // Remove unused import if any
 // Helper function removed
 
-type TabType = "image" | "shopPosition" | "floor" | "picto";
+type TabType = "image" | "shopPosition" | "floor" | "picto" | "mall";
 
 // Export props interface to ensure visibility
 export interface UnifiedSettingsScreenProps {
@@ -111,6 +112,9 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
 
   // Update mallId state when mallSettings changes to trigger GidoApp update
   useEffect(() => {
+    // Only update if mallSettings.mallId is different from current mallId to avoid loops
+    if (mallId === mallSettings.mallId) return;
+
     setMallId(mallSettings.mallId);
     
     // モール変更時は、そのモールのデフォルト設定で完全にリセットする
@@ -125,6 +129,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   }, [mallSettings.mallId]);
 
   // Sync state with props when they change (e.g. after mall change reload)
+  // NOTE: These are disabled to prevent overwriting local edits during mall switching preview
+  /*
   useEffect(() => {
     setFloor(initialFloor);
   }, [initialFloor]);
@@ -171,6 +177,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   useEffect(() => {
     setMallSettings(initialMallSettings);
   }, [initialMallSettings]);
+  */
 
   // 中央位置を計算する関数（すべてのタブで同じロジックを使用）
   const calculateOtherTabCenterPosition = useCallback(() => {
@@ -263,9 +270,15 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     setErrors({});
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     // Revert to initial values
     setMallId(initialMallId);
+    
+    // モールIDが変更されていた場合、元に戻す（永続化された変更をロールバック）
+    if (mallId !== initialMallId) {
+        await onSaveMallId(initialMallId);
+    }
+
     setFloor(initialFloor);
     setLocationIconSettings(initialLocationIconSettings);
     setImageSettings(initialImageSettings);
@@ -303,12 +316,18 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       
       // Save sequentially to avoid race conditions in main process file writing
       console.log("Saving mall ID...");
+      // ここで初めて永続化される
       await onSaveMallId(mallId);
       
       console.log("Saving floor...");
       await onSaveFloor(floor);
       
       console.log("Saving location icons...");
+      // 現在選択されているmallIdに対して保存するAPIが必要だが、
+      // onSaveLocationIconSettingsは引数にmallIdを取らない。
+      // しかし、直前の onSaveMallId でメインプロセスの currentMallId が更新されているので、
+      // 従来の saveLocationIconSettings 呼び出しでも、新しいモールIDに対して保存されるはず。
+      // ただし、念のためElectron側で saveSettings が呼ばれると、current mallId に対して保存されるロジックになっているか確認済み。
       await onSaveLocationIconSettings(locationIconSettings);
       
       console.log("Saving image settings...");
@@ -484,16 +503,33 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
 
                   // モール変更時にピクト設定なども即座にリセット（ローカル反映）
                   if (newMallId !== oldMallId) {
-                      setPictoSettings({ instances: {} });
-                      setShopPositions({ positions: {} });
-                      // 画像設定はuseEffectでmallId変更を検知して更新されるのでここでは触らない
+                      const api = window.electronAPI;
+                      if (api) {
+                          // Load settings for the new mall ID without saving
+                          const [newPicto, newShopPos, newLocation, newImage, newMallSettings] = await Promise.all([
+                              api.getPictoSettings(newMallId),
+                              api.getShopPositions(newMallId),
+                              api.getLocationIconSettings(newMallId),
+                              api.getImageSettings(newMallId),
+                              api.getMallSettings(newMallId)
+                          ]);
+
+                          setPictoSettings(newPicto);
+                          setShopPositions(newShopPos);
+                          setLocationIconSettings(newLocation as LocationIconSettingsPerFloor);
+                          setImageSettings(newImage);
+                          if (newMallSettings) {
+                              setMallSettings(newMallSettings);
+                          } else {
+                              setMallSettings(newSettings); 
+                          }
+                      }
+                  } else {
+                      setMallSettings(newSettings);
                   }
 
-                  // モール切り替え時に即座に設定を保存（リロード）して、表示を切り替える
-                  await onSaveMallSettings(newSettings);
-                  
-                  // モールIDを親に通知 (App.tsxでの画像リセット処理をトリガー)
-                  await onSaveMallId(newMallId);
+                  // モール切り替え時は、設定の保存（saveMallSettings）を行わずに、IDの保存（切り替え）のみを行う
+                  // await onSaveMallId(newMallId); // REMOVED
                 }}
                 style={{ width: "100%", padding: "8px 12px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 6, color: "#ffffff", fontSize: 14 }}
              >
@@ -509,6 +545,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               { id: "image" as TabType, label: "画像" },
               { id: "shopPosition" as TabType, label: "座標設定" },
               { id: "picto" as TabType, label: "ピクトグラム設定" },
+              { id: "mall" as TabType, label: "ジャンル設定" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -725,6 +762,12 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               selectedInstanceId={selectedPictoId}
               onSelectedInstanceIdChange={setSelectedPictoId}
               mallId={mallSettings.mallId}
+            />
+          )}
+          {activeTab === "mall" && (
+            <MallSettingsTab
+              mallSettings={mallSettings}
+              onChangeMallSettings={setMallSettings}
             />
           )}
         </div>

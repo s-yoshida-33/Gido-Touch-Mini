@@ -2,10 +2,28 @@ export type MallId = "suzaka" | "sendai-kamisugi";
 
 export interface MallSettings {
   mallId: MallId;
+  genreMemoIgnoreKeywords?: string[];
+  maxDisplayCount?: number;
+  keywordsInitialized?: boolean;
 }
 
 export const DEFAULT_MALL_SETTINGS: MallSettings = {
   mallId: "suzaka",
+  genreMemoIgnoreKeywords: [
+    "waonpoint加盟店",
+    "aeonpayの使えるお店",
+    "グルメ",
+    "フード",
+    "フードコート",
+    "レストラン",
+    "グルメアリーナ",
+    "suzaka蔵",
+    "suzuka蔵",
+    "レストラン・カフェ",
+    "レストラン・グルメ"
+  ],
+  maxDisplayCount: 3,
+  keywordsInitialized: true
 };
 
 export interface Genre {

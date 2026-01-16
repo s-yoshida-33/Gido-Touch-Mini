@@ -670,6 +670,14 @@ const App: React.FC = () => {
         await api.saveImageSettings(newImageSettings);
       }
 
+      // モール設定（ジャンル設定等）もリロードする
+      if (api.getMallSettings) {
+          const newMallSettings = await api.getMallSettings();
+          if (newMallSettings) {
+              setMallSettings(newMallSettings);
+          }
+      }
+
       logInfo("app", "Mall ID saved successfully", { mallId: nextMallId });
     } catch (e) {
       logError("app", "Failed to save mall ID", { error: e });
@@ -852,6 +860,19 @@ const App: React.FC = () => {
               logError("app", "Failed to reload image settings", { error: e });
             }
           }
+
+          // Reload mall settings (for genre keywords and max count)
+          if (api.getMallSettings) {
+             try {
+               const savedMallSettings = await api.getMallSettings();
+               if (savedMallSettings) {
+                 setMallSettings(savedMallSettings);
+                 logInfo("app", "Mall settings reloaded for new mall", { mallId: saved.mallId });
+               }
+             } catch (e) {
+               logError("app", "Failed to reload mall settings", { error: e });
+             }
+          }
         }
       }
     } catch (e) {
@@ -972,6 +993,7 @@ const App: React.FC = () => {
       genres={currentMallConfig.genres}
       floorMaps={imageSettings.floorMaps}
       openTimeImage={imageSettings.openTimeImage} // Pass openTimeImage
+      mallSettings={mallSettings}
     />
     <UnifiedSettingsScreen
         isOpen={isSettingsOpen}
