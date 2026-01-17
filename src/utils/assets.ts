@@ -1,3 +1,5 @@
+import { logWarn } from "../logs/logging";
+
 // すべてのアセットを一括読み込み
 // キーはファイルパス、値はModule（defaultにURLが入っている）
 // ../assets/malls/**/*.svg と ../assets/common/**/*.svg を両方カバーするために ../assets/**/*.svg とする
@@ -12,7 +14,11 @@ export function getAssetUrl(path: string): string {
   
   if (!module) {
       if (import.meta.env.DEV) {
-          console.warn(`[getAssetUrl] Asset not found in glob: ${fullPath}`);
+          logWarn("ASSET_RESOLVE", "Asset not found in glob", {
+            path,
+            fullPath,
+            reason: "FILE_NOT_EXISTS"
+          });
       }
       return "";
   }
@@ -167,7 +173,10 @@ export function findMallPictoUrl(mallId: string, filename: string): string {
             .filter(p => p.includes(`malls/${mallId}/pictos`))
             .map(p => p.replace(`../assets/malls/${mallId}/pictos/`, ''))
             .filter(p => !p.includes('-highlight') && !p.includes('button-'));
-        console.warn(`Picto icon not found: ${filename} for mall ${mallId}`, {
+        
+        logWarn("ASSET_RESOLVE", "Picto icon not found", {
+            mallId,
+            filename,
             baseFilename,
             normalizedName,
             kebabName,

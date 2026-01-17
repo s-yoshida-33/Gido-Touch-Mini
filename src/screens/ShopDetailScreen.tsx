@@ -18,6 +18,7 @@ import iconTime from "../assets/icon-time.svg";
 import iconTel from "../assets/icon-tel.svg";
 import type { Shop } from "../types/shop";
 import { ShopPin } from "../components/ShopPin";
+import { logInfo } from "../logs/logging";
 
 // Constants for consistent scaling (must match GidoApp)
 const REFERENCE_MAP_WIDTH = 1920; // Keep reference width same as map source resolution
@@ -307,7 +308,19 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
 
   // Language display logic
   const displayShopName = (language === "en" && shop.nameEn) ? shop.nameEn : shop.name;
-  
+
+  // Screen View Logging
+  useEffect(() => {
+    logInfo("SCREEN_VIEW", "Entering Shop Detail", {
+      shopId: shop.shopId || shop.number,
+      shopName: shop.name,
+      hasLogo: !!shop.shopLogo,
+      floor: normalizedFloor,
+      hasNews: false, // Could be enhanced if we know about news
+      language
+    });
+  }, [shop, language, normalizedFloor]);
+
   const displayGenreMemo = React.useMemo(() => {
     if (language === "en" && shop.genreMemoEn) {
       const memos = shop.genreMemoEn.split(/[|]+/).map(s => s.trim()).filter(s => s.length > 0);

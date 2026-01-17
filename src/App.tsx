@@ -314,8 +314,17 @@ const App: React.FC = () => {
             const v = await window.appInfo.getVersion();
             setAppVersion(v);
             addDebug(`App Version loaded: ${v}`);
+            
+            logInfo("SYS_INIT", "Application Mini Started", {
+              appVersion: v,
+              mallId: mallId || "unknown",
+              windowSize: `${window.innerWidth}x${window.innerHeight}`,
+              userAgent: navigator.userAgent,
+              isDev: import.meta.env.DEV
+            });
           } catch (e) {
             addDebug(`Failed to load App Version: ${e}`);
+            logError("SYS_INIT", "Failed to load App Version", { error: e });
           }
       } else {
         addDebug("window.appInfo not found");

@@ -57,27 +57,38 @@ function parseFloorsFromBridge(
 export async function fetchShopsFromBridge(): Promise<Shop[]> {
   const baseUrl = await getApiBaseUrl();
   const url = `${baseUrl}/api/shops`;
+  const startTime = Date.now();
 
-  logInfo("shopList", "Requesting shops from Bridge API", { url });
+  logInfo("DATA_FETCH", "Start fetching shops", { url });
 
   try {
     const res = await fetch(url, { method: "GET" });
 
     if (!res.ok) {
-      logWarn("shopList", "Bridge API returned non-200 response", {
+      logWarn("DATA_FETCH", "Bridge API returned non-200 response", {
         status: res.status,
         statusText: res.statusText,
+        endpoint: "/api/shops"
       });
       throw new Error(`Bridge API error: HTTP ${res.status}`);
     }
 
     const json = await res.json();
-    return parseShopsData(json, APP_CONFIG.floor);
+    const shops = parseShopsData(json, APP_CONFIG.floor);
+
+    logInfo("DATA_FETCH", "Shops loaded successfully", {
+      count: shops.length,
+      durationMs: Date.now() - startTime,
+      source: "BridgeAPI"
+    });
+
+    return shops;
 
   } catch (error: any) {
-    logError("shopList", "Failed to fetch shops from Bridge API", {
+    logError("DATA_FETCH", "Failed to fetch shops", {
       error: error?.message,
       url,
+      durationMs: Date.now() - startTime
     });
     throw error;
   }
@@ -160,28 +171,39 @@ export function parseShopsData(json: any, defaultFloor: string = "1F"): Shop[] {
 export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
   const baseUrl = await getApiBaseUrl();
   const url = `${baseUrl}/api/event-news`; // Changed from /api/shop-news
+  const startTime = Date.now();
 
-  logInfo("shopNews", "Requesting shop news from Bridge API", { url });
+  logInfo("DATA_FETCH", "Requesting shop news from Bridge API", { url });
 
   try {
     const res = await fetch(url, { method: "GET" });
 
     if (!res.ok) {
-      logWarn("shopNews", "Bridge API returned non-200 response", {
+      logWarn("DATA_FETCH", "Bridge API returned non-200 response", {
         status: res.status,
         statusText: res.statusText,
+        endpoint: "/api/event-news"
       });
       // 失敗しても空配列を返してアプリが落ちないようにする
       return [];
     }
 
     const json = await res.json();
-    return parseEventNewsData(json);
+    const news = parseEventNewsData(json);
+
+    logInfo("DATA_FETCH", "Shop news (Event News) loaded successfully", {
+      count: news.length,
+      durationMs: Date.now() - startTime,
+      source: "BridgeAPI"
+    });
+
+    return news;
 
   } catch (error: any) {
-    logError("shopNews", "Failed to fetch shop news from Bridge API", {
+    logError("DATA_FETCH", "Failed to fetch shop news from Bridge API", {
       error: error?.message,
       url,
+      durationMs: Date.now() - startTime
     });
     return [];
   }
@@ -261,27 +283,38 @@ export function parseEventNewsData(json: any): ShopNews[] {
 export async function fetchShopNewsListFromBridge(): Promise<ShopNews[]> {
   const baseUrl = await getApiBaseUrl();
   const url = `${baseUrl}/api/shop-news`;
+  const startTime = Date.now();
 
-  logInfo("shopNewsList", "Requesting shop news list from Bridge API", { url });
+  logInfo("DATA_FETCH", "Requesting shop news list from Bridge API", { url });
 
   try {
     const res = await fetch(url, { method: "GET" });
 
     if (!res.ok) {
-      logWarn("shopNewsList", "Bridge API returned non-200 response", {
+      logWarn("DATA_FETCH", "Bridge API returned non-200 response", {
         status: res.status,
         statusText: res.statusText,
+        endpoint: "/api/shop-news"
       });
       return [];
     }
 
     const json = await res.json();
-    return parseShopNewsData(json);
+    const news = parseShopNewsData(json);
+
+    logInfo("DATA_FETCH", "Shop news list loaded successfully", {
+        count: news.length,
+        durationMs: Date.now() - startTime,
+        source: "BridgeAPI"
+    });
+
+    return news;
 
   } catch (error: any) {
-    logError("shopNewsList", "Failed to fetch shop news list from Bridge API", {
+    logError("DATA_FETCH", "Failed to fetch shop news list from Bridge API", {
       error: error?.message,
       url,
+      durationMs: Date.now() - startTime
     });
     return [];
   }

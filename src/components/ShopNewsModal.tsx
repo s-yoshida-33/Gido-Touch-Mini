@@ -5,6 +5,7 @@ import { getCommonAssetUrl } from "../utils/assets";
 import type { ShopNews } from "../types/shopNews";
 import type { Shop } from "../types/shop";
 import { ShopLogoImage } from "./ShopLogoImage";
+import { logInfo } from "../logs/logging";
 
 const iconDate = getCommonAssetUrl("date.svg");
 const iconTime = getCommonAssetUrl("time.svg");
@@ -105,6 +106,18 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
   };
 
   const selectedShop = selectedNews ? getShopInfo(selectedNews.shopId) : null;
+
+  useEffect(() => {
+    if (isOpen && selectedNews) {
+      logInfo("SCREEN_VIEW", "Viewing Shop News Detail", {
+        shopId: selectedNews.shopId,
+        newsId: selectedNews.id,
+        newsTitle: selectedNews.title,
+        shopName: selectedShop ? selectedShop.name : "Unknown Shop",
+        language
+      });
+    }
+  }, [isOpen, selectedNews, selectedShop, language]);
 
   return (
     <AnimatePresence>
