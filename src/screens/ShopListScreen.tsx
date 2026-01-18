@@ -928,14 +928,14 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 order: index,
                 name: { ja: f.name, en: f.name_en || f.name },
                 iconFile: f.iconFile || `${f.id.replace(/_/g, '-')}.svg`,
-                buttonFile: `button-${f.id.replace(/_/g, '-')}.svg`
+                buttonFile: `${f.id.replace(/_/g, '-')}.svg`
             }));
             
             setMallPictoConfig(mallPictoList);
 
             await Promise.all(facilities.map(async (facility) => {
                  // アイコンパスの推測
-                 const buttonName = `button-${facility.id.replace(/_/g, '-')}`;
+                 const buttonName = facility.id.replace(/_/g, '-');
                  const button = await loadPictoIcon(mallId, selectedLanguage, buttonName, false, true);
                  const buttonHighlight = await loadPictoIcon(mallId, selectedLanguage, buttonName, true, true);
                  
