@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from "../config";
-import { logInfo, logError } from "../logs/logging";
+import { logInfo, logError, logDebug } from "../logs/logging";
 
 export type SseConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -36,12 +36,12 @@ class SSEService {
       const baseUrl = await getApiBaseUrl();
       const url = `${baseUrl}/api/events`;
 
-      logInfo("sse", "Connecting to SSE endpoint", { url });
+      logDebug("sse", "Connecting to SSE endpoint", { url });
 
       this.eventSource = new EventSource(url);
 
       this.eventSource.addEventListener("open", () => {
-        logInfo("sse", "SSE connection opened");
+        logDebug("sse", "SSE connection opened");
         this.setStatus('connected');
       });
 
@@ -67,7 +67,7 @@ class SSEService {
       const handleUpdate = (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          logInfo("sse", `Received ${e.type} event`, data);
+          logDebug("sse", `Received ${e.type} event`, data);
           this.emit("update", data);
         } catch (error) {
           logError("sse", `Failed to parse ${e.type} event`, { error });
@@ -104,7 +104,7 @@ class SSEService {
 
     if (this.retryTimeout) return;
 
-    logInfo("sse", "Scheduling reconnect in 5s...");
+    logDebug("sse", "Scheduling reconnect in 5s...");
     this.retryTimeout = setTimeout(() => {
       this.retryTimeout = null;
       this.connect();

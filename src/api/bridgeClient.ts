@@ -3,7 +3,7 @@ import { getApiBaseUrl, APP_CONFIG } from "../config";
 import type { BridgeShop, Shop, FloorId } from "../types/shop";
 import type { ShopNews } from "../types/shopNews";
 
-import { logInfo, logWarn, logError } from "../logs/logging";
+import { logInfo, logWarn, logError, logDebug } from "../logs/logging";
 
 // Normalize floor id string (you can extend this if needed)
 function normalizeFloorId(value: string): FloorId {
@@ -59,7 +59,7 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
   const url = `${baseUrl}/api/shops`;
   const startTime = Date.now();
 
-  logInfo("DATA_FETCH", "Start fetching shops", { url });
+  logDebug("DATA_FETCH", "Start fetching shops", { url });
 
   try {
     const res = await fetch(url, { method: "GET" });
@@ -76,7 +76,7 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
     const json = await res.json();
     const shops = parseShopsData(json, APP_CONFIG.floor);
 
-    logInfo("DATA_FETCH", "Shops loaded successfully", {
+    logDebug("DATA_FETCH", "Shops loaded successfully", {
       count: shops.length,
       durationMs: Date.now() - startTime,
       source: "BridgeAPI"
@@ -101,18 +101,18 @@ export function parseShopsData(json: any, defaultFloor: string = "1F"): Shop[] {
       rawList = json;
     } else if (Array.isArray((json as any).data)) {
       rawList = (json as any).data;
-      logInfo(
+      logDebug(
         "shopList",
         "Bridge API returned data under json.data (legacy format)"
       );
     } else if (Array.isArray((json as any).items)) {
       rawList = (json as any).items;
-      logInfo(
+      logDebug(
         "shopList",
         "Bridge API returned data under json.items (legacy format)"
       );
     } else {
-      logInfo("shopList", "Bridge API response did not contain an array", {
+      logDebug("shopList", "Bridge API response did not contain an array", {
         receivedKeys: Object.keys(json),
       });
     }
@@ -159,7 +159,7 @@ export function parseShopsData(json: any, defaultFloor: string = "1F"): Shop[] {
       };
     });
 
-    logInfo("shopList", "Shops normalized", {
+    logDebug("shopList", "Shops normalized", {
       count: shops.length,
       defaultFloor,
     });
@@ -173,7 +173,7 @@ export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
   const url = `${baseUrl}/api/event-news`; // Changed from /api/shop-news
   const startTime = Date.now();
 
-  logInfo("DATA_FETCH", "Requesting shop news from Bridge API", { url });
+  logDebug("DATA_FETCH", "Requesting shop news from Bridge API", { url });
 
   try {
     const res = await fetch(url, { method: "GET" });
@@ -191,7 +191,7 @@ export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
     const json = await res.json();
     const news = parseEventNewsData(json);
 
-    logInfo("DATA_FETCH", "Shop news (Event News) loaded successfully", {
+    logDebug("DATA_FETCH", "Shop news (Event News) loaded successfully", {
       count: news.length,
       durationMs: Date.now() - startTime,
       source: "BridgeAPI"
@@ -221,15 +221,15 @@ export function parseEventNewsData(json: any): ShopNews[] {
     } else if (json && typeof json === "object" && ("shop_news_id" in json || "id" in json || "event_id" in json)) {
       // Single object response
       rawList = [json];
-      logInfo("shopNews", "Bridge API response is a single object, treating as array of 1");
+      logDebug("shopNews", "Bridge API response is a single object, treating as array of 1");
     } else {
-      logInfo("shopNews", "Bridge API response did not contain an array", {
+      logDebug("shopNews", "Bridge API response did not contain an array", {
         receivedKeys: Object.keys(json),
       });
     }
 
     if (rawList.length > 0) {
-      logInfo("shopNews", "Raw shop news item sample (first item)", {
+      logDebug("shopNews", "Raw shop news item sample (first item)", {
         keys: Object.keys(rawList[0]),
         sample: rawList[0]
       });
@@ -271,7 +271,7 @@ export function parseEventNewsData(json: any): ShopNews[] {
       };
     });
 
-    logInfo("shopNews", "Shop news (Event News) normalized", {
+    logDebug("shopNews", "Shop news (Event News) normalized", {
       count: news.length,
       sample: news.length > 0 ? news[0] : null,
     });
@@ -285,7 +285,7 @@ export async function fetchShopNewsListFromBridge(): Promise<ShopNews[]> {
   const url = `${baseUrl}/api/shop-news`;
   const startTime = Date.now();
 
-  logInfo("DATA_FETCH", "Requesting shop news list from Bridge API", { url });
+  logDebug("DATA_FETCH", "Requesting shop news list from Bridge API", { url });
 
   try {
     const res = await fetch(url, { method: "GET" });
@@ -302,7 +302,7 @@ export async function fetchShopNewsListFromBridge(): Promise<ShopNews[]> {
     const json = await res.json();
     const news = parseShopNewsData(json);
 
-    logInfo("DATA_FETCH", "Shop news list loaded successfully", {
+    logDebug("DATA_FETCH", "Shop news list loaded successfully", {
         count: news.length,
         durationMs: Date.now() - startTime,
         source: "BridgeAPI"
@@ -331,9 +331,9 @@ export function parseShopNewsData(json: any): ShopNews[] {
       rawList = (json as any).items;
     } else if (json && typeof json === "object" && ("shop_news_id" in json || "id" in json)) {
       rawList = [json];
-      logInfo("shopNewsList", "Bridge API response is a single object, treating as array of 1");
+      logDebug("shopNewsList", "Bridge API response is a single object, treating as array of 1");
     } else {
-      logInfo("shopNewsList", "Bridge API response did not contain an array", {
+      logDebug("shopNewsList", "Bridge API response did not contain an array", {
         receivedKeys: Object.keys(json),
       });
     }
@@ -374,7 +374,7 @@ export function parseShopNewsData(json: any): ShopNews[] {
       };
     });
 
-    logInfo("shopNewsList", "Shop news list normalized", {
+    logDebug("shopNewsList", "Shop news list normalized", {
       count: news.length,
       sample: news.length > 0 ? news[0] : null,
     });

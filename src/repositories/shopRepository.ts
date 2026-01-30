@@ -2,7 +2,7 @@
 import { DATA_SOURCE, GENRE_ORDER } from "../config";
 import type { Shop } from "../types/shop";
 import { fetchShopsFromBridge } from "../api/bridgeClient";
-import { logInfo, logError } from "../logs/logging";
+import { logInfo, logError, logDebug } from "../logs/logging";
 
 const CACHE_KEY = "gido_shops_cache";
 
@@ -11,7 +11,7 @@ export function saveShopsToCache(shops: Shop[]) {
   try {
     const json = JSON.stringify(shops);
     localStorage.setItem(CACHE_KEY, json);
-    logInfo("repository", "Saved shops to cache", { count: shops.length });
+    logDebug("repository", "Saved shops to cache", { count: shops.length });
   } catch (e) {
     logError("repository", "Failed to save shops to cache", { error: e });
   }
@@ -23,7 +23,7 @@ export function loadShopsFromCache(): Shop[] | null {
     const json = localStorage.getItem(CACHE_KEY);
     if (!json) return null;
     const shops = JSON.parse(json) as Shop[];
-    logInfo("repository", "Loaded shops from cache", { count: shops.length });
+    logDebug("repository", "Loaded shops from cache", { count: shops.length });
     return shops;
   } catch (e) {
     logError("repository", "Failed to load shops from cache", { error: e });
