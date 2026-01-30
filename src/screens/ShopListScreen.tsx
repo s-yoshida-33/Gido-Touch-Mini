@@ -1237,6 +1237,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     mallId // Added mallId dependency for genre filtering logic
   ]);
 
+  // Pre-calculate genre ID for each shop and genre order map -> REMOVED
+
   // Filter shops by selected floor AND selected genre
   const filteredShops = React.useMemo(() => {
     let result = shops;
@@ -1320,7 +1322,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       } 
       
       // 2. If not found, try to find in genres prop (Loaded from malls.ts via props)
-      // Note: genres prop might be passed from parent, containing fallback data
       if (!targetGenreName) {
         const genreItem = genres.find(g => g.id === selectedGenre);
         if (genreItem) {
@@ -1329,7 +1330,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
       }
 
       // 3. Fallback: If still not found, try to find in current Mall Config (Direct look up)
-      // This covers cases where props might be stale or mallGenreConfig is empty
       if (!targetGenreName) {
          const currentConfig = getMallConfig(mallId);
          const genreItem = currentConfig.genres.find(g => g.id === selectedGenre);
@@ -1338,48 +1338,25 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
          }
       }
 
-      if (!targetGenreName) {
-           console.log(`[Filter] Warning: Genre ID "${selectedGenre}" not found in any config.`);
-      }
-      
       if (targetGenreName) {
-        // Debug Log
-        console.log(`[Filter] Filtering for genre: "${targetGenreName}" (Mall: ${mallId})`);
-
         result = result.filter((shop) => {
           if (!shop.genre) return false;
           
-          // Debug Log for non-matching items (sample)
-          // console.log(`[Filter] Checking shop: ${shop.name}, Genre: "${shop.genre}"`);
-
           // 1. Exact match
           if (shop.genre === targetGenreName) return true;
           
-          // 2. Normalize (ignore spaces, dots, ampersands)
+          // 2. Normalize
           const normalize = (s: string) => s.replace(/[ 　・&＆]/g, "");
           if (normalize(shop.genre) === normalize(targetGenreName)) return true;
 
           // 3. Mall specific variations
           if (mallId === "sendai-kamisugi") {
-             // Sendai specific mapping
-             // "ライフスタイル雑貨" -> "ライフスタイル" or "雑貨"
              if (targetGenreName === "ライフスタイル雑貨" && 
                  (shop.genre === "ライフスタイル" || shop.genre === "雑貨")) {
                  return true;
              }
-             // "ファッション雑貨" -> "ファッション" (but differentiate from pure Fashion if needed, though usually safe here as subset)
-             // Careful: if shop.genre is "ファッション", it should match "ファッション" (Fashion) genre, NOT "ファッション雑貨" (Fashion Goods).
-             // But if shop.genre is "ファッション・グッズ", normalize handles it.
-             
-             // "サービス" -> "サービス・その他"
              if (targetGenreName === "サービス" && shop.genre.includes("サービス")) return true;
           }
-          
-          if (mallId === "suzaka") {
-             // Suzaka specific mapping
-             // Example: "スポーツ＆アウトドア" vs "スポーツ・アウトドア" (Handled by normalize)
-          }
-
           return false;
         });
       }
@@ -1396,13 +1373,11 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         const aOnFloor = a.floors?.some(f => normalizeFloor(String(f)) === normalizedSelected);
         const bOnFloor = b.floors?.some(f => normalizeFloor(String(f)) === normalizedSelected);
 
-        // If one is on the selected floor and the other isn't, prioritize the one on the selected floor
         if (aOnFloor && !bOnFloor) return -1;
         if (!aOnFloor && bOnFloor) return 1;
       }
 
-      // Priority 2: Floor Order (Ascending) for everyone else (or if both are on selected floor)
-      // Extract floor number for sorting
+      // Priority 2: Floor Order (Ascending)
       const getFloorVal = (s: Shop) => {
         if (!s.floors || s.floors.length === 0) return 999;
         const str = String(s.floors[0]);
@@ -1423,6 +1398,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
     return result;
   }, [shops, selectedFloor, selectedGenre, searchQuery, mallGenreConfig, genres, mallId]);
+
+  // Scroll to selected genre -> REMOVED
 
 
   // Add style to hide scrollbar
@@ -2302,7 +2279,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 }}
                 onClick={() => {
                   if (genreScrollContainerRef.current) {
-                    genreScrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
+                    const { clientWidth } = genreScrollContainerRef.current;
+                    genreScrollContainerRef.current.scrollBy({ left: -clientWidth * 0.7, behavior: "smooth" });
                   }
                 }}
                 onMouseDown={() => setPressedGenreNavButton("prev")}
@@ -2422,8 +2400,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 }}
                 onClick={() => {
                   if (genreScrollContainerRef.current) {
-                    const { scrollWidth, clientWidth } = genreScrollContainerRef.current;
-                    genreScrollContainerRef.current.scrollTo({ left: scrollWidth - clientWidth, behavior: "smooth" });
+                    const { clientWidth } = genreScrollContainerRef.current;
+                    genreScrollContainerRef.current.scrollBy({ left: clientWidth * 0.7, behavior: "smooth" });
                   }
                 }}
                 onMouseDown={() => setPressedGenreNavButton("next")}
