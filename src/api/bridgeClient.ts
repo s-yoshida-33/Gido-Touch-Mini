@@ -3,7 +3,7 @@ import { getApiBaseUrl, APP_CONFIG } from "../config";
 import type { BridgeShop, Shop, FloorId } from "../types/shop";
 import type { ShopNews } from "../types/shopNews";
 
-import { logInfo, logWarn, logError, logDebug } from "../logs/logging";
+import { logWarn, logError, logDebug } from "../logs/logging";
 
 // Normalize floor id string (you can extend this if needed)
 function normalizeFloorId(value: string): FloorId {

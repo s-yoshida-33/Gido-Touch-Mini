@@ -311,7 +311,7 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
 
   // Screen View Logging
   useEffect(() => {
-    logInfo("SCREEN_VIEW", "Entering Shop Detail", {
+    logInfo("SCREEN_VIEW", "Viewing Shop Detail", {
       shopId: shop.shopId || shop.number,
       shopName: shop.name,
       hasLogo: !!shop.shopLogo,

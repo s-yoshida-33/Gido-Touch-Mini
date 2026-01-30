@@ -140,7 +140,7 @@ function loadDefaultShopPositions() {
       
       // 形式を確認
       if (parsed && typeof parsed === 'object' && parsed.positions) {
-        logger.info('Loaded default shop positions from default-shop-positions.json');
+        logger.debug('Loaded default shop positions from default-shop-positions.json');
         return parsed;
       }
     }
@@ -167,7 +167,7 @@ function loadDefaultPictoSettings() {
       
       // 形式を確認
       if (parsed && typeof parsed === 'object' && parsed.instances) {
-        logger.info('Loaded default picto settings from default-picto-settings.json');
+        logger.debug('Loaded default picto settings from default-picto-settings.json');
         return parsed;
       }
     }
@@ -204,7 +204,7 @@ function loadAllDefaultMallData() {
           const parsed = JSON.parse(raw);
           
           if (parsed && typeof parsed === 'object') {
-            logger.info(`Loaded default mall data for ${mallId} from ${file}`);
+            logger.debug(`Loaded default mall data for ${mallId} from ${file}`);
             loadedData[mallId] = parsed;
           }
         } catch (e) {
@@ -522,7 +522,7 @@ function loadSettings() {
             openTimeImage
         };
         
-        logger.info(`Generated default image settings for ${currentMallId}`);
+        logger.debug(`Generated default image settings for ${currentMallId}`);
     }
     
     merged.imageSettings = imageSettingsSource;
@@ -1433,7 +1433,7 @@ ipcMain.handle('read-mall-config', async (_event, mallId, configType) => {
     const configPath = path.join(basePath, mallId, `${configType}.json`);
     
     if (!fs.existsSync(configPath)) {
-      logger.warn('Mall config not found', { mallId, configType, configPath });
+      logger.error('Mall config not found', { mallId, configType, configPath });
       return null;
     }
     
@@ -1457,7 +1457,7 @@ ipcMain.handle('read-mall-asset', async (_event, relativePath) => {
     
     if (!fs.existsSync(fullPath)) {
       // ログに詳細を出力してデバッグしやすくする
-      logger.warn('Mall asset not found', { 
+      logger.error('Mall asset not found', { 
         relativePath, 
         normalizedRelativePath,
         fullPath, 

@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from "../config";
-import { logInfo, logError, logDebug } from "../logs/logging";
+import { logError, logDebug } from "../logs/logging";
 
 export type SseConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 

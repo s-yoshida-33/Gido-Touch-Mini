@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CloseButton } from "./CloseButton";
 import { getCommonAssetUrl } from "../utils/assets";
 import type { ShopNews } from "../types/shopNews";
+import { logInfo } from "../logs/logging";
 
 const iconDate = getCommonAssetUrl("date.svg");
 const iconTime = getCommonAssetUrl("time.svg");
@@ -79,6 +80,16 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
     }
   }, [isOpen, sortedNews]); // Also trigger when sortedNews updates while open
 
+
+  useEffect(() => {
+    if (isOpen && selectedNews) {
+      logInfo("SCREEN_VIEW", "Viewing Event News Detail", {
+        newsId: selectedNews.id,
+        newsTitle: selectedNews.title,
+        language
+      });
+    }
+  }, [isOpen, selectedNews, language]);
 
   // Helper to format date string to YYYY/MM/DD(Weekday)
   const formatDate = (dateString: string | undefined) => {

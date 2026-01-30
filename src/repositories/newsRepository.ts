@@ -1,5 +1,5 @@
 import type { ShopNews } from "../types/shopNews";
-import { logInfo, logError, logDebug } from "../logs/logging";
+import { logError, logDebug } from "../logs/logging";
 
 const SHOP_NEWS_CACHE_KEY = "gido_shop_news_cache";
 const EVENT_NEWS_CACHE_KEY = "gido_event_news_cache";

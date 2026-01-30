@@ -788,6 +788,19 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     }
   };
 
+  // Log Screen View for Shop Detail
+  useEffect(() => {
+    if (selectedShopDetail) {
+      logInfo("SCREEN_VIEW", "Viewing Shop Detail", {
+        shopId: selectedShopDetail.shopId || selectedShopDetail.number,
+        shopName: selectedShopDetail.name,
+        hasLogo: !!selectedShopDetail.shopLogo,
+        floor: normalizeFloor(String(selectedShopDetail.position?.floor || "")),
+        language: selectedLanguage
+      });
+    }
+  }, [selectedShopDetail, selectedLanguage]);
+
   // 営業時間の画像
   const [openTimeImage, setOpenTimeImage] = useState<string>("");
 

@@ -2,7 +2,7 @@
 import { DATA_SOURCE, GENRE_ORDER } from "../config";
 import type { Shop } from "../types/shop";
 import { fetchShopsFromBridge } from "../api/bridgeClient";
-import { logInfo, logError, logDebug } from "../logs/logging";
+import { logError, logDebug } from "../logs/logging";
 
 const CACHE_KEY = "gido_shops_cache";
 
