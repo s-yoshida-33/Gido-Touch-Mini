@@ -31,6 +31,65 @@ function configureLogger() {
 }
 
 /* --------------------------------------------------------------------------
+   Utils for Safe Logging (Gidoからの移植)
+   -------------------------------------------------------------------------- */
+
+// リスナー配列（レンダラーへの転送用）
+const listeners = [];
+
+function onLog(callback) {
+  listeners.push(callback);
+}
+
+function notifyListeners(level, message, context, line) {
+  for (const listener of listeners) {
+    try {
+      listener({ level, message, context, line, timestamp: new Date().toISOString() });
+    } catch (e) {
+      console.error('Error in log listener', e);
+    }
+  }
+}
+
+/**
+ * 長すぎる文字列を切り詰めてログの肥大化を防ぐ
+ */
+function truncate(val, maxLen = 500) {
+  if (typeof val === 'string') {
+    return val.length > maxLen
+      ? val.substring(0, maxLen) + `...[TRUNCATED ${val.length} chars]`
+      : val;
+  }
+  return val;
+}
+
+/**
+ * オブジェクトを安全にログ出力用に変換する（循環参照防止・サイズ制限）
+ */
+function safeLogObject(obj, maxLen = 500, depth = 3) {
+  if (depth < 0) return '[MAX_DEPTH]';
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') return truncate(obj, maxLen);
+  if (typeof obj !== 'object') return obj;
+
+  try {
+    if (Array.isArray(obj)) {
+      return obj.map((item) => safeLogObject(item, maxLen, depth - 1));
+    }
+
+    const newObj = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        newObj[key] = safeLogObject(obj[key], maxLen, depth - 1);
+      }
+    }
+    return newObj;
+  } catch (e) {
+    return '[CIRCULAR_OR_ERROR]';
+  }
+}
+
+/* --------------------------------------------------------------------------
    State-transition based Slack alert control
    -------------------------------------------------------------------------- */
 
@@ -162,14 +221,16 @@ function notifySlack(level, message, context = {}) {
 function formatMessage(level, message, context = {}) {
   const appVersion = app.getVersion ? app.getVersion() : 'dev';
 
+  // 【重要】コンテキストをサニタイズして巨大ログを防止
+  const safeContext = safeLogObject(context);
+
   const base = {
     level,
     app: 'Gido Touch Mini',
     version: appVersion,
     host: hostname,
-    ...context,
+    ...safeContext,
   };
-
   return JSON.stringify({
     ...base,
     message,
@@ -183,6 +244,14 @@ function formatMessage(level, message, context = {}) {
 function write(level, message, context = {}) {
   const line = formatMessage(level, message, context);
 
+  // リスナーへの通知 (Gidoと同様のフィルタリング)
+  // debugレベルはIPC通信量を減らすため通知しない
+  if (level !== 'debug') {
+    notifyListeners(level, message, context, line);
+  }
+
+  // ファイル出力設定
+  // 開発環境以外では 'info' 以上のみ出力される設定(configureLogger参照)
   switch (level) {
     case 'debug':
       log.debug(line);
@@ -219,12 +288,8 @@ module.exports = {
   warn: (msg, ctx) => write('warn', msg, ctx),
   error: (msg, ctx) => write('error', msg, ctx),
   fatal: (msg, ctx) => write('fatal', msg, ctx),
-
-  /**
-   * Called from renderer via IPC:
-   * { level, message, context } is forwarded to the logger.
-   */
   logFromRenderer: ({ level = 'info', message = '', context = {} } = {}) => {
     write(level, message, { ...context, source: 'renderer' });
   },
+  onLog, // 追加: main.cjsからフックできるようにする
 };

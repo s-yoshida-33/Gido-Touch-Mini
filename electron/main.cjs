@@ -13,6 +13,20 @@ const {
 } = require('./updateChecker.cjs');
 const logger = require('./logger.cjs');
 
+// 【追加】Gidoと同様にログをレンダラーへ転送する際のフィルタリングを行う
+logger.onLog((entry) => {
+  // debugログは転送しない
+  if (entry.level === 'debug') return;
+
+  // 特定の高頻度メッセージも除外（必要に応じてキーワードを追加）
+  const msg = entry.message || '';
+  if (msg.includes('Optimization')) return;
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('debug:log', entry);
+  }
+});
+
 const isDev = !app.isPackaged;
 
 let patchWindow = null;
@@ -1118,7 +1132,7 @@ ipcMain.handle('save-location-icon-settings', (_event, locationIcons) => {
  * IPC handlers for Picto Settings (merged into settings.json)
  */
 ipcMain.handle('get-picto-settings', (_event, mallId) => {
-  logger.info('IPC get-picto-settings', { mallId });
+  logger.debug('IPC get-picto-settings', { mallId });
   const settings = loadSettings();
   
   if (mallId) {
@@ -1148,7 +1162,7 @@ ipcMain.handle('save-picto-settings', (_event, pictoSettings) => {
  * IPC handlers for Image Settings
  */
 ipcMain.handle('get-image-settings', (_event, mallId) => {
-  logger.info('IPC get-image-settings', { mallId });
+  logger.debug('IPC get-image-settings', { mallId });
   const settings = loadSettings();
   
   if (mallId) {
@@ -1249,7 +1263,7 @@ ipcMain.handle('save-image-settings', (_event, imageSettings) => {
  * IPC handlers for Mall Settings
  */
 ipcMain.handle('get-mall-settings', (_event, mallId) => {
-  logger.info('IPC get-mall-settings', { mallId });
+  logger.debug('IPC get-mall-settings', { mallId });
   const settings = loadSettings();
   
   // If mallId provided, construct settings for that mall from dataByMall
@@ -1340,7 +1354,7 @@ function readImageFileAsDataUrl(filePath) {
 }
 
 ipcMain.handle('get-shop-positions', (_event, mallId) => {
-  logger.info('IPC get-shop-positions', { mallId });
+  logger.debug('IPC get-shop-positions', { mallId });
   const settings = loadSettings();
   
   if (mallId) {
