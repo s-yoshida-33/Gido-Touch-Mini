@@ -42,7 +42,6 @@ import { sseService } from "./services/SSEService";
 import type { SseConnectionStatus } from "./services/SSEService";
 import { logInfo, logError } from "./logs/logging";
 import { loadSettings, updateSettings, saveImageFile } from "./utils/settings";
-import type { GidoTouchMiniSettings } from "./utils/settings";
 import { getVersion } from "@tauri-apps/api/app";
 
 type FloorId = "1F" | "2F" | "3F" | "4F";
