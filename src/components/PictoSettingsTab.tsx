@@ -149,7 +149,7 @@ export const PictoSettingsTab: React.FC<PictoSettingsTabProps> = ({
               };
             })
           );
-          setIconOptions(options.filter(opt => opt.url && !opt.fileName.startsWith('button-')));
+          setIconOptions(options.filter((opt: { fileName: string; url: string }) => opt.url && !opt.fileName.startsWith('button-')));
         }
       } catch (error) {
         console.error("Failed to load picto config", error);

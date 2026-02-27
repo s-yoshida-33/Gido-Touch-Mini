@@ -189,19 +189,32 @@ export function findMallPictoUrl(mallId: string, filename: string): string {
 }
 
 // 非同期読み込みヘルパー (Tauri invoke)
-export async function loadMallPictoConfig(mallId: string) {
+
+interface PictoConfigItem {
+  id: string;
+  order: number;
+  name: Record<string, string>;
+  iconFile: string;
+  buttonFile?: string;
+}
+
+interface MallPictoConfig {
+  pictos: PictoConfigItem[];
+}
+
+export async function loadMallPictoConfig(mallId: string): Promise<MallPictoConfig | null> {
   try {
-    const result = await invoke<unknown>('read_mall_config', { mallId, configType: 'pictos' });
+    const result = await invoke<MallPictoConfig | null>('read_mall_config', { mallId, configType: 'pictos' });
     return result;
   } catch {
     return null;
   }
 }
 
-export async function loadMallGenreConfig(mallId: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function loadMallGenreConfig(mallId: string): Promise<any> {
   try {
-    const result = await invoke<unknown>('read_mall_config', { mallId, configType: 'genres' });
-    return result;
+    return await invoke('read_mall_config', { mallId, configType: 'genres' });
   } catch {
     return null;
   }
