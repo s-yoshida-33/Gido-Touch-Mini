@@ -14,7 +14,10 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build"
+    "desktop:build": "tauri build",
+    "tauri:build:signed": "node ./build/runner.js sign-and-build.ps1",
+    "tauri:release": "npm run tauri:build:signed && node ./build/runner.js manage-release.ps1",
+    "bump:version": "powershell -ExecutionPolicy Bypass -File ./build/bump-version.ps1"
   },
   "dependencies": {
     "@tauri-apps/plugin-dialog": "^2.0.0",
