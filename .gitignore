@@ -38,5 +38,9 @@ out/
 media/*
 !media/.gitkeep
 
+# Private keys / secrets
+~/*
+!~/.gitkeep
+
 # Temporary files
 tmp/
