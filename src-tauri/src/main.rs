@@ -9,6 +9,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use chrono::Local;
+use sysinfo::System;
 
 // ---------------------------------------------------------------------------
 // State management structure
@@ -446,6 +447,82 @@ fn get_shop_image(file_path: String) -> Result<Option<String>, String> {
 }
 
 // ---------------------------------------------------------------------------
+// System info command (CPU, memory, GPU, OS)
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+struct SystemInfoResponse {
+    cpu_name: String,
+    cpu_cores: usize,
+    cpu_usage: f32,
+    memory_total_mb: u64,
+    memory_used_mb: u64,
+    memory_usage_percent: f64,
+    gpu_name: String,
+    os_name: String,
+    os_version: String,
+}
+
+#[tauri::command]
+fn get_system_info() -> SystemInfoResponse {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+
+    let cpu_name = sys.cpus().first()
+        .map(|c| c.brand().to_string())
+        .unwrap_or_else(|| "Unknown".to_string());
+    let cpu_cores = sys.cpus().len();
+    let cpu_usage = sys.global_cpu_usage();
+
+    let memory_total_mb = sys.total_memory() / (1024 * 1024);
+    let memory_used_mb = sys.used_memory() / (1024 * 1024);
+    let memory_usage_percent = if sys.total_memory() > 0 {
+        (sys.used_memory() as f64 / sys.total_memory() as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    let gpu_name = get_gpu_name();
+
+    let os_name = System::name().unwrap_or_else(|| "Unknown".to_string());
+    let os_version = System::os_version().unwrap_or_else(|| "Unknown".to_string());
+
+    SystemInfoResponse {
+        cpu_name,
+        cpu_cores,
+        cpu_usage,
+        memory_total_mb,
+        memory_used_mb,
+        memory_usage_percent,
+        gpu_name,
+        os_name,
+        os_version,
+    }
+}
+
+fn get_gpu_name() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        let output = Command::new("wmic")
+            .args(["path", "win32_VideoController", "get", "name"])
+            .output();
+        if let Ok(out) = output {
+            let text = String::from_utf8_lossy(&out.stdout);
+            let name = text.lines()
+                .skip(1)
+                .find(|l| !l.trim().is_empty())
+                .map(|l| l.trim().to_string())
+                .unwrap_or_default();
+            if !name.is_empty() {
+                return name;
+            }
+        }
+    }
+    "Unknown".to_string()
+}
+
+// ---------------------------------------------------------------------------
 // Quit app command
 // ---------------------------------------------------------------------------
 
@@ -478,6 +555,7 @@ fn main() {
             read_mall_config,
             read_mall_asset,
             get_shop_image,
+            get_system_info,
             quit_app,
         ]);
 
