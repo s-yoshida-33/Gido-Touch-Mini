@@ -62,37 +62,8 @@ const GidoApp: React.FC<GidoAppProps> = ({
     previewFloor ?? APP_CONFIG.floor
   );
 
-  useEffect(() => {
-    if (previewFloor || !window.electronAPI?.getFloor) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const init = async () => {
-      try {
-        const current = await window.electronAPI!.getFloor();
-        if (!cancelled && current) {
-          setFloor(current);
-        }
-      } catch (e) {
-        console.error("Failed to get floor from Electron", e);
-      }
-    };
-
-    init();
-
-    window.electronAPI.onFloorChanged((nextFloor) => {
-      if (!cancelled) {
-        setFloor(nextFloor);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [previewFloor]);
-
+  // Floor is managed by parent (App.tsx) and passed via previewFloor prop.
+  // No Electron IPC needed in Tauri - floor state comes from props.
   useEffect(() => {
     if (previewFloor !== undefined) {
       setFloor(previewFloor);

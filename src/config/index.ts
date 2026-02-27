@@ -21,44 +21,28 @@ export const APP_CONFIG = {
 };
 
 // Effective API base URL
-// Priority: window.__BWP_BASE_URL__ (injected by BridgeWebPopper) > Electron API (port range detection) > Vite env > default
-// Note: API_BASE_URL is now a function that returns a Promise to support async port detection
+// Priority: window.__BWP_BASE_URL__ > Vite env > default
 let cachedApiBaseUrl: string | null = null;
 
 export async function getApiBaseUrl(): Promise<string> {
   // Priority 1: window.__BWP_BASE_URL__ (injected by BridgeWebPopper)
-  if ((window as any).__BWP_BASE_URL__) {
-    return (window as any).__BWP_BASE_URL__;
+  if (window.__BWP_BASE_URL__) {
+    return window.__BWP_BASE_URL__;
   }
 
-  // Priority 2: Electron API (port range detection)
-  if (window.electronAPI?.getBridgeBaseUrl) {
-    try {
-      const url = await window.electronAPI.getBridgeBaseUrl();
-      if (url) {
-        // Electron側で30秒間隔のキャッシュ制御を行っているため、
-        // レンダラー側ではキャッシュせず毎回問い合わせるように変更し、
-        // 後からAPIサーバーが起動した場合でも追従できるようにする
-        return url;
-      }
-    } catch (error) {
-      console.warn('Failed to get Bridge base URL from Electron API', error);
-    }
-  }
-
-  // Priority 3: Cached value (if available)
+  // Priority 2: Cached value (if available)
   if (cachedApiBaseUrl) {
     return cachedApiBaseUrl;
   }
 
-  // Priority 4: Vite env
+  // Priority 3: Vite env
   if (import.meta.env.VITE_API_BASE) {
     const viteUrl = import.meta.env.VITE_API_BASE;
     cachedApiBaseUrl = viteUrl;
     return viteUrl;
   }
 
-  // Priority 5: Default
+  // Priority 4: Default
   cachedApiBaseUrl = APP_CONFIG.defaultApiBaseUrl;
   return APP_CONFIG.defaultApiBaseUrl;
 }

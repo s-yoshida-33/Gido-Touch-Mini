@@ -1,85 +1,45 @@
 import { useEffect, useState } from 'react';
 import appIcon from '../../build/icon.ico';
-import type { StatusState } from '../types/global';
+import { useAutoUpdate } from '../hooks/useAutoUpdate';
+import { getVersion } from '@tauri-apps/api/app';
 
 export function PatchScreen() {
-  const [statusState, setStatusState] = useState<StatusState>('checking');
-  const [statusMessage, setStatusMessage] = useState<string>('起動しています…');
-  const [percent, setPercent] = useState<number | null>(null);
-  const [transferred, setTransferred] = useState<number | null>(null);
-  const [total, setTotal] = useState<number | null>(null);
-  const [speed, setSpeed] = useState<number | null>(null);
+  const { updateStatus, installUpdate } = useAutoUpdate();
   const [appVersion, setAppVersion] = useState<string>('');
 
-  // 待機用ステート
+  // 待機用ステート (when no update or error, wait before proceeding)
   const [isWaiting, setIsWaiting] = useState(false);
   const [waitProgress, setWaitProgress] = useState(0); // 0-100%
   const [countdown, setCountdown] = useState(90);      // 秒数
 
+  // Load app version from Tauri
   useEffect(() => {
-    // Mock data for browser preview
-    const isBrowser = !window.electronAPI;
-    
-    if (isBrowser) {
-      // Simulate update progress for browser preview
-      setAppVersion('0.1.0-beta.15');
-      setStatusState('available');
-      setStatusMessage('アップデートをダウンロードしています…\nしばらくお待ちください。');
-      
-      // Simulate progress
-      let mockPercent = 0;
-      const interval = setInterval(() => {
-        mockPercent += 2;
-        if (mockPercent > 100) {
-          mockPercent = 100;
-          setStatusState('downloaded');
-          setStatusMessage('アップデートが完了しました。\nアプリを再起動してください。');
-          clearInterval(interval);
-        } else {
-          setPercent(mockPercent);
-          setTransferred(mockPercent * 1024 * 1024 * 2); // Mock: 2MB per percent
-          setTotal(100 * 1024 * 1024 * 2); // Mock: 200MB total
-          setSpeed(5 * 1024 * 1024); // Mock: 5MB/s
-        }
-      }, 100);
-      
-      return () => clearInterval(interval);
-    }
-
-    if (!window.updater) return;
-
-    window.updater.onStatus((data) => {
-      setStatusState(data.state);
-      setStatusMessage(data.message);
-
-      // アップデートなし、またはエラーの場合に待機モードへ
-      if (data.state === 'none' || data.state === 'error') {
-        setIsWaiting(true);
-        setPercent(null);
-        setTransferred(null);
-        setTotal(null);
-        setSpeed(null);
-      }
-    });
-
-    window.updater.onProgress((data) => {
-      setPercent(data.percent);
-      setTransferred(data.transferred);
-      setTotal(data.total);
-      setSpeed(data.speed);
-    });
-
-    // Notify main process that we are ready to receive update events
-    if (window.updater.checkForUpdatesReady) {
-      window.updater.checkForUpdatesReady();
-    }
+    getVersion()
+      .then((v) => setAppVersion(v))
+      .catch(() => setAppVersion(''));
   }, []);
 
-  // 待機完了・スキップ時の処理
-  const finishWait = () => {
-    if (window.updater?.startupWaitCompleted) {
-      window.updater.startupWaitCompleted();
+  // When update is ready, auto-relaunch after 5 seconds
+  useEffect(() => {
+    if (updateStatus.status === 'ready') {
+      const timer = setTimeout(() => {
+        installUpdate();
+      }, 5000);
+      return () => clearTimeout(timer);
     }
+  }, [updateStatus.status, installUpdate]);
+
+  // When no update available or error, enter waiting mode
+  useEffect(() => {
+    if (updateStatus.status === 'uptodate' || updateStatus.status === 'error') {
+      setIsWaiting(true);
+    }
+  }, [updateStatus.status]);
+
+  // Navigate to main app (reload without #patch hash)
+  const finishWait = () => {
+    window.location.hash = '';
+    window.location.reload();
   };
 
   // 90秒タイマーのロジック
@@ -91,11 +51,11 @@ export function PatchScreen() {
 
     const timer = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      
+
       // 進捗率計算
       const progress = Math.min(100, (elapsed / duration) * 100);
       setWaitProgress(progress);
-      
+
       // 残り秒数計算
       const remaining = Math.max(0, Math.ceil((duration - elapsed) / 1000));
       setCountdown(remaining);
@@ -110,35 +70,21 @@ export function PatchScreen() {
     return () => clearInterval(timer);
   }, [isWaiting]);
 
-  useEffect(() => {
-    // Mock data for browser preview
-    const isBrowser = !window.electronAPI;
-    
-    if (isBrowser) {
-      // Already set in the previous useEffect
-      return;
-    }
-
-    if (!window.appInfo) return;
-    window.appInfo
-      .getVersion()
-      .then((v) => {
-        setAppVersion(v);
-      })
-      .catch(() => {
-        setAppVersion('');
-      });
-  }, []);
-
+  // Map Tauri update status to display title
   const titleLabel = (() => {
-    switch (statusState) {
+    if (isWaiting) {
+      return updateStatus.status === 'error' ? 'アップデートエラー' : '最新バージョンです';
+    }
+    switch (updateStatus.status) {
+      case 'idle':
       case 'checking':
         return 'アップデートを確認中…';
       case 'available':
+      case 'downloading':
         return 'アップデートをダウンロードしています';
-      case 'downloaded':
+      case 'ready':
         return 'アップデートが完了しました';
-      case 'none':
+      case 'uptodate':
         return '最新バージョンです';
       case 'error':
         return 'アップデートエラー';
@@ -147,19 +93,17 @@ export function PatchScreen() {
     }
   })();
 
-  const formatMB = (bytes: number | null) => {
-    if (bytes == null || bytes <= 0) return '-';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
-  const formatSpeed = (bytesPerSec: number | null) => {
-    if (bytesPerSec == null || bytesPerSec <= 0) return '-';
-    return (bytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
-  };
+  // Map status message
+  const statusMessage = (() => {
+    if (isWaiting) {
+      return updateStatus.message;
+    }
+    return updateStatus.message || '起動しています…';
+  })();
 
   // UI描画用変数
   // 待機中は待機進捗、ダウンロード中はダウンロード進捗を表示
-  const displayPercent = isWaiting ? waitProgress : (percent ?? 0);
+  const displayPercent = isWaiting ? waitProgress : updateStatus.progress;
 
   return (
     <div
@@ -250,7 +194,7 @@ export function PatchScreen() {
               whiteSpace: 'pre-line',
             }}
           >
-            {isWaiting 
+            {isWaiting
               ? `${statusMessage}\nあと ${countdown} 秒で起動します。`
               : statusMessage}
           </p>
@@ -297,10 +241,12 @@ export function PatchScreen() {
           </div>
 
           <div style={{ fontSize: 12, textAlign: 'right', color: '#ffffff', fontWeight: 600 }}>
-            {isWaiting ? `${countdown}s` : (percent != null ? `${percent.toFixed(1)}%` : '待機中…')}
+            {isWaiting
+              ? `${countdown}s`
+              : (updateStatus.progress > 0 ? `${updateStatus.progress.toFixed(1)}%` : '待機中…')}
           </div>
 
-          {/* Numeric Info */}
+          {/* State Info */}
           {!isWaiting && (
             <div
               style={{
@@ -313,17 +259,8 @@ export function PatchScreen() {
                 borderTop: '1px solid #1a1a1a',
               }}
             >
-              <div style={{ color: '#888888' }}>Transferred</div>
-              <div style={{ textAlign: 'right', color: '#ffffff', fontWeight: 600 }}>{formatMB(transferred)}</div>
-
-              <div style={{ color: '#888888' }}>Total</div>
-              <div style={{ textAlign: 'right', color: '#ffffff', fontWeight: 600 }}>{formatMB(total)}</div>
-
-              <div style={{ color: '#888888' }}>Speed</div>
-              <div style={{ textAlign: 'right', color: '#00ff4c', fontWeight: 600 }}>{formatSpeed(speed)}</div>
-
               <div style={{ color: '#888888' }}>State</div>
-              <div style={{ textAlign: 'right', color: '#ffffff', fontWeight: 600, textTransform: 'uppercase' }}>{statusState}</div>
+              <div style={{ textAlign: 'right', color: '#ffffff', fontWeight: 600, textTransform: 'uppercase' }}>{updateStatus.status}</div>
             </div>
           )}
         </div>
@@ -333,7 +270,7 @@ export function PatchScreen() {
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center', // Align items vertically
+            alignItems: 'center',
             fontSize: 11,
             color: '#666666',
             marginTop: 'auto',
@@ -343,7 +280,7 @@ export function PatchScreen() {
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div>Do not turn off your device while updating.</div>
-            <div>© 2025 Toei Techno International Inc.</div>
+            <div>&copy; 2025 Toei Techno International Inc.</div>
           </div>
 
           {/* Skip Button (only visible when waiting) */}
