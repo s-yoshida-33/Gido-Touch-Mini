@@ -24,23 +24,26 @@ import { getMallConfig } from "./config/malls";
 // import { getMallAssetUrl } from "./utils/assets";
 import type { Shop } from "./types/shop";
 import { fetchShops, loadShopsFromCache, saveShopsToCache } from "./repositories/shopRepository";
-import { 
-  loadShopNewsFromCache, 
-  saveShopNewsToCache, 
-  loadEventNewsFromCache, 
-  saveEventNewsToCache 
+import {
+  loadShopNewsFromCache,
+  saveShopNewsToCache,
+  loadEventNewsFromCache,
+  saveEventNewsToCache
 } from "./repositories/newsRepository";
-import { 
-  fetchShopNewsFromBridge, 
-  fetchShopNewsListFromBridge, 
-  parseShopsData, 
-  parseShopNewsData, 
-  parseEventNewsData 
+import {
+  fetchShopNewsFromBridge,
+  fetchShopNewsListFromBridge,
+  parseShopsData,
+  parseShopNewsData,
+  parseEventNewsData
 } from "./api/bridgeClient";
 import type { ShopNews } from "./types/shopNews";
 import { sseService } from "./services/SSEService";
 import type { SseConnectionStatus } from "./services/SSEService";
 import { logInfo, logError } from "./logs/logging";
+import { loadSettings, updateSettings, saveImageFile } from "./utils/settings";
+import type { GidoTouchMiniSettings } from "./utils/settings";
+import { getVersion } from "@tauri-apps/api/app";
 
 type FloorId = "1F" | "2F" | "3F" | "4F";
 
@@ -48,7 +51,7 @@ const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageS
   const config = getMallConfig(mallId as any);
   // Default open time image path based on mallId
   // const defaultOpenTime = getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
-  
+
   let openTimeImage = settings.openTimeImage;
 
   // Check if the current openTimeImage belongs to a different mall's default asset
@@ -57,11 +60,11 @@ const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageS
     // Check known mall IDs in the path
     const isSuzakaAsset = openTimeImage.includes("malls/suzaka");
     const isSendaiAsset = openTimeImage.includes("malls/sendai-kamisugi");
-    
+
     // If current mall is Suzaka but image is from Sendai -> Reset to default
     if (mallId === "suzaka" && isSendaiAsset) {
       openTimeImage = "";
-    } 
+    }
     // If current mall is Sendai but image is from Suzaka -> Reset to default
     else if (mallId === "sendai-kamisugi" && isSuzakaAsset) {
       openTimeImage = "";
@@ -102,7 +105,7 @@ const App: React.FC = () => {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDebugVisible, setIsDebugVisible] = useState(false);
   const [appVersion, setAppVersion] = useState<string>("");
-  
+
   // API Status State
   const [sseStatus, setSseStatus] = useState<SseConnectionStatus>('disconnected');
 
@@ -112,7 +115,7 @@ const App: React.FC = () => {
 
   // Mall ID state
   const [mallId, setMallId] = useState<string>("suzaka");
-  
+
   // Floor and floor layout state for unified settings
   const [floor, setFloor] = useState<FloorId>("1F");
   const [mallSettings, setMallSettings] = useState<MallSettings>(DEFAULT_MALL_SETTINGS);
@@ -124,7 +127,7 @@ const App: React.FC = () => {
   const [shops, setShops] = useState<Shop[]>([]);
   const [shopNews, setShopNews] = useState<ShopNews[]>([]);
   const [eventNews, setEventNews] = useState<ShopNews[]>([]);
-  
+
   // Settings screen open state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -168,20 +171,20 @@ const App: React.FC = () => {
       }));
       setShops(cleanedShops);
       saveShopsToCache(shopData);
-      
+
       // Load News
       const sNews = await fetchShopNewsListFromBridge();
       setShopNews(sNews);
       saveShopNewsToCache(sNews);
-      
+
       const eNews = await fetchShopNewsFromBridge();
       setEventNews(eNews);
       saveEventNewsToCache(eNews);
-      
-      logInfo("app", "Data loaded from API", { 
-        shops: cleanedShops.length, 
-        shopNews: sNews.length, 
-        eventNews: eNews.length 
+
+      logInfo("app", "Data loaded from API", {
+        shops: cleanedShops.length,
+        shopNews: sNews.length,
+        eventNews: eNews.length
       });
     } catch (e) {
       logError("app", "Failed to load data from API", { error: e });
@@ -217,11 +220,11 @@ const App: React.FC = () => {
         setIsDebugVisible(prev => !prev);
       }
     };
-    
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('keydown', handleKeyDown);
-    
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -262,7 +265,7 @@ const App: React.FC = () => {
              logInfo("app", "Updated shops from SSE", { count: cleaned.length });
           }
           break;
-          
+
         case "shop_news":
           if (payload.data) {
              const news = parseShopNewsData(payload.data);
@@ -271,7 +274,7 @@ const App: React.FC = () => {
              logInfo("app", "Updated shop news from SSE", { count: news.length });
           }
           break;
-            
+
         case "event_news":
            if (payload.data) {
              const news = parseEventNewsData(payload.data);
@@ -280,7 +283,7 @@ const App: React.FC = () => {
              logInfo("app", "Updated event news from SSE", { count: news.length });
           }
           break;
-          
+
         default:
           logInfo("app", "Unknown or unhandled SSE event type", { type: payload.type });
           // If unsure, reload all data (fallback behavior, optional)
@@ -293,7 +296,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Load initial settings from Electron and subscribe to updates
+  // Load initial settings from Tauri
   const initCalled = useRef(false);
 
   useEffect(() => {
@@ -301,236 +304,56 @@ const App: React.FC = () => {
     if (initCalled.current) return;
     initCalled.current = true;
 
-    let unsubscribeUpdated: (() => void) | undefined;
-    let unsubscribeFloorLayout: (() => void) | undefined;
-    let unsubscribeOpenSettings: (() => void) | undefined;
-
     const init = async () => {
       addDebug("Initializing App...");
-      
-      // 1. App Version
-      if (window.appInfo?.getVersion) {
-          try {
-            const v = await window.appInfo.getVersion();
-            setAppVersion(v);
-            addDebug(`App Version loaded: ${v}`);
-            
-            logInfo("SYS_INIT", "Application Mini Started", {
-              appVersion: v,
-              mallId: mallId || "unknown",
-              windowSize: `${window.innerWidth}x${window.innerHeight}`,
-              userAgent: navigator.userAgent,
-              isDev: import.meta.env.DEV
-            });
-          } catch (e) {
-            addDebug(`Failed to load App Version: ${e}`);
-            logError("SYS_INIT", "Failed to load App Version", { error: e });
-          }
-      } else {
-        addDebug("window.appInfo not found");
-      }
 
-      const api = window.electronAPI;
-      if (!api) {
-        addDebug("window.electronAPI not found");
-        return;
-      }
-      addDebug("window.electronAPI found");
+      // 1. App Version (Tauri)
+      try {
+        const v = await getVersion();
+        setAppVersion(v);
+        addDebug(`App Version loaded: ${v}`);
 
-      // Listen for settings open event
-      if (api.onOpenSettings) {
-        unsubscribeOpenSettings = api.onOpenSettings(() => {
-          setIsSettingsOpen(true);
+        logInfo("SYS_INIT", "Application Mini Started", {
+          appVersion: v,
+          mallId: mallId || "unknown",
+          windowSize: `${window.innerWidth}x${window.innerHeight}`,
+          userAgent: navigator.userAgent,
+          isDev: import.meta.env.DEV
         });
+      } catch (e) {
+        addDebug(`Failed to load App Version: ${e}`);
+        logError("SYS_INIT", "Failed to load App Version", { error: e });
       }
 
-      // Load location icon settings
-      if (api.getLocationIconSettings) {
-        try {
-          const saved = await api.getLocationIconSettings();
-          if (saved) {
-            // Check if saved is per-floor format or old single format
-            if ('speechBubble' in saved && 'location' in saved && !('1F' in saved)) {
-              // Old format: single LocationIconSettings - convert to per-floor format
-              const oldSettings = saved as LocationIconSettings;
-              const mergedSettings: LocationIconSettings = {
-                speechBubble: {
-                  ...DEFAULT_LOCATION_ICON_SETTINGS.speechBubble,
-                  ...oldSettings.speechBubble,
-                  enabled: oldSettings.speechBubble?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.enabled,
-                  shadow: oldSettings.speechBubble?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.shadow,
-                  animation: oldSettings.speechBubble?.animation ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.animation,
-                },
-                location: {
-                  ...DEFAULT_LOCATION_ICON_SETTINGS.location,
-                  ...oldSettings.location,
-                  enabled: oldSettings.location?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.location.enabled,
-                  shadow: oldSettings.location?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.location.shadow,
-                },
-              };
-              // Convert to per-floor format
-              const perFloorSettings: LocationIconSettingsPerFloor = {
-                "1F": mergedSettings,
-                "2F": mergedSettings,
-                "3F": mergedSettings,
-                "4F": mergedSettings,
-              };
-              setLocationSettings(perFloorSettings);
-            } else {
-              // New format: LocationIconSettingsPerFloor
-              const perFloorSettings: LocationIconSettingsPerFloor = { ...DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR };
-              const savedPerFloor = saved as LocationIconSettingsPerFloor;
-              
-              Object.keys(savedPerFloor).forEach((key) => {
-                const floorId = key as FloorId;
-                if (savedPerFloor[floorId]) {
-                  const defaultSettings = DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR[floorId];
-                  const savedSettings = savedPerFloor[floorId];
-  
-                  perFloorSettings[floorId] = {
-                    speechBubble: {
-                      ...defaultSettings.speechBubble,
-                      ...savedSettings.speechBubble,
-                      shadow: {
-                        ...defaultSettings.speechBubble.shadow,
-                        ...savedSettings.speechBubble?.shadow
-                      },
-                      animation: defaultSettings.speechBubble.animation && savedSettings.speechBubble?.animation ? {
-                        ...defaultSettings.speechBubble.animation,
-                        ...savedSettings.speechBubble.animation,
-                        enabled: savedSettings.speechBubble.animation.enabled ?? defaultSettings.speechBubble.animation.enabled,
-                        type: savedSettings.speechBubble.animation.type ?? defaultSettings.speechBubble.animation.type
-                      } : defaultSettings.speechBubble.animation
-                    },
-                    location: {
-                      ...defaultSettings.location,
-                      ...savedSettings.location,
-                      shadow: {
-                        ...defaultSettings.location.shadow,
-                        ...savedSettings.location?.shadow
-                      },
-                      animation: defaultSettings.location.animation && savedSettings.location?.animation ? {
-                        ...defaultSettings.location.animation,
-                        ...savedSettings.location.animation,
-                        enabled: savedSettings.location.animation.enabled ?? defaultSettings.location.animation.enabled,
-                        type: savedSettings.location.animation.type ?? defaultSettings.location.animation.type
-                      } : defaultSettings.location.animation
-                    }
-                  };
-                }
-              });
-              setLocationSettings(perFloorSettings);
-            }
-            addDebug("Location settings loaded");
-          }
-        } catch (e) {
-          addDebug(`Failed to load location settings: ${e}`);
+      // 2. Load all settings from Tauri settings file
+      try {
+        const settings = await loadSettings();
+        addDebug("Settings loaded from Tauri");
+
+        // Apply mall ID
+        const currentMallId = settings.mallId ?? "suzaka";
+        setMallId(currentMallId);
+        addDebug(`Mall ID loaded: ${currentMallId}`);
+
+        // Apply floor
+        if (settings.floor) {
+          setFloor(settings.floor as FloorId);
+          addDebug(`Floor loaded: ${settings.floor}`);
         }
-      }
 
-      // Load floor
-      if (api.getFloor) {
-        try {
-          const currentFloor = await api.getFloor();
-          if (currentFloor) {
-            setFloor(currentFloor as FloorId);
-            addDebug(`Floor loaded: ${currentFloor}`);
-          }
-        } catch (e) {
-          addDebug(`Failed to load floor: ${e}`);
+        // Apply mall settings
+        if (settings.mallSettings) {
+          setMallSettings(settings.mallSettings);
+          addDebug(`Mall settings loaded: ${settings.mallSettings.mallId}`);
         }
-      }
 
-      // Load mall settings first (needed for image settings merge)
-      let currentMallId = "suzaka";
-      if (api.getMallSettings) {
-        try {
-          const saved = await api.getMallSettings();
-          if (saved) {
-            setMallSettings(saved);
-            currentMallId = saved.mallId;
-            setMallId(saved.mallId);
-            addDebug(`Mall settings loaded: ${saved.mallId}`);
-          }
-        } catch (e) {
-          addDebug(`Failed to load mall settings: ${e}`);
-        }
-      }
-
-      // Load image settings
-      if (api.getImageSettings) {
-        try {
-          const saved = await api.getImageSettings();
-          if (saved) {
-            setImageSettings(mergeWithDefaultImages(saved, currentMallId));
-            addDebug(`Image settings loaded`);
-          }
-        } catch (e) {
-          addDebug(`Failed to load image settings: ${e}`);
-        }
-      }
-
-      // Load shop positions
-      if (api.getShopPositions) {
-        try {
-          const saved = await api.getShopPositions();
-          if (saved) {
-            logInfo("app", "Loaded shop positions", { count: Object.keys(saved.positions).length });
-            setShopPositions(saved);
-            addDebug(`Shop positions loaded: ${Object.keys(saved.positions).length} items`);
-          }
-        } catch (e) {
-          addDebug(`Failed to load shop positions: ${e}`);
-        }
-      }
-
-      // Load picto settings
-      if (api.getPictoSettings) {
-        try {
-          const saved = await api.getPictoSettings();
-          if (saved) {
-            setPictoSettings(saved);
-            addDebug(`Picto settings loaded: ${Object.keys(saved.instances).length} items`);
-          }
-        } catch (e) {
-          addDebug(`Failed to load picto settings: ${e}`);
-        }
-      }
-
-      // Load API URLs
-      if (api.getBridgeBaseUrl) {
-         try {
-             const url = await api.getBridgeBaseUrl();
-             // Just logging for debug, not storing in state if not used elsewhere
-             addDebug(`Bridge URL loaded: ${url}`);
-         } catch (e) {
-             addDebug(`Failed to load Bridge URL: ${e}`);
-         }
-      }
-      
-      // Detailed Debug Info
-      if (api.getDebugSettingsStatus) {
-         try {
-             await api.getDebugSettingsStatus();
-             addDebug(`DEBUG STATUS loaded`);
-         } catch (e: any) {
-             addDebug(`DEBUG ERROR: ${e.message}`);
-         }
-      }
-    };
-
-    init();
-
-    const api = window.electronAPI;
-    if (api) {
-      // onOpenSettings moved to init/useEffect scope to capture unsubscribe
-
-      if (api.onLocationIconSettingsUpdated) {
-        unsubscribeUpdated = api.onLocationIconSettingsUpdated((updated) => {
-          // Check if updated is per-floor format or old single format
-          if ('speechBubble' in updated && 'location' in updated && !('1F' in updated)) {
+        // Apply location icon settings
+        if (settings.locationIcons) {
+          const saved = settings.locationIcons;
+          // Check if saved is per-floor format or old single format
+          if ('speechBubble' in saved && 'location' in saved && !('1F' in saved)) {
             // Old format: single LocationIconSettings - convert to per-floor format
-            const oldSettings = updated as LocationIconSettings;
+            const oldSettings = saved as unknown as LocationIconSettings;
             const mergedSettings: LocationIconSettings = {
               speechBubble: {
                 ...DEFAULT_LOCATION_ICON_SETTINGS.speechBubble,
@@ -557,134 +380,115 @@ const App: React.FC = () => {
           } else {
             // New format: LocationIconSettingsPerFloor
             const perFloorSettings: LocationIconSettingsPerFloor = { ...DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR };
-            Object.entries(updated as LocationIconSettingsPerFloor).forEach(([floorId, settings]) => {
-              perFloorSettings[floorId] = {
-                speechBubble: {
-                  ...DEFAULT_LOCATION_ICON_SETTINGS.speechBubble,
-                  ...settings.speechBubble,
-                  enabled: settings.speechBubble?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.enabled,
-                  xPercent: settings.speechBubble?.xPercent ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.xPercent,
-                  yPercent: settings.speechBubble?.yPercent ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.yPercent,
-                  size: settings.speechBubble?.size ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.size,
-                  rotation: settings.speechBubble?.rotation ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.rotation,
-                  shadow: settings.speechBubble?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.shadow,
-                  animation: settings.speechBubble?.animation ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.animation,
-                },
-                location: {
-                  ...DEFAULT_LOCATION_ICON_SETTINGS.location,
-                  ...settings.location,
-                  enabled: settings.location?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.location.enabled,
-                  xPercent: settings.location?.xPercent ?? DEFAULT_LOCATION_ICON_SETTINGS.location.xPercent,
-                  yPercent: settings.location?.yPercent ?? DEFAULT_LOCATION_ICON_SETTINGS.location.yPercent,
-                  size: settings.location?.size ?? DEFAULT_LOCATION_ICON_SETTINGS.location.size,
-                  rotation: settings.location?.rotation ?? DEFAULT_LOCATION_ICON_SETTINGS.location.rotation,
-                  shadow: settings.location?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.location.shadow,
-                  animation: settings.location?.animation ?? DEFAULT_LOCATION_ICON_SETTINGS.location.animation,
-                },
-              };
+            const savedPerFloor = saved as LocationIconSettingsPerFloor;
+
+            Object.keys(savedPerFloor).forEach((key) => {
+              const floorId = key as FloorId;
+              if (savedPerFloor[floorId]) {
+                const defaultSettings = DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR[floorId];
+                const savedSettings = savedPerFloor[floorId];
+
+                perFloorSettings[floorId] = {
+                  speechBubble: {
+                    ...defaultSettings.speechBubble,
+                    ...savedSettings.speechBubble,
+                    shadow: {
+                      ...defaultSettings.speechBubble.shadow,
+                      ...savedSettings.speechBubble?.shadow
+                    },
+                    animation: defaultSettings.speechBubble.animation && savedSettings.speechBubble?.animation ? {
+                      ...defaultSettings.speechBubble.animation,
+                      ...savedSettings.speechBubble.animation,
+                      enabled: savedSettings.speechBubble.animation.enabled ?? defaultSettings.speechBubble.animation.enabled,
+                      type: savedSettings.speechBubble.animation.type ?? defaultSettings.speechBubble.animation.type
+                    } : defaultSettings.speechBubble.animation
+                  },
+                  location: {
+                    ...defaultSettings.location,
+                    ...savedSettings.location,
+                    shadow: {
+                      ...defaultSettings.location.shadow,
+                      ...savedSettings.location?.shadow
+                    },
+                    animation: defaultSettings.location.animation && savedSettings.location?.animation ? {
+                      ...defaultSettings.location.animation,
+                      ...savedSettings.location.animation,
+                      enabled: savedSettings.location.animation.enabled ?? defaultSettings.location.animation.enabled,
+                      type: savedSettings.location.animation.type ?? defaultSettings.location.animation.type
+                    } : defaultSettings.location.animation
+                  }
+                };
+              }
             });
             setLocationSettings(perFloorSettings);
           }
-        });
-      }
+          addDebug("Location settings loaded");
+        }
 
-      if (api.onFloorChanged) {
-        api.onFloorChanged((nextFloor) => {
-          setFloor(nextFloor as FloorId);
-        });
-      }
+        // Apply image settings
+        if (settings.imageSettings) {
+          setImageSettings(mergeWithDefaultImages(settings.imageSettings, currentMallId));
+          addDebug("Image settings loaded");
+        }
 
-      if (api.onImageSettingsUpdated) {
-        api.onImageSettingsUpdated((updated) => {
-          setImageSettings(mergeWithDefaultImages(updated, mallId));
-        });
-      }
+        // Apply shop positions
+        if (settings.shopPositions) {
+          logInfo("app", "Loaded shop positions", { count: Object.keys(settings.shopPositions.positions).length });
+          setShopPositions(settings.shopPositions);
+          addDebug(`Shop positions loaded: ${Object.keys(settings.shopPositions.positions).length} items`);
+        }
 
-      if (api.onShopPositionsUpdated) {
-        api.onShopPositionsUpdated((updated) => {
-          setShopPositions(updated);
-        });
-      }
+        // Apply picto settings
+        if (settings.pictoSettings) {
+          setPictoSettings(settings.pictoSettings);
+          addDebug(`Picto settings loaded: ${Object.keys(settings.pictoSettings.instances).length} items`);
+        }
 
-      if (api.onPictoSettingsUpdated) {
-        api.onPictoSettingsUpdated((updated) => {
-          setPictoSettings(updated);
-        });
+      } catch (e) {
+        addDebug(`Failed to load settings: ${e}`);
+        logError("app", "Failed to load settings from Tauri", { error: e });
       }
-
-      if (api.onMallSettingsUpdated) {
-        api.onMallSettingsUpdated((updated) => {
-          setMallSettings(updated);
-          setMallId(updated.mallId);
-        });
-      }
-    }
-
-    return () => {
-      if (unsubscribeUpdated) unsubscribeUpdated();
-      if (unsubscribeFloorLayout) unsubscribeFloorLayout();
-      if (unsubscribeOpenSettings) unsubscribeOpenSettings();
     };
+
+    init();
   }, []);
 
   const handleSaveLocationSettings = async (settings: LocationIconSettingsPerFloor) => {
-    // Persist to Electron settings.json
-    if (window.electronAPI?.saveLocationIconSettings) {
-      const saved =
-        (await window.electronAPI.saveLocationIconSettings(settings)) ??
-        settings;
-      
-      if ('speechBubble' in saved && 'location' in saved && !('1F' in saved)) {
-        // Fallback for old format (should not happen with updated types but for safety)
-        const mergedSettings: LocationIconSettings = saved as LocationIconSettings;
-        const perFloorSettings: LocationIconSettingsPerFloor = {
-          "1F": mergedSettings,
-          "2F": mergedSettings,
-          "3F": mergedSettings,
-          "4F": mergedSettings,
-        };
-        setLocationSettings(perFloorSettings);
-      } else {
-        setLocationSettings(saved as LocationIconSettingsPerFloor);
-      }
-    } else {
-      // Fallback: no Electron available (dev in browser)
+    try {
+      await updateSettings({ locationIcons: settings });
+      setLocationSettings(settings);
+    } catch (e) {
+      logError("app", "Failed to save location settings", { error: e });
+      // Fallback: still update local state
       setLocationSettings(settings);
     }
   };
 
 
   const handleSaveMallId = async (nextMallId: string) => {
-    const api = window.electronAPI;
-    if (!api) return;
-
     try {
-      await api.setMallId(nextMallId);
-      // setMallIdはvoidを返すので、成功した場合はnextMallIdを使用
+      // Update mall ID in settings
+      await updateSettings({ mallId: nextMallId as MallId });
       setMallId(nextMallId);
-      
+
       // モールIDが変更されたら、画像設定をリセットして新しいモールのデフォルトを適用
       // openTimeImage と floorMaps を空にすることで mergeWithDefaultImages が新しいモールのデフォルト値を設定する
       const resetSettings = {
         ...imageSettings,
         floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
-        openTimeImage: "", 
+        openTimeImage: "",
       };
       const newImageSettings = mergeWithDefaultImages(resetSettings, nextMallId);
-      
-      setImageSettings(newImageSettings);
-      
-      // 画像設定も保存しておく（次回起動時のため）
-      if (api.saveImageSettings) {
-        await api.saveImageSettings(newImageSettings);
-      }
 
-      // モール設定（ジャンル設定等）もリロードする
-      if (api.getMallSettings) {
-          const newMallSettings = await api.getMallSettings();
-          if (newMallSettings) {
-              setMallSettings(newMallSettings);
-          }
+      setImageSettings(newImageSettings);
+
+      // 画像設定も保存しておく（次回起動時のため）
+      await updateSettings({ imageSettings: newImageSettings });
+
+      // Reload all settings for the new mall (loadSettings resolves dataByMall per mall)
+      const freshSettings = await loadSettings();
+      if (freshSettings.mallSettings) {
+        setMallSettings(freshSettings.mallSettings);
       }
 
       logInfo("app", "Mall ID saved successfully", { mallId: nextMallId });
@@ -695,11 +499,8 @@ const App: React.FC = () => {
   };
 
   const handleSaveFloor = async (nextFloor: FloorId) => {
-    const api = window.electronAPI;
-    if (!api) return;
-
     try {
-      api.setFloor(nextFloor);
+      await updateSettings({ floor: nextFloor });
     } catch (e) {
       console.error("Failed to save floor", e);
     }
@@ -707,13 +508,40 @@ const App: React.FC = () => {
 
 
   const handleSaveImageSettings = async (settings: ImageSettings) => {
-    const api = window.electronAPI;
-    if (!api) return;
-
     try {
-      const saved = await api.saveImageSettings(settings);
-      if (saved) {
-        setImageSettings(mergeWithDefaultImages(saved, mallId));
+      // Process any data: URLs by saving them as files first
+      const processedSettings = { ...settings };
+      const floorKeys: FloorId[] = ["1F", "2F", "3F", "4F"];
+
+      for (const floorKey of floorKeys) {
+        const mapValue = processedSettings.floorMaps[floorKey];
+        if (mapValue && mapValue.startsWith("data:")) {
+          // Extract the binary data from the data: URL and save as file
+          const response = await fetch(mapValue);
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          const ext = blob.type.includes("png") ? "png" : blob.type.includes("svg") ? "svg" : "jpg";
+          const filename = `floormap-${floorKey}.${ext}`;
+          const savedPath = await saveImageFile(filename, uint8Array);
+          processedSettings.floorMaps[floorKey] = savedPath;
+        }
+      }
+
+      if (processedSettings.openTimeImage && processedSettings.openTimeImage.startsWith("data:")) {
+        const response = await fetch(processedSettings.openTimeImage);
+        const blob = await response.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const ext = blob.type.includes("png") ? "png" : blob.type.includes("svg") ? "svg" : "jpg";
+        const filename = `open-time.${ext}`;
+        const savedPath = await saveImageFile(filename, uint8Array);
+        processedSettings.openTimeImage = savedPath;
+      }
+
+      const merged = await updateSettings({ imageSettings: processedSettings });
+      if (merged.imageSettings) {
+        setImageSettings(mergeWithDefaultImages(merged.imageSettings, mallId));
       }
     } catch (e) {
       console.error("Failed to save image settings", e);
@@ -721,16 +549,13 @@ const App: React.FC = () => {
   };
 
   const handleSaveShopPositions = async (settings: ShopPositionSettings) => {
-    const api = window.electronAPI;
-    if (!api) return;
-
     try {
       logInfo("app", "Saving shop positions", { count: Object.keys(settings.positions).length });
-      const saved = await api.saveShopPositions(settings);
-      if (saved) {
-        setShopPositions(saved);
-        logInfo("app", "Shop positions saved successfully");
+      const merged = await updateSettings({ shopPositions: settings });
+      if (merged.shopPositions) {
+        setShopPositions(merged.shopPositions);
       }
+      logInfo("app", "Shop positions saved successfully");
     } catch (e) {
       logError("app", "Failed to save shop positions", { error: e });
       console.error("Failed to save shop positions", e);
@@ -738,149 +563,100 @@ const App: React.FC = () => {
   };
 
   const handleSavePictoSettings = async (settings: PictoSettings) => {
-    const api = window.electronAPI;
-    // Electron環境でない場合のフォールバック（開発用）
-    if (!api) {
-        setPictoSettings(settings);
-        return;
-    }
-
     try {
-      const saved = await api.savePictoSettings(settings);
-      if (saved) {
-        setPictoSettings(saved);
-        logInfo("app", "Picto settings saved successfully");
+      const merged = await updateSettings({ pictoSettings: settings });
+      if (merged.pictoSettings) {
+        setPictoSettings(merged.pictoSettings);
       }
+      logInfo("app", "Picto settings saved successfully");
     } catch (e) {
       logError("app", "Failed to save picto settings", { error: e });
       console.error("Failed to save picto settings", e);
+      // Fallback: still update local state
+      setPictoSettings(settings);
     }
   };
 
   const handleSaveMallSettings = async (settings: MallSettings) => {
-    const api = window.electronAPI;
-    if (!api) {
-      const oldMallId = mallSettings.mallId;
-      setMallSettings(settings);
-
-      // ブラウザ環境でのモック動作：モールが変わったらデータをリセット
-      if (settings.mallId !== oldMallId) {
-          setPictoSettings({ instances: {} });
-          setShopPositions({ positions: {} });
-          setImageSettings(mergeWithDefaultImages(DEFAULT_IMAGE_SETTINGS, settings.mallId));
-      }
-      return;
-    }
-
     try {
-      const saved = await api.saveMallSettings(settings);
-      if (saved) {
-        setMallSettings(saved);
-        setMallId(saved.mallId);
-        logInfo("app", "Mall settings saved successfully", { mallId: saved.mallId });
-        
+      const oldMallId = mallSettings.mallId;
+      const merged = await updateSettings({ mallSettings: settings });
+
+      if (merged.mallSettings) {
+        setMallSettings(merged.mallSettings);
+        setMallId(merged.mallSettings.mallId);
+        logInfo("app", "Mall settings saved successfully", { mallId: merged.mallSettings.mallId });
+
         // Reload mall-specific settings when mall changes
-        if (saved.mallId !== mallSettings.mallId) {
-          // Reload shop positions for the new mall
-          if (api.getShopPositions) {
-            try {
-              const newShopPositions = await api.getShopPositions();
-              if (newShopPositions) {
-                setShopPositions(newShopPositions);
-                logInfo("app", "Shop positions reloaded for new mall", { 
-                  mallId: saved.mallId,
-                  count: Object.keys(newShopPositions.positions).length 
-                });
-              }
-            } catch (e) {
-              logError("app", "Failed to reload shop positions", { error: e });
-            }
+        if (merged.mallSettings.mallId !== oldMallId) {
+          // Reload all settings for the new mall (loadSettings resolves dataByMall per mall)
+          const freshSettings = await loadSettings();
+
+          // Apply shop positions for new mall
+          if (freshSettings.shopPositions) {
+            setShopPositions(freshSettings.shopPositions);
+            logInfo("app", "Shop positions reloaded for new mall", {
+              mallId: merged.mallSettings.mallId,
+              count: Object.keys(freshSettings.shopPositions.positions).length
+            });
           }
 
-          // Reload location settings for the new mall
-          if (api.getLocationIconSettings) {
-            try {
-              const newLocationSettings = await api.getLocationIconSettings();
-              if (newLocationSettings) {
-                // Check if saved is per-floor format or old single format
-                const isPerFloor = '1F' in newLocationSettings || '2F' in newLocationSettings;
-                
-                if (!isPerFloor && 'speechBubble' in newLocationSettings) {
-                   // Convert old format to per-floor
-                   const oldSettings = newLocationSettings as LocationIconSettings;
-                   const mergedSettings: LocationIconSettings = {
-                     speechBubble: {
-                       ...DEFAULT_LOCATION_ICON_SETTINGS.speechBubble,
-                       ...oldSettings.speechBubble,
-                       enabled: oldSettings.speechBubble?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.enabled,
-                       shadow: oldSettings.speechBubble?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.shadow,
-                       animation: oldSettings.speechBubble?.animation ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.animation,
-                     },
-                     location: {
-                       ...DEFAULT_LOCATION_ICON_SETTINGS.location,
-                       ...oldSettings.location,
-                       enabled: oldSettings.location?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.location.enabled,
-                       shadow: oldSettings.location?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.location.shadow,
-                     },
-                   };
-                   const perFloorSettings: LocationIconSettingsPerFloor = {
-                     "1F": mergedSettings,
-                     "2F": mergedSettings,
-                     "3F": mergedSettings,
-                     "4F": mergedSettings,
-                   };
-                   setLocationSettings(perFloorSettings);
-                } else {
-                   // Per floor format
-                   setLocationSettings(newLocationSettings as LocationIconSettingsPerFloor);
-                }
-                logInfo("app", "Location settings reloaded for new mall", { mallId: saved.mallId });
-              }
-            } catch (e) {
-              logError("app", "Failed to reload location settings", { error: e });
+          // Apply location settings for new mall
+          if (freshSettings.locationIcons) {
+            const newLocationSettings = freshSettings.locationIcons;
+            const isPerFloor = '1F' in newLocationSettings || '2F' in newLocationSettings;
+
+            if (!isPerFloor && 'speechBubble' in newLocationSettings) {
+               // Convert old format to per-floor
+               const oldSettings = newLocationSettings as unknown as LocationIconSettings;
+               const mergedLoc: LocationIconSettings = {
+                 speechBubble: {
+                   ...DEFAULT_LOCATION_ICON_SETTINGS.speechBubble,
+                   ...oldSettings.speechBubble,
+                   enabled: oldSettings.speechBubble?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.enabled,
+                   shadow: oldSettings.speechBubble?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.shadow,
+                   animation: oldSettings.speechBubble?.animation ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.animation,
+                 },
+                 location: {
+                   ...DEFAULT_LOCATION_ICON_SETTINGS.location,
+                   ...oldSettings.location,
+                   enabled: oldSettings.location?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.location.enabled,
+                   shadow: oldSettings.location?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.location.shadow,
+                 },
+               };
+               const perFloorSettings: LocationIconSettingsPerFloor = {
+                 "1F": mergedLoc,
+                 "2F": mergedLoc,
+                 "3F": mergedLoc,
+                 "4F": mergedLoc,
+               };
+               setLocationSettings(perFloorSettings);
+            } else {
+               // Per floor format
+               setLocationSettings(newLocationSettings as LocationIconSettingsPerFloor);
             }
-          }
-          
-          // Reload picto settings for the new mall
-          if (api.getPictoSettings) {
-            try {
-              const newPictoSettings = await api.getPictoSettings();
-              if (newPictoSettings) {
-                setPictoSettings(newPictoSettings);
-                logInfo("app", "Picto settings reloaded for new mall", { 
-                  mallId: saved.mallId,
-                  count: Object.keys(newPictoSettings.instances).length 
-                });
-              }
-            } catch (e) {
-              logError("app", "Failed to reload picto settings", { error: e });
-            }
-          }
-          
-          // Reload image settings for the new mall
-          if (api.getImageSettings) {
-            try {
-              const savedImageSettings = await api.getImageSettings();
-              if (savedImageSettings) {
-                setImageSettings(mergeWithDefaultImages(savedImageSettings, saved.mallId));
-                logInfo("app", "Image settings reloaded for new mall", { mallId: saved.mallId });
-              }
-            } catch (e) {
-              logError("app", "Failed to reload image settings", { error: e });
-            }
+            logInfo("app", "Location settings reloaded for new mall", { mallId: merged.mallSettings.mallId });
           }
 
-          // Reload mall settings (for genre keywords and max count)
-          if (api.getMallSettings) {
-             try {
-               const savedMallSettings = await api.getMallSettings();
-               if (savedMallSettings) {
-                 setMallSettings(savedMallSettings);
-                 logInfo("app", "Mall settings reloaded for new mall", { mallId: saved.mallId });
-               }
-             } catch (e) {
-               logError("app", "Failed to reload mall settings", { error: e });
-             }
+          // Apply picto settings for new mall
+          if (freshSettings.pictoSettings) {
+            setPictoSettings(freshSettings.pictoSettings);
+            logInfo("app", "Picto settings reloaded for new mall", {
+              mallId: merged.mallSettings.mallId,
+              count: Object.keys(freshSettings.pictoSettings.instances).length
+            });
+          }
+
+          // Apply image settings for new mall
+          if (freshSettings.imageSettings) {
+            setImageSettings(mergeWithDefaultImages(freshSettings.imageSettings, merged.mallSettings.mallId));
+            logInfo("app", "Image settings reloaded for new mall", { mallId: merged.mallSettings.mallId });
+          }
+
+          // Apply mall settings (for genre keywords and max count)
+          if (freshSettings.mallSettings) {
+            setMallSettings(freshSettings.mallSettings);
+            logInfo("app", "Mall settings reloaded for new mall", { mallId: merged.mallSettings.mallId });
           }
         }
       }
@@ -926,9 +702,9 @@ const App: React.FC = () => {
         fontFamily: 'monospace'
       }}>
         {/* Header (Draggable) */}
-        <div onMouseDown={handleDebugMouseDown} style={{ 
-          padding: '8px', 
-          background: '#333', 
+        <div onMouseDown={handleDebugMouseDown} style={{
+          padding: '8px',
+          background: '#333',
           cursor: 'move',
           display: 'flex',
           justifyContent: 'space-between',
@@ -937,7 +713,7 @@ const App: React.FC = () => {
           <span>Debug Log</span>
           <span>Ctrl+Shift+D to toggle</span>
         </div>
-        
+
         {/* System Info */}
         <div style={{ padding: '8px', borderBottom: '1px solid #333' }}>
           <div>Version: {appVersion} | Window: {window.innerWidth}x{window.innerHeight}</div>
@@ -945,7 +721,7 @@ const App: React.FC = () => {
 
         {/* Scrollable Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
-          
+
           {/* API Status (Expandable) */}
           <details open>
             <summary style={{ cursor: 'pointer', marginBottom: '4px' }}>API Status</summary>
@@ -976,9 +752,9 @@ const App: React.FC = () => {
         </div>
 
         {/* Resizer Handle */}
-        <div onMouseDown={handleResizeMouseDown} style={{ 
-          cursor: 'se-resize', 
-          height: '16px', 
+        <div onMouseDown={handleResizeMouseDown} style={{
+          cursor: 'se-resize',
+          height: '16px',
           background: '#222',
           display: 'flex',
           justifyContent: 'flex-end',
@@ -989,8 +765,8 @@ const App: React.FC = () => {
         </div>
       </div>
       )}
-    <ShopListScreen 
-      isSettingsOpen={isSettingsOpen} 
+    <ShopListScreen
+      isSettingsOpen={isSettingsOpen}
       locationIconSettings={locationSettings}
       currentFloor={floor}
       mallId={mallId as MallId}
