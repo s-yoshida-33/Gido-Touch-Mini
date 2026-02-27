@@ -67,7 +67,7 @@
       "active": true,
       "endpoints": ["https://github.com/s-yoshida-33/Gido-Touch-Mini/releases/latest/download/latest.json"],
       "dialog": false,
-      "pubkey": ""
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE2M0I0QzgwMzY1RjQ0NzkKUldSNVJGODJnRXc3cGdGSlNiK3R4dGZEdFhJZkJBRmFWSU5zM1B5Sml5T0JmeWV3S0RGUGZvYSsK"
     }
   }
 }
