@@ -1,4 +1,16 @@
 // src/utils/imageUtils.ts
+import { invoke } from "@tauri-apps/api/core";
+
+/**
+ * Load a shop image via Tauri IPC (returns data URL or null).
+ */
+export async function getShopImageDataUrl(filePath: string): Promise<string | null> {
+  try {
+    return await invoke<string | null>('get_shop_image', { filePath });
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Build image path using shop_id if photo is relative or filename only
@@ -71,7 +83,7 @@ export function buildImagePath(photo: string | undefined, shopId: string | undef
 }
 
 /**
- * Convert a local file path to a file:// URL for Electron
+ * Convert a local file path to a file:// URL
  */
 export function toFileUrl(filePath: string): string {
   if (!filePath) return "";
