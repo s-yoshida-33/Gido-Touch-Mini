@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -304,6 +305,156 @@ fn read_image_file(file_path: String) -> Result<Vec<u8>, String> {
 }
 
 // ---------------------------------------------------------------------------
+// Mall asset helpers
+// ---------------------------------------------------------------------------
+
+/// Resolve base path for mall assets.
+/// In dev: <cwd>/src/assets/malls
+/// In production: <exe_dir>/resources/assets/malls  (extraResource)
+fn get_mall_assets_base_path() -> Result<PathBuf, String> {
+    // Development: check for src/assets/malls relative to CWD
+    let dev_path = std::env::current_dir()
+        .unwrap_or_default()
+        .join("src")
+        .join("assets")
+        .join("malls");
+    if dev_path.exists() {
+        return Ok(dev_path);
+    }
+
+    // Production: next to the executable under _up_/resources/assets/malls
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            let prod_path = exe_dir.join("resources").join("assets").join("malls");
+            if prod_path.exists() {
+                return Ok(prod_path);
+            }
+            // Tauri on Windows: resources may sit next to the exe directly
+            let alt_path = exe_dir.join("assets").join("malls");
+            if alt_path.exists() {
+                return Ok(alt_path);
+            }
+        }
+    }
+
+    Err("Mall assets directory not found".to_string())
+}
+
+/// Detect MIME type from file extension.
+fn mime_from_ext(ext: &str) -> &str {
+    match ext {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        "ico" => "image/x-icon",
+        "bmp" => "image/bmp",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Read a file and return as a data-URL string (data:<mime>;base64,...).
+fn file_to_data_url(path: &std::path::Path) -> Option<String> {
+    if !path.exists() {
+        return None;
+    }
+    let data = fs::read(path).ok()?;
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    let mime = mime_from_ext(&ext);
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&data);
+    Some(format!("data:{};base64,{}", mime, b64))
+}
+
+// ---------------------------------------------------------------------------
+// Mall config & asset commands
+// ---------------------------------------------------------------------------
+
+/// Read a mall configuration JSON file (genres.json or pictos.json).
+#[tauri::command]
+fn read_mall_config(mall_id: String, config_type: String) -> Result<serde_json::Value, String> {
+    let base = get_mall_assets_base_path()?;
+    let config_path = base.join(&mall_id).join(format!("{}.json", config_type));
+
+    if !config_path.exists() {
+        return Ok(serde_json::Value::Null);
+    }
+
+    let content = fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read config: {}", e))?;
+    serde_json::from_str(&content)
+        .map_err(|e| format!("Invalid JSON in {}: {}", config_path.display(), e))
+}
+
+/// Read a mall asset file and return it as a data-URL string.
+/// `relative_path` is relative to the malls directory, e.g. "suzaka/pictos/icon/restroom.svg".
+#[tauri::command]
+fn read_mall_asset(relative_path: String) -> Result<Option<String>, String> {
+    let base = get_mall_assets_base_path()?;
+    let full_path = base.join(&relative_path);
+
+    if let Some(url) = file_to_data_url(&full_path) {
+        return Ok(Some(url));
+    }
+
+    // Case-insensitive fallback: scan directory for matching filename
+    if let Some(parent) = full_path.parent() {
+        if parent.exists() {
+            if let Some(fname) = full_path.file_name().and_then(|f| f.to_str()) {
+                let lower = fname.to_lowercase();
+                if let Ok(entries) = fs::read_dir(parent) {
+                    for entry in entries.flatten() {
+                        if entry.file_name().to_string_lossy().to_lowercase() == lower {
+                            if let Some(url) = file_to_data_url(&entry.path()) {
+                                return Ok(Some(url));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+// ---------------------------------------------------------------------------
+// Shop image command (reads arbitrary image path as data-URL)
+// ---------------------------------------------------------------------------
+
+/// Read a shop image from a local file path and return as data-URL.
+/// Handles `file://` prefixed paths and Windows drive-letter paths.
+#[tauri::command]
+fn get_shop_image(file_path: String) -> Result<Option<String>, String> {
+    let mut local = file_path.clone();
+
+    // Strip file:// prefix
+    if local.starts_with("file://") {
+        local = local.replacen("file://", "", 1);
+        // Handle Windows: file:///C:/... -> C:/...
+        if local.starts_with('/') && local.chars().nth(1).map_or(false, |c| c.is_ascii_alphabetic()) && local.chars().nth(2) == Some(':') {
+            local = local[1..].to_string();
+        }
+    }
+
+    let path = std::path::Path::new(&local);
+    Ok(file_to_data_url(path))
+}
+
+// ---------------------------------------------------------------------------
+// Quit app command
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
+// ---------------------------------------------------------------------------
 // App entry point
 // ---------------------------------------------------------------------------
 
@@ -324,6 +475,10 @@ fn main() {
             get_image_path,
             delete_image_file,
             read_image_file,
+            read_mall_config,
+            read_mall_asset,
+            get_shop_image,
+            quit_app,
         ]);
 
     let app = builder

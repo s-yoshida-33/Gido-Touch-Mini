@@ -1,10 +1,12 @@
 // src/components/FloorSelectDialog.tsx
 import React, { useState } from 'react';
+import { updateSettings } from '../utils/settings';
 
 interface FloorSelectDialogProps {
   isOpen: boolean;
   initialFloor: string;
   onClose: () => void;
+  onFloorChange?: (floor: string) => void;
 }
 
 const FLOORS = ['1F', '2F', '3F', '4F'];
@@ -13,13 +15,15 @@ export const FloorSelectDialog: React.FC<FloorSelectDialogProps> = ({
   isOpen,
   initialFloor,
   onClose,
+  onFloorChange,
 }) => {
   const [selected, setSelected] = useState(initialFloor);
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
-    window.electronAPI?.setFloor(selected);
+  const handleSave = async () => {
+    await updateSettings({ floor: selected });
+    onFloorChange?.(selected);
     onClose();
   };
 

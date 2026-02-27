@@ -24,7 +24,7 @@ import { ShopNewsModal } from "../components/ShopNewsModal";
 import { ShopLogoImage } from "../components/ShopLogoImage";
 import { TwoLineAutoScaleText } from "../components/TwoLineAutoScaleText";
 import { AutoScaleText } from "../components/AutoScaleText";
-import { buildImagePath, toFileUrl } from "../utils/imageUtils";
+import { buildImagePath, toFileUrl, getShopImageDataUrl } from "../utils/imageUtils";
 // Unused variables removed
 import { getCommonAssetUrl } from "../utils/assets"; // Import common assets helper
 // ImageSettings import removed - handled in parent
@@ -105,7 +105,7 @@ const IDLE_TIMEOUT_MS = 30000;
 // ShopLogoImage moved to src/components/ShopLogoImage.tsx
 
 /**
- * Shop image component that loads images via Electron IPC or falls back to file:// URL
+ * Shop image component that loads images via Tauri IPC or falls back to file:// URL
  */
 const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefined }> = ({ photo, shopId }) => {
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -124,23 +124,18 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
         return;
       }
 
-      // Check if we're in Electron environment
-      const electronAPI = (window as any).electronAPI; // Cast window to any
-      if (electronAPI && electronAPI.getShopImage) {
-        try {
-          // Use Electron IPC to load image as data URL
-          const dataUrl = await electronAPI.getShopImage(imagePath);
-          if (dataUrl) {
-            setImageUrl(dataUrl);
-            setIsLoading(false);
-            return;
-          }
-        } catch (error) {
-          console.error("Failed to load image via IPC:", error);
+      try {
+        const dataUrl = await getShopImageDataUrl(imagePath);
+        if (dataUrl) {
+          setImageUrl(dataUrl);
+          setIsLoading(false);
+          return;
         }
+      } catch (error) {
+        console.error("Failed to load image via IPC:", error);
       }
 
-      // Fallback to file:// URL (works in Electron, not in browser)
+      // Fallback to file:// URL
       const fileUrl = toFileUrl(imagePath);
       setImageUrl(fileUrl);
       setIsLoading(false);

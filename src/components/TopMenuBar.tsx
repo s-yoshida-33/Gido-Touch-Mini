@@ -1,5 +1,8 @@
 // src/components/TopMenuBar.tsx
 import React from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import type { CSSWithDrag } from '../types/CSSWithDrag';
 
 interface TopMenuBarProps {
@@ -27,13 +30,13 @@ const MenuButton: React.FC<{
         WebkitAppRegion: 'no-drag',
         transition: 'background 120ms ease-out, color 120ms ease-out',
     };
-    
+
     const style: CSSWithDrag = {
         ...baseButtonStyle,
         background: hover ? 'rgba(255,255,255,0.06)' : 'transparent',
         color: '#f5f5f7',
     };
-    
+
     return (
         <button
           type="button"
@@ -46,6 +49,26 @@ const MenuButton: React.FC<{
         </button>
     );
 };
+
+async function handleManualUpdateCheck() {
+  try {
+    const update = await check();
+    if (update) {
+      await update.downloadAndInstall();
+      await relaunch();
+    }
+  } catch (e) {
+    console.error('Update check failed:', e);
+  }
+}
+
+async function handleQuitApp() {
+  try {
+    await invoke('quit_app');
+  } catch (e) {
+    console.error('Failed to quit app:', e);
+  }
+}
 
 export const TopMenuBar: React.FC<TopMenuBarProps> = ({
   onOpenFloorSelect,
@@ -112,13 +135,10 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
       <div style={{ flex: 1 }} />
 
       {/* Right-side action */}
-      <MenuButton onClick={() => window.electronAPI?.manualUpdateCheck()}>
+      <MenuButton onClick={handleManualUpdateCheck}>
         Check for updates
       </MenuButton>
-      <MenuButton onClick={() => window.electronAPI?.oneClickUpdate()}>
-        Update now
-      </MenuButton>
-      <MenuButton onClick={() => window.electronAPI?.quitApp()}>Quit</MenuButton>
+      <MenuButton onClick={handleQuitApp}>Quit</MenuButton>
     </div>
   );
 };

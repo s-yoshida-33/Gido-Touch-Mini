@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import type { ShopPosition } from "../types/shop";
 import { ShopLocationIcon } from "./ShopLocationIcon";
+import { getShopImageDataUrl } from "../utils/imageUtils";
 import "../styles/location-icons.css"; // Ensure CSS is imported
 
 interface ShopPinProps {
@@ -144,19 +145,16 @@ export const ShopPin: React.FC<ShopPinProps> = ({
         return;
       }
 
-      const electronAPI = window.electronAPI;
-      if (electronAPI && electronAPI.getShopImage) {
-        try {
-          const normalizedPath = imagePath.replace(/\\/g, "/");
-          const dataUrl = await electronAPI.getShopImage(normalizedPath);
-          if (dataUrl) {
-            setLogoUrl(dataUrl);
-            setLogoLoading(false);
-            return;
-          }
-        } catch (error) {
-          console.error("Failed to load logo via IPC:", error);
+      try {
+        const normalizedPath = imagePath.replace(/\\/g, "/");
+        const dataUrl = await getShopImageDataUrl(normalizedPath);
+        if (dataUrl) {
+          setLogoUrl(dataUrl);
+          setLogoLoading(false);
+          return;
         }
+      } catch (error) {
+        console.error("Failed to load logo via IPC:", error);
       }
 
       const fileUrl = toFileUrl(imagePath);

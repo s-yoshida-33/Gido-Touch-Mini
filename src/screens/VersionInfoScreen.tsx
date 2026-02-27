@@ -1,8 +1,9 @@
 // src/screens/VersionInfoScreen.tsx
 import React, { useEffect, useState } from "react";
-import type { AppInfoAPI } from "../types/global";
+import { getVersion } from "@tauri-apps/api/app";
 
 interface Props {
+  isOpen?: boolean;
   onClose?: () => void;
 }
 
@@ -16,8 +17,7 @@ interface VersionInfo {
   error: string | null;
 }
 
-const VersionInfoScreen: React.FC<Props> = () => {
-  const [visible, setVisible] = useState(false);
+const VersionInfoScreen: React.FC<Props> = ({ isOpen = false, onClose }) => {
   const [versionInfo, setVersionInfo] = useState<VersionInfo>({
     current: "",
     latest: null,
@@ -32,60 +32,29 @@ const VersionInfoScreen: React.FC<Props> = () => {
   });
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-
-    if (window.electronAPI?.onOpenVersionInfo) {
-      unsubscribe = window.electronAPI.onOpenVersionInfo(() => {
-        const width = 500;
-        const height = 400;
-        const left = Math.max(20, (window.innerWidth - width) / 2);
-        const top = Math.max(20, (window.innerHeight - height) / 2);
-        setWindowPos({ left, top });
-        setVisible(true);
-        checkVersion();
-      });
+    if (isOpen) {
+      const width = 500;
+      const height = 400;
+      const left = Math.max(20, (window.innerWidth - width) / 2);
+      const top = Math.max(20, (window.innerHeight - height) / 2);
+      setWindowPos({ left, top });
+      checkVersion();
     }
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
+  }, [isOpen]);
 
   const checkVersion = async () => {
     setVersionInfo((prev) => ({ ...prev, checking: true, error: null }));
 
     try {
-      // Get current version
-      const currentVersion =
-        (await window.appInfo?.getVersion()) || "不明";
+      const currentVersion = await getVersion();
 
-      // Get latest version info
-      const appInfo = window.appInfo as AppInfoAPI | undefined;
-      const latestInfo = appInfo?.getLatestVersionInfo
-        ? await appInfo.getLatestVersionInfo()
-        : null;
-
-      if (latestInfo) {
-        const isLatest = currentVersion === latestInfo.version;
-        setVersionInfo({
-          current: currentVersion,
-          latest: latestInfo.version,
-          isLatest,
-          releaseDate: latestInfo.releaseDate,
-          releaseNotes: latestInfo.releaseNotes,
-          checking: false,
-          error: null,
-        });
-      } else {
-        // Could not get latest version info
-        setVersionInfo({
-          current: currentVersion,
-          latest: null,
-          isLatest: false,
-          checking: false,
-          error: "最新バージョンの確認に失敗しました。",
-        });
-      }
+      setVersionInfo({
+        current: currentVersion,
+        latest: null,
+        isLatest: false,
+        checking: false,
+        error: null,
+      });
     } catch (error) {
       setVersionInfo((prev) => ({
         ...prev,
@@ -96,7 +65,7 @@ const VersionInfoScreen: React.FC<Props> = () => {
   };
 
   const handleClose = () => {
-    setVisible(false);
+    onClose?.();
   };
 
   const handleDragMouseDown: React.MouseEventHandler<HTMLDivElement> = (e) => {
@@ -129,7 +98,7 @@ const VersionInfoScreen: React.FC<Props> = () => {
     window.addEventListener("mouseup", onMouseUp);
   };
 
-  if (!visible) return null;
+  if (!isOpen) return null;
 
   return (
     <div

@@ -63,7 +63,6 @@ const GidoApp: React.FC<GidoAppProps> = ({
   );
 
   // Floor is managed by parent (App.tsx) and passed via previewFloor prop.
-  // No Electron IPC needed in Tauri - floor state comes from props.
   useEffect(() => {
     if (previewFloor !== undefined) {
       setFloor(previewFloor);

@@ -503,26 +503,19 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
 
                   // モール変更時にピクト設定なども即座にリセット（ローカル反映）
                   if (newMallId !== oldMallId) {
-                      const api = window.electronAPI;
-                      if (api) {
-                          // Load settings for the new mall ID without saving
-                          const [newPicto, newShopPos, newLocation, newImage, newMallSettings] = await Promise.all([
-                              api.getPictoSettings(newMallId),
-                              api.getShopPositions(newMallId),
-                              api.getLocationIconSettings(newMallId),
-                              api.getImageSettings(newMallId),
-                              api.getMallSettings(newMallId)
-                          ]);
+                      // Load settings for the new mall from disk via Tauri
+                      try {
+                          const { loadSettings: loadAllSettings } = await import('../utils/settings');
+                          const allSettings = await loadAllSettings();
+                          const mallData = allSettings.dataByMall?.[newMallId] ?? {};
 
-                          setPictoSettings(newPicto);
-                          setShopPositions(newShopPos);
-                          setLocationIconSettings(newLocation as LocationIconSettingsPerFloor);
-                          setImageSettings(newImage);
-                          if (newMallSettings) {
-                              setMallSettings(newMallSettings);
-                          } else {
-                              setMallSettings(newSettings); 
-                          }
+                          setPictoSettings(mallData.pictoSettings ?? pictoSettings);
+                          setShopPositions(mallData.shopPositions ?? shopPositions);
+                          setLocationIconSettings((mallData.locationIcons ?? locationIconSettings) as LocationIconSettingsPerFloor);
+                          setImageSettings(mallData.imageSettings ?? imageSettings);
+                          // mallSettings already set above
+                      } catch (e) {
+                          console.error('Failed to load settings for new mall:', e);
                       }
                   } else {
                       setMallSettings(newSettings);
