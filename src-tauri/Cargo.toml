@@ -1,6 +1,6 @@
 [package]
 name = "gido-touch-mini"
-version = "0.2.0"
+version = "0.1.0"
 description = "Floor guide display system"
 authors = ["Toei Techno International Inc."]
 license = "UNLICENSED"
@@ -24,6 +24,7 @@ reqwest = { version = "0.11", features = ["blocking", "json"] }
 dirs = "5.0"
 chrono = "0.4"
 base64 = "0.22"
+sysinfo = "0.32"
 
 [profile.release]
 codegen-units = 1

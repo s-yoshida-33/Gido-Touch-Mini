@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "identifier": "com.tti.gido-touch-mini",
   "productName": "Gido Touch Mini",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -67,7 +67,7 @@
       "active": true,
       "endpoints": ["https://github.com/s-yoshida-33/Gido-Touch-Mini/releases/latest/download/latest.json"],
       "dialog": false,
-      "pubkey": ""
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE2M0I0QzgwMzY1RjQ0NzkKUldSNVJGODJnRXc3cGdGSlNiK3R4dGZEdFhJZkJBRmFWSU5zM1B5Sml5T0JmeWV3S0RGUGZvYSsK"
     }
   }
 }

@@ -2,6 +2,8 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import "./styles/global-image.css"; // Global image styles
 import ShopListScreen from "./screens/ShopListScreen";
+import { useHeartbeat } from "./hooks/useHeartbeat";
+import { ContextMenu } from "./components/ContextMenu";
 
 // floor maps imports removed - managed by mall config and assets
 // openTimeImage import removed - managed by mall config
@@ -92,6 +94,9 @@ const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageS
 };
 
 const App: React.FC = () => {
+  // Heartbeat (system info + hourly logging)
+  useHeartbeat();
+
   // DEBUG STATE
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const addDebug = (msg: string) => setDebugLog(prev => [...prev.slice(-49), msg]);
@@ -129,6 +134,7 @@ const App: React.FC = () => {
 
   // Settings screen open state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isVersionInfoOpen, setIsVersionInfoOpen] = useState(false);
 
   // Load data function
   const loadData = async (useCacheFirst = false) => {
@@ -682,7 +688,10 @@ const App: React.FC = () => {
   const currentMallConfig = getMallConfig(mallSettings.mallId);
 
   return (
-    <>
+    <ContextMenu
+      onOpenSettings={() => setIsSettingsOpen(true)}
+      onOpenVersionInfo={() => setIsVersionInfoOpen(true)}
+    >
       {isDebugVisible && (
       <div style={{
         position: 'fixed',
@@ -800,8 +809,8 @@ const App: React.FC = () => {
         mallSettings={mallSettings}
         onSaveMallSettings={handleSaveMallSettings}
       />
-      <VersionInfoScreen onClose={() => {}} />
-    </>
+      <VersionInfoScreen isOpen={isVersionInfoOpen} onClose={() => setIsVersionInfoOpen(false)} />
+    </ContextMenu>
   );
 };
 
