@@ -147,8 +147,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     // Check if incoming paths belong to a different mall (heuristic)
     for (const path of Object.values(incomingMaps)) {
       if (path && typeof path === 'string') {
-        if (currentMallId === 'sendai-kamisugi' && path.includes('suzaka')) isStale = true;
-        if (currentMallId === 'suzaka' && path.includes('sendai-kamisugi')) isStale = true;
+        if (currentMallId === 'sendaikamisugi' && path.includes('suzaka')) isStale = true;
+        if (currentMallId === 'suzaka' && path.includes('sendaikamisugi')) isStale = true;
       }
     }
 
@@ -231,8 +231,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       for (const path of Object.values(incomingMaps)) {
           if (path && typeof path === 'string') {
               // Simple heuristic to detect mall mismatch in path
-              if (currentMallId === 'sendai-kamisugi' && path.includes('suzaka')) isStale = true;
-              if (currentMallId === 'suzaka' && path.includes('sendai-kamisugi')) isStale = true;
+              if (currentMallId === 'sendaikamisugi' && path.includes('suzaka')) isStale = true;
+              if (currentMallId === 'suzaka' && path.includes('sendaikamisugi')) isStale = true;
           }
       }
       
@@ -527,7 +527,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                 style={{ width: "100%", padding: "8px 12px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 6, color: "#ffffff", fontSize: 14 }}
              >
                 <option value="suzaka" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>須坂</option>
-                <option value="sendai-kamisugi" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>仙台上杉</option>
+                <option value="sendaikamisugi" style={{ backgroundColor: "#2C2C2C", color: "#ffffff" }}>仙台上杉</option>
              </select>
           </div>
 

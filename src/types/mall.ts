@@ -1,4 +1,4 @@
-export type MallId = "suzaka" | "sendai-kamisugi";
+export type MallId = "suzaka" | "sendaikamisugi";
 
 export interface MallSettings {
   mallId: MallId;

@@ -60,14 +60,14 @@ const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageS
   if (openTimeImage) {
     // Check known mall IDs in the path
     const isSuzakaAsset = openTimeImage.includes("malls/suzaka");
-    const isSendaiAsset = openTimeImage.includes("malls/sendai-kamisugi");
+    const isSendaiAsset = openTimeImage.includes("malls/sendaikamisugi");
 
     // If current mall is Suzaka but image is from Sendai -> Reset to default
     if (mallId === "suzaka" && isSendaiAsset) {
       openTimeImage = "";
     }
     // If current mall is Sendai but image is from Suzaka -> Reset to default
-    else if (mallId === "sendai-kamisugi" && isSuzakaAsset) {
+    else if (mallId === "sendaikamisugi" && isSuzakaAsset) {
       openTimeImage = "";
     }
     // Fallback: If current mall ID is not in path but another mall ID is -> Reset
@@ -75,7 +75,7 @@ const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageS
         // e.g. some other mall
         openTimeImage = "";
     }
-    else if (mallId === "sendai-kamisugi" && !isSendaiAsset && openTimeImage.includes("malls/")) {
+    else if (mallId === "sendaikamisugi" && !isSendaiAsset && openTimeImage.includes("malls/")) {
         openTimeImage = "";
     }
   }
@@ -472,8 +472,12 @@ const App: React.FC = () => {
 
   const handleSaveMallId = async (nextMallId: string) => {
     try {
-      // Update mall ID in settings
-      await updateSettings({ mallId: nextMallId as MallId });
+      // Update both mallId and mallSettings.mallId together to keep them in sync on disk.
+      // This ensures subsequent updateSettings calls resolve targetMallId correctly.
+      await updateSettings({
+        mallId: nextMallId as MallId,
+        mallSettings: { mallId: nextMallId } as MallSettings,
+      });
       setMallId(nextMallId);
 
       // モールIDが変更されたら、画像設定をリセットして新しいモールのデフォルトを適用

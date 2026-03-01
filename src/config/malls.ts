@@ -54,26 +54,26 @@ const suzakaFacilities: Facility[] = [
 
 // SENDAI CONFIG
 const sendaiGenres: Genre[] = [
-  createGenre("sendai-kamisugi", "all", "すべて", "All", "all"),
-  createGenre("sendai-kamisugi", "fashion", "ファッション", "Fashion", "fashion"),
-  createGenre("sendai-kamisugi", "fashion_goods", "ファッション雑貨", "Fashion Goods", "fashion-goods"),
-  createGenre("sendai-kamisugi", "lifestyle_goods", "ライフスタイル雑貨", "Lifestyle Goods", "lifestyle-goods"),
-  createGenre("sendai-kamisugi", "kids", "キッズ", "Kids", "kids"),
-  createGenre("sendai-kamisugi", "gourmet", "グルメ", "Gourmet", "gourmet"),
-  createGenre("sendai-kamisugi", "entertainment", "エンターテインメント", "Entertainment", "entertainment"),
-  createGenre("sendai-kamisugi", "clinic", "クリニック", "Clinic", "clinic"),
-  createGenre("sendai-kamisugi", "service", "サービス", "Service", "survice"),
+  createGenre("sendaikamisugi", "all", "すべて", "All", "all"),
+  createGenre("sendaikamisugi", "fashion", "ファッション", "Fashion", "fashion"),
+  createGenre("sendaikamisugi", "fashion_goods", "ファッション雑貨", "Fashion Goods", "fashion-goods"),
+  createGenre("sendaikamisugi", "lifestyle_goods", "ライフスタイル雑貨", "Lifestyle Goods", "lifestyle-goods"),
+  createGenre("sendaikamisugi", "kids", "キッズ", "Kids", "kids"),
+  createGenre("sendaikamisugi", "gourmet", "グルメ", "Gourmet", "gourmet"),
+  createGenre("sendaikamisugi", "entertainment", "エンターテインメント", "Entertainment", "entertainment"),
+  createGenre("sendaikamisugi", "clinic", "クリニック", "Clinic", "clinic"),
+  createGenre("sendaikamisugi", "service", "サービス", "Service", "survice"),
 ];
 
 const sendaiFacilities: Facility[] = [
-  createFacility("sendai-kamisugi", "info", "インフォメーション", "Information", "info.svg"),
-  createFacility("sendai-kamisugi", "restroom", "トイレ", "Restroom", "restroom.svg"),
-  createFacility("sendai-kamisugi", "priority_restroom", "多機能トイレ", "Priority Restroom", "priority-restroom.svg"),
-  createFacility("sendai-kamisugi", "baby_room", "赤ちゃんルーム", "Baby Room", "baby-room.svg"),
-  createFacility("sendai-kamisugi", "smoking_room", "喫煙所", "Smoking Room", "smoking-room.svg"),
-  createFacility("sendai-kamisugi", "atm", "ATM", "ATM", "atm.svg"),
-  createFacility("sendai-kamisugi", "elevator", "エレベーター", "Elevator", "elevator.svg"),
-  createFacility("sendai-kamisugi", "bus_stop", "バスのりば", "Bus Stop", "bus-stop.svg"),
+  createFacility("sendaikamisugi", "info", "インフォメーション", "Information", "info.svg"),
+  createFacility("sendaikamisugi", "restroom", "トイレ", "Restroom", "restroom.svg"),
+  createFacility("sendaikamisugi", "priority_restroom", "多機能トイレ", "Priority Restroom", "priority-restroom.svg"),
+  createFacility("sendaikamisugi", "baby_room", "赤ちゃんルーム", "Baby Room", "baby-room.svg"),
+  createFacility("sendaikamisugi", "smoking_room", "喫煙所", "Smoking Room", "smoking-room.svg"),
+  createFacility("sendaikamisugi", "atm", "ATM", "ATM", "atm.svg"),
+  createFacility("sendaikamisugi", "elevator", "エレベーター", "Elevator", "elevator.svg"),
+  createFacility("sendaikamisugi", "bus_stop", "バスのりば", "Bus Stop", "bus-stop.svg"),
 ];
 
 export const MALL_CONFIGS: Record<MallId, MallConfig> = {
@@ -89,16 +89,16 @@ export const MALL_CONFIGS: Record<MallId, MallConfig> = {
       "4F": getMallAssetUrl("suzaka", "maps", "4F.svg"),
     },
   },
-  "sendai-kamisugi": {
-    id: "sendai-kamisugi",
+  "sendaikamisugi": {
+    id: "sendaikamisugi",
     name: "仙台上杉",
     genres: sendaiGenres,
     facilities: sendaiFacilities,
     floorMaps: {
-      "1F": getMallAssetUrl("sendai-kamisugi", "maps", "1F.svg"),
-      "2F": getMallAssetUrl("sendai-kamisugi", "maps", "2F.svg"),
-      "3F": getMallAssetUrl("sendai-kamisugi", "maps", "3F.svg"),
-      "4F": getMallAssetUrl("sendai-kamisugi", "maps", "4F.svg"),
+      "1F": getMallAssetUrl("sendaikamisugi", "maps", "1F.svg"),
+      "2F": getMallAssetUrl("sendaikamisugi", "maps", "2F.svg"),
+      "3F": getMallAssetUrl("sendaikamisugi", "maps", "3F.svg"),
+      "4F": getMallAssetUrl("sendaikamisugi", "maps", "4F.svg"),
     },
   },
 };
