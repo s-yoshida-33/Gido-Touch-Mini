@@ -231,6 +231,53 @@ fn save_settings(json: String) -> Result<String, String> {
 }
 
 // ---------------------------------------------------------------------------
+// Named settings commands (per-mall settings files)
+// ---------------------------------------------------------------------------
+
+/// Resolve path for a named settings file with filename validation.
+fn get_named_settings_path(filename: &str) -> Result<PathBuf, String> {
+    // Only allow alphanumeric, hyphens, underscores, and dots
+    if !filename.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.') {
+        return Err(format!("Invalid settings filename: {}", filename));
+    }
+    if filename.contains("..") {
+        return Err("Invalid filename: path traversal detected".to_string());
+    }
+    let dir = get_app_data_dir()?;
+    Ok(dir.join(filename))
+}
+
+#[tauri::command]
+fn get_named_settings(filename: String) -> Result<String, String> {
+    let path = get_named_settings_path(&filename)?;
+    if !path.exists() {
+        return Ok("{}".to_string());
+    }
+    fs::read_to_string(&path)
+        .map_err(|e| format!("Failed to read {}: {}", filename, e))
+}
+
+#[tauri::command]
+fn save_named_settings(filename: String, json: String) -> Result<String, String> {
+    let _: serde_json::Value = serde_json::from_str(&json)
+        .map_err(|e| format!("Invalid JSON: {}", e))?;
+    let path = get_named_settings_path(&filename)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create directory: {}", e))?;
+    }
+    fs::write(&path, &json)
+        .map_err(|e| format!("Failed to write {}: {}", filename, e))?;
+    Ok(json)
+}
+
+#[tauri::command]
+fn settings_file_exists(filename: String) -> Result<bool, String> {
+    let path = get_named_settings_path(&filename)?;
+    Ok(path.exists())
+}
+
+// ---------------------------------------------------------------------------
 // Image file commands (Base64-free: receives raw bytes from frontend)
 // ---------------------------------------------------------------------------
 
@@ -548,6 +595,9 @@ fn main() {
             fetch_proxy,
             get_settings,
             save_settings,
+            get_named_settings,
+            save_named_settings,
+            settings_file_exists,
             save_image_file,
             get_image_path,
             delete_image_file,

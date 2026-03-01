@@ -16,10 +16,11 @@ import { PictoSettingsTab } from "../components/PictoSettingsTab";
 import { MallSettingsTab } from "../components/MallSettingsTab";
 import type { PictoSettings } from "../types/picto";
 import { DEFAULT_PICTO_SETTINGS } from "../types/picto";
-import type { MallSettings } from "../types/mall";
+import type { MallSettings, MallId } from "../types/mall";
 import { DEFAULT_MALL_SETTINGS } from "../types/mall";
 import { getMallConfig } from "../config/malls";
 import { getAssetUrl } from "../utils/assets"; // Import
+import type { MallSettingsFile } from "../utils/settings";
 
 const iconSvg = getAssetUrl("icon.svg"); // Assuming icon.svg moved to common or use getAssetUrl('icon.svg') if root // Import
 
@@ -33,40 +34,31 @@ export interface UnifiedSettingsScreenProps {
   isOpen: boolean;
   onClose: () => void;
   mallId: string;
-  onSaveMallId: (mallId: string) => Promise<void> | void;
   floor: FloorId;
-  onSaveFloor: (floor: FloorId) => Promise<void> | void;
   locationIconSettings: LocationIconSettingsPerFloor;
-  onSaveLocationIconSettings: (settings: LocationIconSettingsPerFloor) => Promise<void> | void;
   imageSettings: ImageSettings;
-  onSaveImageSettings: (settings: ImageSettings) => Promise<void> | void;
   shopPositions: ShopPositionSettings;
-  onSaveShopPositions: (settings: ShopPositionSettings) => Promise<void> | void;
   shops: Shop[];
   pictoSettings: PictoSettings;
-  onSavePictoSettings: (settings: PictoSettings) => Promise<void> | void;
   mallSettings: MallSettings;
-  onSaveMallSettings: (settings: MallSettings) => Promise<void> | void;
+  onSave: (
+    global: { mallId: string; floor: string },
+    mallData: MallSettingsFile,
+  ) => Promise<void>;
 }
 
 const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   isOpen,
   onClose,
   mallId: initialMallId,
-  onSaveMallId,
   floor: initialFloor,
-  onSaveFloor,
   locationIconSettings: initialLocationIconSettings,
-  onSaveLocationIconSettings,
   imageSettings: initialImageSettings,
-  onSaveImageSettings,
   shopPositions: initialShopPositions,
-  onSaveShopPositions,
   shops,
   pictoSettings: initialPictoSettings,
-  onSavePictoSettings,
   mallSettings: initialMallSettings,
-  onSaveMallSettings,
+  onSave,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>("floor");
   const [mallId, setMallId] = useState<string>(initialMallId);
@@ -110,74 +102,13 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   // Re-calculate config when mallId changes
   const currentMallConfig = getMallConfig(mallSettings.mallId);
 
-  // Update mallId state when mallSettings changes to trigger GidoApp update
-  useEffect(() => {
-    // Only update if mallSettings.mallId is different from current mallId to avoid loops
-    if (mallId === mallSettings.mallId) return;
+  // NOTE: The useEffect on mallSettings.mallId for resetting imageSettings has been removed.
+  // In the per-mall file architecture, the dropdown handler loads complete settings
+  // from the per-mall file directly, so automatic resets are no longer needed.
 
-    setMallId(mallSettings.mallId);
-    
-    // モール変更時は、そのモールのデフォルト設定で完全にリセットする
-    // これにより、前のモールの画像パスが残るのを防ぐ
-    const config = getMallConfig(mallSettings.mallId as any);
-    // const defaultOpenTime = getMallAssetUrl(mallSettings.mallId, "open-time/ja", "open-time.svg");
-    
-    setImageSettings({
-      floorMaps: { ...config.floorMaps } as Record<FloorId, string>, // デフォルトマップ
-      openTimeImage: "" // デフォルト開店時間画像（空にすることで言語別自動読み込みを有効化）
-    });
-  }, [mallSettings.mallId]);
-
-  // Sync state with props when they change (e.g. after mall change reload)
-  // NOTE: These are disabled to prevent overwriting local edits during mall switching preview
-  /*
-  useEffect(() => {
-    setFloor(initialFloor);
-  }, [initialFloor]);
-
-  useEffect(() => {
-    setLocationIconSettings(initialLocationIconSettings);
-  }, [initialLocationIconSettings]);
-
-  useEffect(() => {
-    const currentMallId = mallSettings.mallId;
-    const incomingMaps = initialImageSettings.floorMaps || {};
-    let isStale = false;
-
-    // Check if incoming paths belong to a different mall (heuristic)
-    for (const path of Object.values(incomingMaps)) {
-      if (path && typeof path === 'string') {
-        if (currentMallId === 'sendaikamisugi' && path.includes('suzaka')) isStale = true;
-        if (currentMallId === 'suzaka' && path.includes('sendaikamisugi')) isStale = true;
-      }
-    }
-
-    if (isStale) {
-      // If stale, enforce defaults for the current mall
-      const config = getMallConfig(currentMallId);
-      // const defaultOpenTime = getMallAssetUrl(currentMallId, "open-time/ja", "open-time.svg");
-      setImageSettings({
-        ...initialImageSettings,
-        floorMaps: { ...config.floorMaps } as Record<FloorId, string>,
-        openTimeImage: ""
-      });
-    } else {
-      setImageSettings(initialImageSettings);
-    }
-  }, [initialImageSettings, mallSettings.mallId]);
-
-  useEffect(() => {
-    setShopPositions(initialShopPositions);
-  }, [initialShopPositions]);
-
-  useEffect(() => {
-    setPictoSettings(initialPictoSettings);
-  }, [initialPictoSettings]);
-
-  useEffect(() => {
-    setMallSettings(initialMallSettings);
-  }, [initialMallSettings]);
-  */
+  // NOTE: Prop-sync useEffects have been removed. With per-mall file architecture,
+  // local state is initialized when the screen opens (see prevIsOpen useEffect below)
+  // and is fully ephemeral until the user clicks Save.
 
   // 中央位置を計算する関数（すべてのタブで同じロジックを使用）
   const calculateOtherTabCenterPosition = useCallback(() => {
@@ -209,7 +140,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   // Previous isOpen state to detect opening
   const prevIsOpen = useRef(isOpen);
 
-  // Initialize / Reset values when opened
+  // Initialize / Reset local state from App props when screen opens
   useEffect(() => {
     // Only run initialization when isOpen changes from false to true
     if (isOpen && !prevIsOpen.current) {
@@ -217,41 +148,12 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       setMallId(initialMallId);
       setFloor(initialFloor);
       setLocationIconSettings(initialLocationIconSettings);
-      
-      // Check integrity of image settings
-      // Use initialMallSettings.mallId if available, otherwise initialMallId, otherwise fallback
-      const currentMallId = initialMallSettings?.mallId || initialMallId || "suzaka";
-      const config = getMallConfig(currentMallId as any);
-      
-      let settingsToSet = initialImageSettings;
-      let isStale = false;
-      
-      // Check if incoming paths belong to a different mall
-      const incomingMaps = initialImageSettings.floorMaps || {};
-      for (const path of Object.values(incomingMaps)) {
-          if (path && typeof path === 'string') {
-              // Simple heuristic to detect mall mismatch in path
-              if (currentMallId === 'sendaikamisugi' && path.includes('suzaka')) isStale = true;
-              if (currentMallId === 'suzaka' && path.includes('sendaikamisugi')) isStale = true;
-          }
-      }
-      
-      if (isStale) {
-          console.log(`UnifiedSettingsScreen: Detected stale image settings for mall ${currentMallId}. Resetting to defaults.`);
-          settingsToSet = {
-              ...initialImageSettings,
-              floorMaps: { ...config.floorMaps } as Record<FloorId, string>,
-              openTimeImage: ""
-          };
-      }
-      
-      setImageSettings(settingsToSet);
-      
+      setImageSettings(initialImageSettings);
       setShopPositions(initialShopPositions);
       setPictoSettings(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
       setMallSettings(initialMallSettings || DEFAULT_MALL_SETTINGS);
       setErrors({});
-      
+
       // Reset transform when opening settings
       if (transformRef.current && previewContainerRef.current) {
         requestAnimationFrame(() => {
@@ -270,31 +172,9 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     setErrors({});
   };
 
-  const handleCancel = async () => {
-    // Revert to initial values
-    setMallId(initialMallId);
-    
-    // モールIDが変更されていた場合、元に戻す（永続化された変更をロールバック）
-    if (mallId !== initialMallId) {
-        await onSaveMallId(initialMallId);
-    }
-
-    setFloor(initialFloor);
-    setLocationIconSettings(initialLocationIconSettings);
-    setImageSettings(initialImageSettings);
-    setShopPositions(initialShopPositions);
-    setPictoSettings(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
-    setMallSettings(initialMallSettings || DEFAULT_MALL_SETTINGS);
-    setErrors({});
-    // Reset transform - 現在のactiveTabに応じて適切な中央位置を計算
-    if (transformRef.current && previewContainerRef.current) {
-      requestAnimationFrame(() => {
-        if (transformRef.current && previewContainerRef.current) {
-          const { x, y, scale } = calculateCenterPositionForActiveTab();
-          transformRef.current.setTransform(x, y, scale);
-        }
-      });
-    }
+  const handleCancel = () => {
+    // Simply close — no saves needed since all edits are ephemeral.
+    // On next open, local state will be re-initialized from App props.
     handleClose();
   };
 
@@ -312,40 +192,21 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
 
     try {
       setSaving(true);
-      console.log("Saving settings...");
-      
-      // Save sequentially to avoid race conditions in main process file writing
-      console.log("Saving mall ID...");
-      // ここで初めて永続化される
-      await onSaveMallId(mallId);
-      
-      console.log("Saving floor...");
-      await onSaveFloor(floor);
-      
-      console.log("Saving location icons...");
-      // 現在選択されているmallIdに対して保存するAPIが必要だが、
-      // onSaveLocationIconSettingsは引数にmallIdを取らない。
-      // しかし、直前の onSaveMallId でメインプロセスの currentMallId が更新されているので、
-      // 従来の saveLocationIconSettings 呼び出しでも、新しいモールIDに対して保存されるはず。
-      // ただし、念のためElectron側で saveSettings が呼ばれると、current mallId に対して保存されるロジックになっているか確認済み。
-      await onSaveLocationIconSettings(locationIconSettings);
-      
-      console.log("Saving image settings...");
-      await onSaveImageSettings(imageSettings);
-      
-      console.log("Saving shop positions...", shopPositions);
-      await onSaveShopPositions(shopPositions);
 
-      console.log("Saving picto settings...", pictoSettings);
-      await onSavePictoSettings(pictoSettings);
+      // Single save: global settings + per-mall settings
+      await onSave(
+        { mallId, floor },
+        {
+          mallSettings,
+          locationIcons: locationIconSettings,
+          shopPositions,
+          pictoSettings,
+          imageSettings,
+        },
+      );
 
-      console.log("Saving mall settings...", mallSettings);
-      await onSaveMallSettings(mallSettings);
-      
-      console.log("Settings saved successfully");
       handleClose();
     } catch (e) {
-      console.error("Failed to save settings", e);
       console.error("Failed to save settings", e);
       setErrors({ save: "設定の保存に失敗しました" });
     } finally {
@@ -495,34 +356,47 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
              <select
                 value={mallSettings.mallId}
                 onChange={async (e) => {
-                  const newMallId = e.target.value as any;
-                  const newSettings = { ...mallSettings, mallId: newMallId };
+                  const newMallId = e.target.value;
                   const oldMallId = mallSettings.mallId;
-                  
-                  setMallSettings(newSettings);
+                  if (newMallId === oldMallId) return;
 
-                  // モール変更時にピクト設定なども即座にリセット（ローカル反映）
-                  if (newMallId !== oldMallId) {
-                      // Load settings for the new mall from disk via Tauri
-                      try {
-                          const { loadSettings: loadAllSettings } = await import('../utils/settings');
-                          const allSettings = await loadAllSettings();
-                          const mallData = allSettings.dataByMall?.[newMallId] ?? {};
+                  // Update local mallId immediately
+                  setMallId(newMallId);
 
-                          setPictoSettings(mallData.pictoSettings ?? pictoSettings);
-                          setShopPositions(mallData.shopPositions ?? shopPositions);
-                          setLocationIconSettings((mallData.locationIcons ?? locationIconSettings) as LocationIconSettingsPerFloor);
-                          setImageSettings(mallData.imageSettings ?? imageSettings);
-                          // mallSettings already set above
-                      } catch (e) {
-                          console.error('Failed to load settings for new mall:', e);
-                      }
-                  } else {
-                      setMallSettings(newSettings);
+                  // Load per-mall settings from file (or defaults if file doesn't exist)
+                  try {
+                    const { loadMallSettings, ensureMallSettingsFile } = await import('../utils/settings');
+                    await ensureMallSettingsFile(newMallId);
+                    const mallData = await loadMallSettings(newMallId);
+
+                    // Apply all loaded settings to local state
+                    setMallSettings({ ...mallData.mallSettings, mallId: newMallId as MallId });
+                    setPictoSettings(mallData.pictoSettings);
+                    setShopPositions(mallData.shopPositions);
+                    setLocationIconSettings(mallData.locationIcons);
+
+                    // Merge image settings with config defaults
+                    const config = getMallConfig(newMallId as any);
+                    const loaded = mallData.imageSettings;
+                    setImageSettings({
+                      floorMaps: {
+                        "1F": loaded.floorMaps["1F"] || config.floorMaps["1F"],
+                        "2F": loaded.floorMaps["2F"] || config.floorMaps["2F"],
+                        "3F": loaded.floorMaps["3F"] || config.floorMaps["3F"],
+                        "4F": loaded.floorMaps["4F"] || config.floorMaps["4F"],
+                      } as Record<FloorId, string>,
+                      openTimeImage: loaded.openTimeImage || "",
+                    });
+                  } catch (err) {
+                    console.error('Failed to load settings for new mall:', err);
+                    // Fallback: reset to defaults
+                    const config = getMallConfig(newMallId as any);
+                    setMallSettings({ ...DEFAULT_MALL_SETTINGS, mallId: newMallId as MallId });
+                    setImageSettings({
+                      floorMaps: { ...config.floorMaps } as Record<FloorId, string>,
+                      openTimeImage: "",
+                    });
                   }
-
-                  // モール切り替え時は、設定の保存（saveMallSettings）を行わずに、IDの保存（切り替え）のみを行う
-                  // await onSaveMallId(newMallId); // REMOVED
                 }}
                 style={{ width: "100%", padding: "8px 12px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 6, color: "#ffffff", fontSize: 14 }}
              >

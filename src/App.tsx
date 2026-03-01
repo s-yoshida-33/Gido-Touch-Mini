@@ -11,10 +11,9 @@ import { ContextMenu } from "./components/ContextMenu";
 import VersionInfoScreen from "./screens/VersionInfoScreen";
 import UnifiedSettingsScreen from "./screens/UnifiedSettingsScreen";
 import {
-  DEFAULT_LOCATION_ICON_SETTINGS,
   DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
 } from "./config";
-import type { LocationIconSettings, LocationIconSettingsPerFloor } from "./types/locationIcon";
+import type { LocationIconSettingsPerFloor } from "./types/locationIcon";
 import type { ImageSettings } from "./types/imageSettings";
 import { DEFAULT_IMAGE_SETTINGS } from "./types/imageSettings";
 import type { ShopPositionSettings } from "./types/shopPosition";
@@ -43,7 +42,16 @@ import type { ShopNews } from "./types/shopNews";
 import { sseService } from "./services/SSEService";
 import type { SseConnectionStatus } from "./services/SSEService";
 import { logInfo, logError } from "./logs/logging";
-import { loadSettings, updateSettings, saveImageFile } from "./utils/settings";
+import {
+  loadGlobalSettings,
+  loadMallSettings,
+  saveGlobalSettings,
+  saveMallSettings as saveMallSettingsToFile,
+  ensureMallSettingsFile,
+  migrateFromLegacyIfNeeded,
+  saveImageFile,
+} from "./utils/settings";
+import type { MallSettingsFile } from "./utils/settings";
 import { getVersion } from "@tauri-apps/api/app";
 
 type FloorId = "1F" | "2F" | "3F" | "4F";
@@ -301,7 +309,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Load initial settings from Tauri
+  // Load initial settings from Tauri (per-mall file architecture)
   const initCalled = useRef(false);
 
   useEffect(() => {
@@ -330,125 +338,39 @@ const App: React.FC = () => {
         logError("SYS_INIT", "Failed to load App Version", { error: e });
       }
 
-      // 2. Load all settings from Tauri settings file
+      // 2. Migrate legacy settings if needed (single-file → per-mall files)
       try {
-        const settings = await loadSettings();
-        addDebug("Settings loaded from Tauri");
+        const migrated = await migrateFromLegacyIfNeeded();
+        if (migrated) {
+          addDebug("Migrated legacy settings to per-mall format");
+        }
+      } catch (e) {
+        addDebug(`Migration check failed: ${e}`);
+      }
 
-        // Apply mall ID
-        const currentMallId = settings.mallId ?? "suzaka";
+      // 3. Load global settings (mallId, floor)
+      try {
+        const global = await loadGlobalSettings();
+        const currentMallId = global.mallId ?? "suzaka";
         setMallId(currentMallId);
-        addDebug(`Mall ID loaded: ${currentMallId}`);
+        setFloor(global.floor as FloorId);
+        addDebug(`Global settings loaded: mallId=${currentMallId}, floor=${global.floor}`);
 
-        // Apply floor
-        if (settings.floor) {
-          setFloor(settings.floor as FloorId);
-          addDebug(`Floor loaded: ${settings.floor}`);
-        }
+        // 4. Ensure per-mall settings file exists, then load it
+        await ensureMallSettingsFile(currentMallId);
+        const mallData = await loadMallSettings(currentMallId);
 
-        // Apply mall settings
-        if (settings.mallSettings) {
-          setMallSettings(settings.mallSettings);
-          addDebug(`Mall settings loaded: ${settings.mallSettings.mallId}`);
-        }
+        setMallSettings(mallData.mallSettings);
+        setLocationSettings(mallData.locationIcons);
+        setImageSettings(mergeWithDefaultImages(mallData.imageSettings, currentMallId));
+        setShopPositions(mallData.shopPositions);
+        setPictoSettings(mallData.pictoSettings);
 
-        // Apply location icon settings
-        if (settings.locationIcons) {
-          const saved = settings.locationIcons;
-          // Check if saved is per-floor format or old single format
-          if ('speechBubble' in saved && 'location' in saved && !('1F' in saved)) {
-            // Old format: single LocationIconSettings - convert to per-floor format
-            const oldSettings = saved as unknown as LocationIconSettings;
-            const mergedSettings: LocationIconSettings = {
-              speechBubble: {
-                ...DEFAULT_LOCATION_ICON_SETTINGS.speechBubble,
-                ...oldSettings.speechBubble,
-                enabled: oldSettings.speechBubble?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.enabled,
-                shadow: oldSettings.speechBubble?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.shadow,
-                animation: oldSettings.speechBubble?.animation ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.animation,
-              },
-              location: {
-                ...DEFAULT_LOCATION_ICON_SETTINGS.location,
-                ...oldSettings.location,
-                enabled: oldSettings.location?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.location.enabled,
-                shadow: oldSettings.location?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.location.shadow,
-              },
-            };
-            // Convert to per-floor format
-            const perFloorSettings: LocationIconSettingsPerFloor = {
-              "1F": mergedSettings,
-              "2F": mergedSettings,
-              "3F": mergedSettings,
-              "4F": mergedSettings,
-            };
-            setLocationSettings(perFloorSettings);
-          } else {
-            // New format: LocationIconSettingsPerFloor
-            const perFloorSettings: LocationIconSettingsPerFloor = { ...DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR };
-            const savedPerFloor = saved as LocationIconSettingsPerFloor;
-
-            Object.keys(savedPerFloor).forEach((key) => {
-              const floorId = key as FloorId;
-              if (savedPerFloor[floorId]) {
-                const defaultSettings = DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR[floorId];
-                const savedSettings = savedPerFloor[floorId];
-
-                perFloorSettings[floorId] = {
-                  speechBubble: {
-                    ...defaultSettings.speechBubble,
-                    ...savedSettings.speechBubble,
-                    shadow: {
-                      ...defaultSettings.speechBubble.shadow,
-                      ...savedSettings.speechBubble?.shadow
-                    },
-                    animation: defaultSettings.speechBubble.animation && savedSettings.speechBubble?.animation ? {
-                      ...defaultSettings.speechBubble.animation,
-                      ...savedSettings.speechBubble.animation,
-                      enabled: savedSettings.speechBubble.animation.enabled ?? defaultSettings.speechBubble.animation.enabled,
-                      type: savedSettings.speechBubble.animation.type ?? defaultSettings.speechBubble.animation.type
-                    } : defaultSettings.speechBubble.animation
-                  },
-                  location: {
-                    ...defaultSettings.location,
-                    ...savedSettings.location,
-                    shadow: {
-                      ...defaultSettings.location.shadow,
-                      ...savedSettings.location?.shadow
-                    },
-                    animation: defaultSettings.location.animation && savedSettings.location?.animation ? {
-                      ...defaultSettings.location.animation,
-                      ...savedSettings.location.animation,
-                      enabled: savedSettings.location.animation.enabled ?? defaultSettings.location.animation.enabled,
-                      type: savedSettings.location.animation.type ?? defaultSettings.location.animation.type
-                    } : defaultSettings.location.animation
-                  }
-                };
-              }
-            });
-            setLocationSettings(perFloorSettings);
-          }
-          addDebug("Location settings loaded");
-        }
-
-        // Apply image settings
-        if (settings.imageSettings) {
-          setImageSettings(mergeWithDefaultImages(settings.imageSettings, currentMallId));
-          addDebug("Image settings loaded");
-        }
-
-        // Apply shop positions
-        if (settings.shopPositions) {
-          logInfo("app", "Loaded shop positions", { count: Object.keys(settings.shopPositions.positions).length });
-          setShopPositions(settings.shopPositions);
-          addDebug(`Shop positions loaded: ${Object.keys(settings.shopPositions.positions).length} items`);
-        }
-
-        // Apply picto settings
-        if (settings.pictoSettings) {
-          setPictoSettings(settings.pictoSettings);
-          addDebug(`Picto settings loaded: ${Object.keys(settings.pictoSettings.instances).length} items`);
-        }
-
+        addDebug(`Mall settings loaded for ${currentMallId}`);
+        logInfo("app", "Settings loaded", {
+          mallId: currentMallId,
+          shopPositions: Object.keys(mallData.shopPositions.positions).length,
+        });
       } catch (e) {
         addDebug(`Failed to load settings: ${e}`);
         logError("app", "Failed to load settings from Tauri", { error: e });
@@ -458,74 +380,20 @@ const App: React.FC = () => {
     init();
   }, []);
 
-  const handleSaveLocationSettings = async (settings: LocationIconSettingsPerFloor) => {
+  // Unified save handler: writes global settings + per-mall settings in one operation.
+  // Called by UnifiedSettingsScreen when user clicks "Save".
+  const handleSaveAllSettings = async (
+    global: { mallId: string; floor: string },
+    mallData: MallSettingsFile,
+  ) => {
     try {
-      await updateSettings({ locationIcons: settings });
-      setLocationSettings(settings);
-    } catch (e) {
-      logError("app", "Failed to save location settings", { error: e });
-      // Fallback: still update local state
-      setLocationSettings(settings);
-    }
-  };
-
-
-  const handleSaveMallId = async (nextMallId: string) => {
-    try {
-      // Update both mallId and mallSettings.mallId together to keep them in sync on disk.
-      // This ensures subsequent updateSettings calls resolve targetMallId correctly.
-      await updateSettings({
-        mallId: nextMallId as MallId,
-        mallSettings: { mallId: nextMallId } as MallSettings,
-      });
-      setMallId(nextMallId);
-
-      // モールIDが変更されたら、画像設定をリセットして新しいモールのデフォルトを適用
-      // openTimeImage と floorMaps を空にすることで mergeWithDefaultImages が新しいモールのデフォルト値を設定する
-      const resetSettings = {
-        ...imageSettings,
-        floorMaps: { "1F": "", "2F": "", "3F": "", "4F": "" },
-        openTimeImage: "",
-      };
-      const newImageSettings = mergeWithDefaultImages(resetSettings, nextMallId);
-
-      setImageSettings(newImageSettings);
-
-      // 画像設定も保存しておく（次回起動時のため）
-      await updateSettings({ imageSettings: newImageSettings });
-
-      // Reload all settings for the new mall (loadSettings resolves dataByMall per mall)
-      const freshSettings = await loadSettings();
-      if (freshSettings.mallSettings) {
-        setMallSettings(freshSettings.mallSettings);
-      }
-
-      logInfo("app", "Mall ID saved successfully", { mallId: nextMallId });
-    } catch (e) {
-      logError("app", "Failed to save mall ID", { error: e });
-      console.error("Failed to save mall ID", e);
-    }
-  };
-
-  const handleSaveFloor = async (nextFloor: FloorId) => {
-    try {
-      await updateSettings({ floor: nextFloor });
-    } catch (e) {
-      console.error("Failed to save floor", e);
-    }
-  };
-
-
-  const handleSaveImageSettings = async (settings: ImageSettings) => {
-    try {
-      // Process any data: URLs by saving them as files first
-      const processedSettings = { ...settings };
+      // 1. Process image data: URLs → saved file paths
+      const processedImageSettings = { ...mallData.imageSettings };
       const floorKeys: FloorId[] = ["1F", "2F", "3F", "4F"];
 
       for (const floorKey of floorKeys) {
-        const mapValue = processedSettings.floorMaps[floorKey];
+        const mapValue = processedImageSettings.floorMaps[floorKey];
         if (mapValue && mapValue.startsWith("data:")) {
-          // Extract the binary data from the data: URL and save as file
           const response = await fetch(mapValue);
           const blob = await response.blob();
           const arrayBuffer = await blob.arrayBuffer();
@@ -533,145 +401,48 @@ const App: React.FC = () => {
           const ext = blob.type.includes("png") ? "png" : blob.type.includes("svg") ? "svg" : "jpg";
           const filename = `floormap-${floorKey}.${ext}`;
           const savedPath = await saveImageFile(filename, uint8Array);
-          processedSettings.floorMaps[floorKey] = savedPath;
+          processedImageSettings.floorMaps[floorKey] = savedPath;
         }
       }
 
-      if (processedSettings.openTimeImage && processedSettings.openTimeImage.startsWith("data:")) {
-        const response = await fetch(processedSettings.openTimeImage);
+      if (processedImageSettings.openTimeImage && processedImageSettings.openTimeImage.startsWith("data:")) {
+        const response = await fetch(processedImageSettings.openTimeImage);
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         const ext = blob.type.includes("png") ? "png" : blob.type.includes("svg") ? "svg" : "jpg";
         const filename = `open-time.${ext}`;
         const savedPath = await saveImageFile(filename, uint8Array);
-        processedSettings.openTimeImage = savedPath;
+        processedImageSettings.openTimeImage = savedPath;
       }
 
-      const merged = await updateSettings({ imageSettings: processedSettings });
-      if (merged.imageSettings) {
-        setImageSettings(mergeWithDefaultImages(merged.imageSettings, mallId));
-      }
+      const processedMallData: MallSettingsFile = {
+        ...mallData,
+        imageSettings: processedImageSettings,
+      };
+
+      // 2. Save global settings (settings.json)
+      await saveGlobalSettings({
+        mallId: global.mallId as MallId,
+        floor: global.floor,
+      });
+
+      // 3. Save per-mall settings ([mallId]-settings.json)
+      await saveMallSettingsToFile(global.mallId, processedMallData);
+
+      // 4. Update App state
+      setMallId(global.mallId);
+      setFloor(global.floor as FloorId);
+      setMallSettings(processedMallData.mallSettings);
+      setLocationSettings(processedMallData.locationIcons);
+      setImageSettings(mergeWithDefaultImages(processedMallData.imageSettings, global.mallId));
+      setShopPositions(processedMallData.shopPositions);
+      setPictoSettings(processedMallData.pictoSettings);
+
+      logInfo("app", "All settings saved", { mallId: global.mallId });
     } catch (e) {
-      console.error("Failed to save image settings", e);
-    }
-  };
-
-  const handleSaveShopPositions = async (settings: ShopPositionSettings) => {
-    try {
-      logInfo("app", "Saving shop positions", { count: Object.keys(settings.positions).length });
-      const merged = await updateSettings({ shopPositions: settings });
-      if (merged.shopPositions) {
-        setShopPositions(merged.shopPositions);
-      }
-      logInfo("app", "Shop positions saved successfully");
-    } catch (e) {
-      logError("app", "Failed to save shop positions", { error: e });
-      console.error("Failed to save shop positions", e);
-    }
-  };
-
-  const handleSavePictoSettings = async (settings: PictoSettings) => {
-    try {
-      const merged = await updateSettings({ pictoSettings: settings });
-      if (merged.pictoSettings) {
-        setPictoSettings(merged.pictoSettings);
-      }
-      logInfo("app", "Picto settings saved successfully");
-    } catch (e) {
-      logError("app", "Failed to save picto settings", { error: e });
-      console.error("Failed to save picto settings", e);
-      // Fallback: still update local state
-      setPictoSettings(settings);
-    }
-  };
-
-  const handleSaveMallSettings = async (settings: MallSettings) => {
-    try {
-      const oldMallId = mallSettings.mallId;
-      const merged = await updateSettings({ mallSettings: settings });
-
-      if (merged.mallSettings) {
-        setMallSettings(merged.mallSettings);
-        setMallId(merged.mallSettings.mallId);
-        logInfo("app", "Mall settings saved successfully", { mallId: merged.mallSettings.mallId });
-
-        // Reload mall-specific settings when mall changes
-        if (merged.mallSettings.mallId !== oldMallId) {
-          // Reload all settings for the new mall (loadSettings resolves dataByMall per mall)
-          const freshSettings = await loadSettings();
-
-          // Apply shop positions for new mall
-          if (freshSettings.shopPositions) {
-            setShopPositions(freshSettings.shopPositions);
-            logInfo("app", "Shop positions reloaded for new mall", {
-              mallId: merged.mallSettings.mallId,
-              count: Object.keys(freshSettings.shopPositions.positions).length
-            });
-          }
-
-          // Apply location settings for new mall
-          if (freshSettings.locationIcons) {
-            const newLocationSettings = freshSettings.locationIcons;
-            const isPerFloor = '1F' in newLocationSettings || '2F' in newLocationSettings;
-
-            if (!isPerFloor && 'speechBubble' in newLocationSettings) {
-               // Convert old format to per-floor
-               const oldSettings = newLocationSettings as unknown as LocationIconSettings;
-               const mergedLoc: LocationIconSettings = {
-                 speechBubble: {
-                   ...DEFAULT_LOCATION_ICON_SETTINGS.speechBubble,
-                   ...oldSettings.speechBubble,
-                   enabled: oldSettings.speechBubble?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.enabled,
-                   shadow: oldSettings.speechBubble?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.shadow,
-                   animation: oldSettings.speechBubble?.animation ?? DEFAULT_LOCATION_ICON_SETTINGS.speechBubble.animation,
-                 },
-                 location: {
-                   ...DEFAULT_LOCATION_ICON_SETTINGS.location,
-                   ...oldSettings.location,
-                   enabled: oldSettings.location?.enabled ?? DEFAULT_LOCATION_ICON_SETTINGS.location.enabled,
-                   shadow: oldSettings.location?.shadow ?? DEFAULT_LOCATION_ICON_SETTINGS.location.shadow,
-                 },
-               };
-               const perFloorSettings: LocationIconSettingsPerFloor = {
-                 "1F": mergedLoc,
-                 "2F": mergedLoc,
-                 "3F": mergedLoc,
-                 "4F": mergedLoc,
-               };
-               setLocationSettings(perFloorSettings);
-            } else {
-               // Per floor format
-               setLocationSettings(newLocationSettings as LocationIconSettingsPerFloor);
-            }
-            logInfo("app", "Location settings reloaded for new mall", { mallId: merged.mallSettings.mallId });
-          }
-
-          // Apply picto settings for new mall
-          if (freshSettings.pictoSettings) {
-            setPictoSettings(freshSettings.pictoSettings);
-            logInfo("app", "Picto settings reloaded for new mall", {
-              mallId: merged.mallSettings.mallId,
-              count: Object.keys(freshSettings.pictoSettings.instances).length
-            });
-          }
-
-          // Apply image settings for new mall
-          if (freshSettings.imageSettings) {
-            setImageSettings(mergeWithDefaultImages(freshSettings.imageSettings, merged.mallSettings.mallId));
-            logInfo("app", "Image settings reloaded for new mall", { mallId: merged.mallSettings.mallId });
-          }
-
-          // Apply mall settings (for genre keywords and max count)
-          if (freshSettings.mallSettings) {
-            setMallSettings(freshSettings.mallSettings);
-            logInfo("app", "Mall settings reloaded for new mall", { mallId: merged.mallSettings.mallId });
-          }
-        }
-      }
-    } catch (e) {
-      logError("app", "Failed to save mall settings", { error: e });
-      console.error("Failed to save mall settings", e);
+      logError("app", "Failed to save settings", { error: e });
+      throw e;
     }
   };
 
@@ -796,22 +567,14 @@ const App: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         mallId={mallId}
-        onSaveMallId={handleSaveMallId}
         floor={floor}
-        onSaveFloor={handleSaveFloor}
         locationIconSettings={locationSettings}
-        onSaveLocationIconSettings={handleSaveLocationSettings}
         imageSettings={imageSettings}
-        onSaveImageSettings={handleSaveImageSettings}
         shopPositions={shopPositions}
-        onSaveShopPositions={handleSaveShopPositions}
         shops={mergedShops}
-        // Picto settings
         pictoSettings={pictoSettings}
-        onSavePictoSettings={handleSavePictoSettings}
-        // Mall settings
         mallSettings={mallSettings}
-        onSaveMallSettings={handleSaveMallSettings}
+        onSave={handleSaveAllSettings}
       />
       <VersionInfoScreen isOpen={isVersionInfoOpen} onClose={() => setIsVersionInfoOpen(false)} />
     </ContextMenu>
