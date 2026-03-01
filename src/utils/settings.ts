@@ -70,7 +70,8 @@ export async function loadSettings(): Promise<GidoTouchMiniSettings> {
     const json = await invoke<string>('get_settings');
     const raw = JSON.parse(json) as GidoTouchMiniSettings;
 
-    const mallId = raw.mallSettings?.mallId ?? raw.mallId ?? 'suzaka';
+    // Priority: top-level mallId (updated early by handleSaveMallId) > mallSettings.mallId
+    const mallId = raw.mallId ?? raw.mallSettings?.mallId ?? 'suzaka';
     const dataByMall = raw.dataByMall ?? {};
     const currentMallData = dataByMall[mallId] ?? {};
 

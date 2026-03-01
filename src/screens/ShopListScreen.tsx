@@ -300,7 +300,7 @@ function getAlphabetRegex(char: string): RegExp {
 function getGenreBadgeColor(genre: string | undefined, mallId: MallId = "suzaka"): string {
   if (!genre) return "#999999";
 
-  if (mallId === "sendai-kamisugi") {
+  if (mallId === "sendaikamisugi") {
     switch (genre) {
       case "ファッション":
         return "#1AAE48";
@@ -801,14 +801,14 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
   useEffect(() => {
      if (propOpenTimeImage) {
-        // Simple heuristic: if we are in 'sendai-kamisugi' but the image is 'suzaka', ignore the prop
+        // Simple heuristic: if we are in 'sendaikamisugi' but the image is 'suzaka', ignore the prop
         // This handles cases where App.tsx might pass a stale imageSettings value before it fully updates
         const isSuzakaAsset = propOpenTimeImage.includes("malls/suzaka");
-        const isSendaiAsset = propOpenTimeImage.includes("malls/sendai-kamisugi");
+        const isSendaiAsset = propOpenTimeImage.includes("malls/sendaikamisugi");
         
         let shouldUseProp = true;
         
-        if (mallId === "sendai-kamisugi" && isSuzakaAsset) {
+        if (mallId === "sendaikamisugi" && isSuzakaAsset) {
             shouldUseProp = false;
         } else if (mallId === "suzaka" && isSendaiAsset) {
             shouldUseProp = false;
@@ -1358,7 +1358,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           if (normalize(shop.genre) === normalize(targetGenreName)) return true;
 
           // 3. Mall specific variations
-          if (mallId === "sendai-kamisugi") {
+          if (mallId === "sendaikamisugi") {
              if (targetGenreName === "ライフスタイル雑貨" && 
                  (shop.genre === "ライフスタイル" || shop.genre === "雑貨")) {
                  return true;
