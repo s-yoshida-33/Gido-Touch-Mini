@@ -65,8 +65,10 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Local state for editing (preserved when switching tabs)
-  const [floor, setFloor] = useState<FloorId>(initialFloor);
+  // Current floor: only changed by FloorSettingsTab, persisted on save
+  const [currentFloor, setCurrentFloor] = useState<FloorId>(initialFloor);
+  // Editing floor: used by image/shopPosition/picto tabs for floor navigation, NOT persisted
+  const [editingFloor, setEditingFloor] = useState<FloorId>(initialFloor);
   const [locationIconSettings, setLocationIconSettings] =
     useState<LocationIconSettingsPerFloor>(initialLocationIconSettings || DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR);
   const [imageSettings, setImageSettings] = useState<ImageSettings>(initialImageSettings);
@@ -146,7 +148,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     if (isOpen && !prevIsOpen.current) {
       setActiveTab("floor");
       setMallId(initialMallId);
-      setFloor(initialFloor);
+      setCurrentFloor(initialFloor);
+      setEditingFloor(initialFloor);
       setLocationIconSettings(initialLocationIconSettings);
       setImageSettings(initialImageSettings);
       setShopPositions(initialShopPositions);
@@ -194,8 +197,9 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       setSaving(true);
 
       // Single save: global settings + per-mall settings
+      // currentFloor is the persisted floor (only changed by FloorSettingsTab)
       await onSave(
-        { mallId, floor },
+        { mallId, floor: currentFloor },
         {
           mallSettings,
           locationIcons: locationIconSettings,
@@ -499,8 +503,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               {(activeTab === "shopPosition" || activeTab === "picto" || activeTab === "image") && (
                 <GidoApp
                   mallId={mallSettings.mallId}
-                  locationIconSettings={getLocationIconSettingsForFloor(locationIconSettings, floor)}
-                  previewFloor={floor}
+                  locationIconSettings={getLocationIconSettingsForFloor(locationIconSettings, editingFloor)}
+                  previewFloor={editingFloor}
                   imageSettings={imageSettings}
                   shopPositions={activeTab === "shopPosition" || activeTab === "picto" ? shopPositions : undefined}
                   shops={activeTab === "shopPosition" || activeTab === "picto" ? shops : undefined}
@@ -596,22 +600,22 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
         >
           {activeTab === "floor" && (
             <FloorSettingsTab
-              floor={floor}
-              onChangeFloor={setFloor}
+              floor={currentFloor}
+              onChangeFloor={setCurrentFloor}
             />
           )}
           {activeTab === "image" && (
             <ImageSettingsTab
-              floor={floor}
-              onChangeFloor={setFloor}
+              floor={editingFloor}
+              onChangeFloor={setEditingFloor}
               imageSettings={imageSettings}
               onChangeImageSettings={setImageSettings}
             />
           )}
           {activeTab === "shopPosition" && (
             <ShopPositionSettingsTab
-              floor={floor}
-              onChangeFloor={setFloor}
+              floor={editingFloor}
+              onChangeFloor={setEditingFloor}
               shopPositions={shopPositions}
               onChangeShopPositions={setShopPositions}
               shops={shops}
@@ -622,8 +626,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
           )}
           {activeTab === "picto" && (
             <PictoSettingsTab
-              floor={floor}
-              onChangeFloor={setFloor}
+              floor={editingFloor}
+              onChangeFloor={setEditingFloor}
               pictoSettings={pictoSettings}
               onSavePictoSettings={setPictoSettings}
               selectedInstanceId={selectedPictoId}

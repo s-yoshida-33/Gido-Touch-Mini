@@ -57,6 +57,14 @@ interface LegacySettings {
 
 const DEFAULT_SHOP_POSITIONS: ShopPositionSettings = { positions: {} };
 
+/**
+ * Map legacy mall IDs to their current equivalents.
+ * Used during migration to avoid creating stale settings files.
+ */
+const LEGACY_MALL_ID_MAP: Record<string, string> = {
+  'sendai-kamisugi': 'sendaikamisugi',
+};
+
 // ============================================================================
 // Defaults
 // ============================================================================
@@ -183,44 +191,67 @@ export async function migrateFromLegacyIfNeeded(): Promise<boolean> {
 
     logInfo('CONFIG', 'Starting legacy settings migration');
 
-    const dataByMall = raw.dataByMall ?? {};
-    const allMallIds = new Set([globalMallId, ...Object.keys(dataByMall)]);
+    // Normalize global mall ID (map legacy IDs to current ones)
+    const normalizedGlobalMallId = LEGACY_MALL_ID_MAP[globalMallId] ?? globalMallId;
 
-    for (const mallId of allMallIds) {
-      const mallData = dataByMall[mallId] ?? {};
-      const isGlobal = mallId === globalMallId;
+    const dataByMall = raw.dataByMall ?? {};
+
+    // Collect all legacy mall IDs and normalize them.
+    // If both "sendai-kamisugi" and "sendaikamisugi" exist in dataByMall,
+    // the new ID's data takes priority (it's more recent).
+    const mergedMallData = new Map<string, typeof dataByMall[string]>();
+
+    // First, add the global mall entry
+    mergedMallData.set(normalizedGlobalMallId, {});
+
+    // Then process dataByMall entries, normalizing IDs
+    for (const [legacyId, data] of Object.entries(dataByMall)) {
+      const normalizedId = LEGACY_MALL_ID_MAP[legacyId] ?? legacyId;
+      // Only set if not already present (new ID data takes priority)
+      if (!mergedMallData.has(normalizedId)) {
+        mergedMallData.set(normalizedId, data);
+      } else if (legacyId === normalizedId) {
+        // This IS the new ID — overwrite any legacy data
+        mergedMallData.set(normalizedId, data);
+      }
+      // else: legacy ID entry, but new ID already present — skip
+    }
+
+    for (const [mallId, mallData] of mergedMallData) {
+      const data = mallData ?? {};
+      const isGlobal = mallId === normalizedGlobalMallId;
 
       const settings: MallSettingsFile = {
         mallSettings: {
           ...DEFAULT_MALL_SETTINGS,
           mallId: mallId as MallId,
           genreMemoIgnoreKeywords:
-            mallData.genreMemoIgnoreKeywords ??
+            data.genreMemoIgnoreKeywords ??
             (isGlobal ? raw.mallSettings?.genreMemoIgnoreKeywords : undefined) ??
             DEFAULT_MALL_SETTINGS.genreMemoIgnoreKeywords,
           maxDisplayCount:
-            mallData.maxDisplayCount ??
+            data.maxDisplayCount ??
             (isGlobal ? raw.mallSettings?.maxDisplayCount : undefined) ??
             DEFAULT_MALL_SETTINGS.maxDisplayCount,
           keywordsInitialized:
-            mallData.keywordsInitialized ??
+            data.keywordsInitialized ??
             (isGlobal ? raw.mallSettings?.keywordsInitialized : undefined) ??
             true,
         },
         locationIcons:
-          mallData.locationIcons ??
+          data.locationIcons ??
           (isGlobal ? raw.locationIcons : undefined) ??
           DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
         shopPositions:
-          mallData.shopPositions ??
+          data.shopPositions ??
           (isGlobal ? raw.shopPositions : undefined) ??
           DEFAULT_SHOP_POSITIONS,
         pictoSettings:
-          mallData.pictoSettings ??
+          data.pictoSettings ??
           (isGlobal ? raw.pictoSettings : undefined) ??
           DEFAULT_PICTO_SETTINGS,
         imageSettings:
-          mallData.imageSettings ??
+          data.imageSettings ??
           (isGlobal ? raw.imageSettings : undefined) ??
           DEFAULT_IMAGE_SETTINGS,
       };
@@ -228,14 +259,14 @@ export async function migrateFromLegacyIfNeeded(): Promise<boolean> {
       await saveMallSettings(mallId, settings);
     }
 
-    // Overwrite settings.json with clean global-only format
+    // Overwrite settings.json with clean global-only format (using normalized ID)
     await saveGlobalSettings({
-      mallId: globalMallId as MallId,
+      mallId: normalizedGlobalMallId as MallId,
       floor: raw.floor ?? '1F',
     });
 
     logInfo('CONFIG', 'Legacy settings migration completed', {
-      malls: Array.from(allMallIds),
+      malls: Array.from(mergedMallData.keys()),
     });
 
     return true;
