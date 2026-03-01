@@ -2287,11 +2287,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 }}
                 onClick={() => {
                   if (genreScrollContainerRef.current) {
-                    const { scrollLeft, clientWidth } = genreScrollContainerRef.current;
-                    const step = clientWidth * 0.7;
-                    // If remaining distance is less than a full step, scroll to the start
-                    const left = scrollLeft <= step ? -scrollLeft : -step;
-                    genreScrollContainerRef.current.scrollBy({ left, behavior: "smooth" });
+                    genreScrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
                   }
                 }}
                 onMouseDown={() => setPressedGenreNavButton("prev")}
@@ -2411,12 +2407,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 }}
                 onClick={() => {
                   if (genreScrollContainerRef.current) {
-                    const { scrollLeft, scrollWidth, clientWidth } = genreScrollContainerRef.current;
-                    const step = clientWidth * 0.7;
-                    const remaining = scrollWidth - clientWidth - scrollLeft;
-                    // If remaining distance is less than a full step, scroll to the end
-                    const left = remaining <= step ? remaining : step;
-                    genreScrollContainerRef.current.scrollBy({ left, behavior: "smooth" });
+                    const { scrollWidth } = genreScrollContainerRef.current;
+                    genreScrollContainerRef.current.scrollTo({ left: scrollWidth, behavior: "smooth" });
                   }
                 }}
                 onMouseDown={() => setPressedGenreNavButton("next")}
