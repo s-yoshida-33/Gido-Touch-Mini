@@ -1,6 +1,6 @@
 // src/components/FloorSelectDialog.tsx
 import React, { useState } from 'react';
-import { updateSettings } from '../utils/settings';
+import { loadGlobalSettings, saveGlobalSettings } from '../utils/settings';
 
 interface FloorSelectDialogProps {
   isOpen: boolean;
@@ -22,7 +22,8 @@ export const FloorSelectDialog: React.FC<FloorSelectDialogProps> = ({
   if (!isOpen) return null;
 
   const handleSave = async () => {
-    await updateSettings({ floor: selected });
+    const global = await loadGlobalSettings();
+    await saveGlobalSettings({ ...global, floor: selected });
     onFloorChange?.(selected);
     onClose();
   };

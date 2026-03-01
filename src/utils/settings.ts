@@ -10,168 +10,246 @@ import { DEFAULT_MALL_SETTINGS } from '../types/mall';
 import { DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from '../config';
 import { logInfo, logError } from '../logs/logging';
 
+// ============================================================================
+// Type definitions
+// ============================================================================
+
 /**
- * Per-mall data structure stored inside dataByMall.
+ * Global app settings stored in settings.json.
+ * Contains only the active mall selection and current floor.
  */
-export interface MallData {
-  shopPositions?: ShopPositionSettings;
-  pictoSettings?: PictoSettings;
-  locationIcons?: LocationIconSettingsPerFloor;
-  imageSettings?: ImageSettings;
-  genreMemoIgnoreKeywords?: string[];
-  maxDisplayCount?: number;
-  keywordsInitialized?: boolean;
+export interface GlobalSettings {
+  mallId: MallId;
+  floor: string;
 }
 
 /**
- * Full settings structure persisted to disk.
+ * Per-mall settings stored in [mallId]-settings.json.
+ * Each mall has its own independent settings file.
  */
-export interface GidoTouchMiniSettings {
-  mallId?: MallId;
+export interface MallSettingsFile {
+  mallSettings: MallSettings;
+  locationIcons: LocationIconSettingsPerFloor;
+  shopPositions: ShopPositionSettings;
+  pictoSettings: PictoSettings;
+  imageSettings: ImageSettings;
+}
+
+/** Legacy settings structure for migration */
+interface LegacySettings {
+  mallId?: string;
   floor?: string;
   mallSettings?: MallSettings;
   locationIcons?: LocationIconSettingsPerFloor;
   shopPositions?: ShopPositionSettings;
   pictoSettings?: PictoSettings;
   imageSettings?: ImageSettings;
-  dataByMall?: Record<string, MallData>;
+  dataByMall?: Record<string, {
+    shopPositions?: ShopPositionSettings;
+    pictoSettings?: PictoSettings;
+    locationIcons?: LocationIconSettingsPerFloor;
+    imageSettings?: ImageSettings;
+    genreMemoIgnoreKeywords?: string[];
+    maxDisplayCount?: number;
+    keywordsInitialized?: boolean;
+  }>;
 }
 
 const DEFAULT_SHOP_POSITIONS: ShopPositionSettings = { positions: {} };
 
-/**
- * Deep merge utility for nested objects.
- */
-function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
-  const result = { ...target };
-  for (const key of Object.keys(source) as (keyof T)[]) {
-    const srcVal = source[key];
-    const tgtVal = target[key];
-    if (
-      srcVal && typeof srcVal === 'object' && !Array.isArray(srcVal) &&
-      tgtVal && typeof tgtVal === 'object' && !Array.isArray(tgtVal)
-    ) {
-      (result as Record<string, unknown>)[key as string] = deepMerge(
-        tgtVal as Record<string, unknown>,
-        srcVal as Record<string, unknown>,
-      );
-    } else if (srcVal !== undefined) {
-      (result as Record<string, unknown>)[key as string] = srcVal;
-    }
-  }
-  return result;
+// ============================================================================
+// Defaults
+// ============================================================================
+
+export function getDefaultMallSettingsFile(mallId: string): MallSettingsFile {
+  return {
+    mallSettings: { ...DEFAULT_MALL_SETTINGS, mallId: mallId as MallId },
+    locationIcons: DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
+    shopPositions: DEFAULT_SHOP_POSITIONS,
+    pictoSettings: DEFAULT_PICTO_SETTINGS,
+    imageSettings: DEFAULT_IMAGE_SETTINGS,
+  };
 }
 
-/**
- * Load all settings from disk via Rust backend.
- */
-export async function loadSettings(): Promise<GidoTouchMiniSettings> {
+// ============================================================================
+// Global settings (settings.json)
+// ============================================================================
+
+export async function loadGlobalSettings(): Promise<GlobalSettings> {
   try {
     const json = await invoke<string>('get_settings');
-    const raw = JSON.parse(json) as GidoTouchMiniSettings;
+    const raw = JSON.parse(json);
+    return {
+      mallId: (raw.mallId ?? 'suzaka') as MallId,
+      floor: raw.floor ?? '1F',
+    };
+  } catch (error) {
+    logError('CONFIG', 'Failed to load global settings', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { mallId: 'suzaka', floor: '1F' };
+  }
+}
 
-    // Priority: top-level mallId (updated early by handleSaveMallId) > mallSettings.mallId
-    const mallId = raw.mallId ?? raw.mallSettings?.mallId ?? 'suzaka';
-    const dataByMall = raw.dataByMall ?? {};
-    const currentMallData = dataByMall[mallId] ?? {};
+export async function saveGlobalSettings(settings: GlobalSettings): Promise<void> {
+  const json = JSON.stringify(settings, null, 2);
+  await invoke('save_settings', { json });
+  logInfo('CONFIG', 'Global settings saved', { mallId: settings.mallId });
+}
+
+// ============================================================================
+// Per-mall settings ([mallId]-settings.json)
+// ============================================================================
+
+function mallSettingsFilename(mallId: string): string {
+  return `${mallId}-settings.json`;
+}
+
+export async function loadMallSettings(mallId: string): Promise<MallSettingsFile> {
+  try {
+    const filename = mallSettingsFilename(mallId);
+    const json = await invoke<string>('get_named_settings', { filename });
+    const raw = JSON.parse(json);
+
+    // If empty object, return defaults
+    if (!raw || Object.keys(raw).length === 0) {
+      return getDefaultMallSettingsFile(mallId);
+    }
 
     return {
-      mallId,
-      floor: raw.floor ?? '1F',
       mallSettings: {
         ...DEFAULT_MALL_SETTINGS,
         ...raw.mallSettings,
-        mallId,
-        genreMemoIgnoreKeywords: currentMallData.genreMemoIgnoreKeywords ?? raw.mallSettings?.genreMemoIgnoreKeywords ?? DEFAULT_MALL_SETTINGS.genreMemoIgnoreKeywords,
-        maxDisplayCount: currentMallData.maxDisplayCount ?? raw.mallSettings?.maxDisplayCount ?? DEFAULT_MALL_SETTINGS.maxDisplayCount,
-        keywordsInitialized: currentMallData.keywordsInitialized ?? raw.mallSettings?.keywordsInitialized ?? true,
+        mallId: mallId as MallId,
       },
-      locationIcons: currentMallData.locationIcons ?? raw.locationIcons ?? DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
-      shopPositions: currentMallData.shopPositions ?? raw.shopPositions ?? DEFAULT_SHOP_POSITIONS,
-      pictoSettings: currentMallData.pictoSettings ?? raw.pictoSettings ?? DEFAULT_PICTO_SETTINGS,
-      imageSettings: currentMallData.imageSettings ?? raw.imageSettings ?? DEFAULT_IMAGE_SETTINGS,
-      dataByMall,
+      locationIcons: raw.locationIcons ?? DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
+      shopPositions: raw.shopPositions ?? DEFAULT_SHOP_POSITIONS,
+      pictoSettings: raw.pictoSettings ?? DEFAULT_PICTO_SETTINGS,
+      imageSettings: raw.imageSettings ?? DEFAULT_IMAGE_SETTINGS,
     };
   } catch (error) {
-    logError('CONFIG', 'Failed to load settings', {
+    logError('CONFIG', 'Failed to load mall settings', {
+      mallId,
       error: error instanceof Error ? error.message : String(error),
     });
-    return {
-      mallId: 'suzaka',
-      floor: '1F',
-      mallSettings: DEFAULT_MALL_SETTINGS,
-      locationIcons: DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
-      shopPositions: DEFAULT_SHOP_POSITIONS,
-      pictoSettings: DEFAULT_PICTO_SETTINGS,
-      imageSettings: DEFAULT_IMAGE_SETTINGS,
-      dataByMall: {},
-    };
+    return getDefaultMallSettingsFile(mallId);
   }
 }
 
-/**
- * Save all settings to disk via Rust backend.
- */
-export async function saveAllSettings(settings: GidoTouchMiniSettings): Promise<void> {
+export async function saveMallSettings(
+  mallId: string,
+  settings: MallSettingsFile,
+): Promise<void> {
+  const filename = mallSettingsFilename(mallId);
+  const json = JSON.stringify(settings, null, 2);
+  await invoke('save_named_settings', { filename, json });
+  logInfo('CONFIG', 'Mall settings saved', { mallId, filename });
+}
+
+export async function mallSettingsFileExists(mallId: string): Promise<boolean> {
+  const filename = mallSettingsFilename(mallId);
+  return invoke<boolean>('settings_file_exists', { filename });
+}
+
+export async function ensureMallSettingsFile(mallId: string): Promise<void> {
+  const exists = await mallSettingsFileExists(mallId);
+  if (!exists) {
+    const defaults = getDefaultMallSettingsFile(mallId);
+    await saveMallSettings(mallId, defaults);
+    logInfo('CONFIG', 'Created default mall settings file', { mallId });
+  }
+}
+
+// ============================================================================
+// Migration from legacy single-file format
+// ============================================================================
+
+export async function migrateFromLegacyIfNeeded(): Promise<boolean> {
   try {
-    const json = JSON.stringify(settings, null, 2);
-    await invoke('save_settings', { json });
-    logInfo('CONFIG', 'Settings saved successfully');
+    const json = await invoke<string>('get_settings');
+    const raw = JSON.parse(json) as LegacySettings;
+
+    // If there's no legacy data indicators, skip migration
+    if (!raw.mallSettings && !raw.dataByMall && !raw.shopPositions) {
+      return false;
+    }
+
+    // Check if per-mall files already exist (migration already done)
+    const globalMallId = raw.mallId ?? raw.mallSettings?.mallId ?? 'suzaka';
+    const exists = await mallSettingsFileExists(globalMallId);
+    if (exists) {
+      return false;
+    }
+
+    logInfo('CONFIG', 'Starting legacy settings migration');
+
+    const dataByMall = raw.dataByMall ?? {};
+    const allMallIds = new Set([globalMallId, ...Object.keys(dataByMall)]);
+
+    for (const mallId of allMallIds) {
+      const mallData = dataByMall[mallId] ?? {};
+      const isGlobal = mallId === globalMallId;
+
+      const settings: MallSettingsFile = {
+        mallSettings: {
+          ...DEFAULT_MALL_SETTINGS,
+          mallId: mallId as MallId,
+          genreMemoIgnoreKeywords:
+            mallData.genreMemoIgnoreKeywords ??
+            (isGlobal ? raw.mallSettings?.genreMemoIgnoreKeywords : undefined) ??
+            DEFAULT_MALL_SETTINGS.genreMemoIgnoreKeywords,
+          maxDisplayCount:
+            mallData.maxDisplayCount ??
+            (isGlobal ? raw.mallSettings?.maxDisplayCount : undefined) ??
+            DEFAULT_MALL_SETTINGS.maxDisplayCount,
+          keywordsInitialized:
+            mallData.keywordsInitialized ??
+            (isGlobal ? raw.mallSettings?.keywordsInitialized : undefined) ??
+            true,
+        },
+        locationIcons:
+          mallData.locationIcons ??
+          (isGlobal ? raw.locationIcons : undefined) ??
+          DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
+        shopPositions:
+          mallData.shopPositions ??
+          (isGlobal ? raw.shopPositions : undefined) ??
+          DEFAULT_SHOP_POSITIONS,
+        pictoSettings:
+          mallData.pictoSettings ??
+          (isGlobal ? raw.pictoSettings : undefined) ??
+          DEFAULT_PICTO_SETTINGS,
+        imageSettings:
+          mallData.imageSettings ??
+          (isGlobal ? raw.imageSettings : undefined) ??
+          DEFAULT_IMAGE_SETTINGS,
+      };
+
+      await saveMallSettings(mallId, settings);
+    }
+
+    // Overwrite settings.json with clean global-only format
+    await saveGlobalSettings({
+      mallId: globalMallId as MallId,
+      floor: raw.floor ?? '1F',
+    });
+
+    logInfo('CONFIG', 'Legacy settings migration completed', {
+      malls: Array.from(allMallIds),
+    });
+
+    return true;
   } catch (error) {
-    logError('CONFIG', 'Failed to save settings', {
+    logError('CONFIG', 'Failed to migrate legacy settings', {
       error: error instanceof Error ? error.message : String(error),
     });
-    throw error;
+    return false;
   }
 }
 
-/**
- * Partially update settings: load current -> merge -> save.
- */
-export async function updateSettings(
-  partial: Partial<GidoTouchMiniSettings>,
-): Promise<GidoTouchMiniSettings> {
-  const current = await loadSettings();
-  const merged: GidoTouchMiniSettings = deepMerge(
-    current as Record<string, unknown>,
-    partial as Record<string, unknown>,
-  ) as GidoTouchMiniSettings;
-
-  // Determine target mall for dataByMall update
-  const targetMallId = partial.mallSettings?.mallId ?? partial.mallId ?? current.mallSettings?.mallId ?? 'suzaka';
-
-  // Ensure dataByMall exists
-  if (!merged.dataByMall) merged.dataByMall = {};
-  if (!merged.dataByMall[targetMallId]) merged.dataByMall[targetMallId] = {};
-
-  // Sync per-mall data
-  if (partial.shopPositions) {
-    merged.dataByMall[targetMallId].shopPositions = merged.shopPositions;
-  }
-  if (partial.pictoSettings) {
-    // For pictoSettings, overwrite instances entirely (allow deletion)
-    merged.pictoSettings = partial.pictoSettings;
-    merged.dataByMall[targetMallId].pictoSettings = partial.pictoSettings;
-  }
-  if (partial.locationIcons) {
-    merged.dataByMall[targetMallId].locationIcons = merged.locationIcons;
-  }
-  if (partial.imageSettings) {
-    merged.dataByMall[targetMallId].imageSettings = merged.imageSettings;
-  }
-  if (partial.mallSettings) {
-    if (partial.mallSettings.genreMemoIgnoreKeywords !== undefined) {
-      merged.dataByMall[targetMallId].genreMemoIgnoreKeywords = partial.mallSettings.genreMemoIgnoreKeywords;
-      merged.dataByMall[targetMallId].keywordsInitialized = true;
-    }
-    if (partial.mallSettings.maxDisplayCount !== undefined) {
-      merged.dataByMall[targetMallId].maxDisplayCount = partial.mallSettings.maxDisplayCount;
-    }
-  }
-
-  await saveAllSettings(merged);
-  return merged;
-}
+// ============================================================================
+// Image file utilities (unchanged)
+// ============================================================================
 
 /**
  * Save image file via Rust backend (receives raw bytes, no Base64).
