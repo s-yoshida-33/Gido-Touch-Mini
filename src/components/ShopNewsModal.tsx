@@ -5,6 +5,7 @@ import { getCommonAssetUrl } from "../utils/assets";
 import type { ShopNews } from "../types/shopNews";
 import type { Shop } from "../types/shop";
 import { ShopLogoImage } from "./ShopLogoImage";
+import { NewsImage } from "./NewsImage";
 import { logInfo } from "../logs/logging";
 
 const iconDate = getCommonAssetUrl("date.svg");
@@ -248,17 +249,17 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
                           {/* Image if available */}
                           {selectedNews.imageUrl && (
                             <div style={{ width: "200px", height: "200px", flexShrink: 0 }}>
-                              <img 
-                                src={selectedNews.imageUrl} 
-                                alt={selectedNews.title} 
-                                style={{ 
-                                  width: "100%", 
-                                  height: "100%", 
-                                  borderRadius: "20px", 
+                              <NewsImage
+                                imageUrl={selectedNews.imageUrl}
+                                alt={selectedNews.title}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  borderRadius: "20px",
                                   objectFit: "contain",
                                   border: "1px solid #D9D9D9",
                                   boxSizing: "border-box"
-                                }} 
+                                }}
                               />
                             </div>
                           )}
@@ -459,17 +460,16 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
                         }}
                       >
                          {news.imageUrl ? (
-                           <img 
-                             src={news.imageUrl} 
+                           <NewsImage
+                             imageUrl={news.imageUrl}
                              alt={news.title}
                              style={{
                                width: "100%",
                                height: "100%",
-                               objectFit: "contain", // Changed to contain to show full image
+                               objectFit: "contain",
                              }}
                            />
                          ) : (
-                           // Placeholder or empty
                            <span style={{ color: "#ccc", fontSize: "12px" }}>No Image</span>
                          )}
                       </div>

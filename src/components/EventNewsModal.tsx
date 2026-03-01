@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CloseButton } from "./CloseButton";
+import { NewsImage } from "./NewsImage";
 import { getCommonAssetUrl } from "../utils/assets";
 import type { ShopNews } from "../types/shopNews";
 import { logInfo } from "../logs/logging";
@@ -237,17 +238,17 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                           {/* Image if available */}
                           {selectedNews.imageUrl && (
                             <div style={{ width: "200px", height: "200px", flexShrink: 0 }}>
-                              <img 
-                                src={selectedNews.imageUrl} 
-                                alt={selectedNews.title} 
-                                style={{ 
-                                  width: "100%", 
-                                  height: "100%", 
-                                  borderRadius: "20px", 
+                              <NewsImage
+                                imageUrl={selectedNews.imageUrl}
+                                alt={selectedNews.title}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  borderRadius: "20px",
                                   objectFit: "contain",
                                   border: "1px solid #D9D9D9",
                                   boxSizing: "border-box"
-                                }} 
+                                }}
                               />
                             </div>
                           )}
@@ -415,17 +416,16 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                         }}
                       >
                          {news.imageUrl ? (
-                           <img 
-                             src={news.imageUrl} 
+                           <NewsImage
+                             imageUrl={news.imageUrl}
                              alt={news.title}
                              style={{
                                width: "100%",
                                height: "100%",
-                               objectFit: "contain", // Changed to contain to show full image
+                               objectFit: "contain",
                              }}
                            />
                          ) : (
-                           // Placeholder or empty
                            <span style={{ color: "#ccc", fontSize: "12px" }}>No Image</span>
                          )}
                       </div>
