@@ -193,12 +193,12 @@ const GidoApp: React.FC<GidoAppProps> = ({
               padding: "1em",
             }}
             onLoad={() => {
-              logInfo("openTime", "Open-time image loaded", {
+              logInfo("ASSET_RESOLVE", "Open-time image loaded", {
                 src: imageSettings?.openTimeImage || defaultOpenTimeImage,
               });
             }}
             onError={(event) => {
-              logError("openTime", "Failed to load open-time image", {
+              logError("ASSET_RESOLVE", "Failed to load open-time image", {
                 src: imageSettings?.openTimeImage || defaultOpenTimeImage,
               });
               (event.target as HTMLImageElement).style.visibility = "hidden";

@@ -4,7 +4,7 @@ import type { BridgeShop, Shop, FloorId } from "../types/shop";
 import type { ShopNews } from "../types/shopNews";
 import { fetch } from "@tauri-apps/plugin-http";
 
-import { logWarn, logError, logDebug } from "../logs/logging";
+import { logInfo, logWarn, logError, logDebug } from "../logs/logging";
 
 // Normalize floor id string (you can extend this if needed)
 function normalizeFloorId(value: string): FloorId {
@@ -77,7 +77,7 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
     const json = await res.json();
     const shops = parseShopsData(json, APP_CONFIG.floor);
 
-    logDebug("DATA_FETCH", "Shops loaded successfully", {
+    logInfo("DATA_FETCH", "Shops loaded successfully", {
       count: shops.length,
       durationMs: Date.now() - startTime,
       source: "BridgeAPI"
@@ -180,7 +180,7 @@ export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
     const res = await fetch(url, { method: "GET" });
 
     if (!res.ok) {
-      logWarn("DATA_FETCH", "Bridge API returned non-200 response", {
+      logWarn("NEWS", "Event news API returned non-200 response", {
         status: res.status,
         statusText: res.statusText,
         endpoint: "/api/event-news"
@@ -192,16 +192,16 @@ export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
     const json = await res.json();
     const news = parseEventNewsData(json);
 
-    logDebug("DATA_FETCH", "Shop news (Event News) loaded successfully", {
+    logInfo("NEWS", "Event news loaded successfully", {
       count: news.length,
       durationMs: Date.now() - startTime,
-      source: "BridgeAPI"
+      endpoint: "/api/event-news"
     });
 
     return news;
 
   } catch (error: any) {
-    logError("DATA_FETCH", "Failed to fetch shop news from Bridge API", {
+    logError("NEWS", "Failed to fetch event news", {
       error: error?.message,
       url,
       durationMs: Date.now() - startTime
@@ -292,7 +292,7 @@ export async function fetchShopNewsListFromBridge(): Promise<ShopNews[]> {
     const res = await fetch(url, { method: "GET" });
 
     if (!res.ok) {
-      logWarn("DATA_FETCH", "Bridge API returned non-200 response", {
+      logWarn("NEWS", "Shop news API returned non-200 response", {
         status: res.status,
         statusText: res.statusText,
         endpoint: "/api/shop-news"
@@ -303,16 +303,16 @@ export async function fetchShopNewsListFromBridge(): Promise<ShopNews[]> {
     const json = await res.json();
     const news = parseShopNewsData(json);
 
-    logDebug("DATA_FETCH", "Shop news list loaded successfully", {
+    logInfo("NEWS", "Shop news loaded successfully", {
         count: news.length,
         durationMs: Date.now() - startTime,
-        source: "BridgeAPI"
+        endpoint: "/api/shop-news"
     });
 
     return news;
 
   } catch (error: any) {
-    logError("DATA_FETCH", "Failed to fetch shop news list from Bridge API", {
+    logError("NEWS", "Failed to fetch shop news", {
       error: error?.message,
       url,
       durationMs: Date.now() - startTime

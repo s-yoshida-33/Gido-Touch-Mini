@@ -57,6 +57,56 @@ import { getVersion } from "@tauri-apps/api/app";
 
 type FloorId = "1F" | "2F" | "3F" | "4F";
 
+// Error boundary for React render failures
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    logError("RENDERER_ERROR", "React ErrorBoundary caught an error", {
+      error: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+    });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div
+          style={{
+            padding: 40,
+            color: "white",
+            background: "#333",
+            height: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <h1 style={{ fontSize: "2em", marginBottom: "1em" }}>
+            System Error
+          </h1>
+          <p>
+            予期せぬエラーが発生しました。自動的に復旧しない場合は再起動してください。
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageSettings => {
   const config = getMallConfig(mallId as any);
   // Default open time image path based on mallId
@@ -290,7 +340,7 @@ const App: React.FC = () => {
              const news = parseShopNewsData(payload.data);
              setShopNews(news);
              saveShopNewsToCache(news);
-             logInfo("app", "Updated shop news from SSE", { count: news.length });
+             logInfo("NEWS", "Updated shop news from SSE", { count: news.length, endpoint: "/api/shop-news" });
           }
           break;
 
@@ -299,7 +349,7 @@ const App: React.FC = () => {
              const news = parseEventNewsData(payload.data);
              setEventNews(news);
              saveEventNewsToCache(news);
-             logInfo("app", "Updated event news from SSE", { count: news.length });
+             logInfo("NEWS", "Updated event news from SSE", { count: news.length, endpoint: "/api/event-news" });
           }
           break;
 
@@ -387,6 +437,7 @@ const App: React.FC = () => {
         });
 
         setAppPhase("running");
+        logInfo("SYSTEM", "Application initialized successfully");
       } catch (e) {
         addDebug(`Failed to load settings: ${e}`);
         logError("app", "Failed to load settings from Tauri", { error: e });
@@ -395,6 +446,34 @@ const App: React.FC = () => {
     };
 
     init();
+  }, []);
+
+  // Global error handlers for uncaught errors (SYSTEM scope)
+  useEffect(() => {
+    const handleGlobalError = (event: ErrorEvent) => {
+      logError("SYSTEM", "Uncaught global error", {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+      });
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      logError("SYSTEM", "Unhandled promise rejection", {
+        reason: event.reason instanceof Error
+          ? { message: event.reason.message, stack: event.reason.stack }
+          : String(event.reason),
+      });
+    };
+
+    window.addEventListener("error", handleGlobalError);
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener("error", handleGlobalError);
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+    };
   }, []);
 
   // Unified save handler: writes global settings + per-mall settings in one operation.
@@ -553,30 +632,37 @@ const App: React.FC = () => {
 
   // --- Phase: Mall Selection (first launch) ---
   if (appPhase === "mall_select") {
-    return <MallSelectScreen onSelect={handleMallSelect} />;
+    return (
+      <ErrorBoundary>
+        <MallSelectScreen onSelect={handleMallSelect} />
+      </ErrorBoundary>
+    );
   }
 
   // --- Phase: Initial Settings (first launch, after mall selection) ---
   if (appPhase === "settings") {
     return (
-      <UnifiedSettingsScreen
-        isOpen={true}
-        onClose={handleSettingsClose}
-        mallId={mallId}
-        floor={floor}
-        locationIconSettings={locationSettings}
-        imageSettings={imageSettings}
-        shopPositions={shopPositions}
-        shops={mergedShops}
-        pictoSettings={pictoSettings}
-        mallSettings={mallSettings}
-        onSave={handleInitialSetupSave}
-      />
+      <ErrorBoundary>
+        <UnifiedSettingsScreen
+          isOpen={true}
+          onClose={handleSettingsClose}
+          mallId={mallId}
+          floor={floor}
+          locationIconSettings={locationSettings}
+          imageSettings={imageSettings}
+          shopPositions={shopPositions}
+          shops={mergedShops}
+          pictoSettings={pictoSettings}
+          mallSettings={mallSettings}
+          onSave={handleInitialSetupSave}
+        />
+      </ErrorBoundary>
     );
   }
 
   // --- Phase: Running (normal operation) ---
   return (
+    <ErrorBoundary>
     <ContextMenu
       onOpenSettings={() => setIsSettingsOpen(true)}
       onOpenVersionInfo={() => setIsVersionInfoOpen(true)}
@@ -692,6 +778,7 @@ const App: React.FC = () => {
       />
       <VersionInfoScreen isOpen={isVersionInfoOpen} onClose={() => setIsVersionInfoOpen(false)} />
     </ContextMenu>
+    </ErrorBoundary>
   );
 };
 
