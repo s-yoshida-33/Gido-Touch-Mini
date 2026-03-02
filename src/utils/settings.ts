@@ -21,6 +21,7 @@ import { logInfo, logError } from '../logs/logging';
 export interface GlobalSettings {
   mallId: MallId;
   floor: string;
+  setupCompleted?: boolean;
 }
 
 /**
@@ -90,12 +91,13 @@ export async function loadGlobalSettings(): Promise<GlobalSettings> {
     return {
       mallId: (raw.mallId ?? 'suzaka') as MallId,
       floor: raw.floor ?? '1F',
+      setupCompleted: raw.setupCompleted ?? false,
     };
   } catch (error) {
     logError('CONFIG', 'Failed to load global settings', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { mallId: 'suzaka', floor: '1F' };
+    return { mallId: 'suzaka', floor: '1F', setupCompleted: false };
   }
 }
 

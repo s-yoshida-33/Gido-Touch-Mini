@@ -10,6 +10,7 @@ import { ContextMenu } from "./components/ContextMenu";
 
 import VersionInfoScreen from "./screens/VersionInfoScreen";
 import UnifiedSettingsScreen from "./screens/UnifiedSettingsScreen";
+import MallSelectScreen from "./screens/MallSelectScreen";
 import {
   DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
 } from "./config";
@@ -139,6 +140,11 @@ const App: React.FC = () => {
   const [shops, setShops] = useState<Shop[]>([]);
   const [shopNews, setShopNews] = useState<ShopNews[]>([]);
   const [eventNews, setEventNews] = useState<ShopNews[]>([]);
+
+  // App startup phase
+  // "loading" → reading settings | "mall_select" → first launch | "settings" → initial config | "running" → main screen
+  type AppPhase = "loading" | "mall_select" | "settings" | "running";
+  const [appPhase, setAppPhase] = useState<AppPhase>("loading");
 
   // Settings screen open state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -348,9 +354,17 @@ const App: React.FC = () => {
         addDebug(`Migration check failed: ${e}`);
       }
 
-      // 3. Load global settings (mallId, floor)
+      // 3. Load global settings (mallId, floor, setupCompleted)
       try {
         const global = await loadGlobalSettings();
+
+        // If first launch (setup not completed), show mall selection
+        if (!global.setupCompleted) {
+          addDebug("First launch detected — showing mall selection");
+          setAppPhase("mall_select");
+          return;
+        }
+
         const currentMallId = global.mallId ?? "suzaka";
         setMallId(currentMallId);
         setFloor(global.floor as FloorId);
@@ -371,9 +385,12 @@ const App: React.FC = () => {
           mallId: currentMallId,
           shopPositions: Object.keys(mallData.shopPositions.positions).length,
         });
+
+        setAppPhase("running");
       } catch (e) {
         addDebug(`Failed to load settings: ${e}`);
         logError("app", "Failed to load settings from Tauri", { error: e });
+        setAppPhase("mall_select");
       }
     };
 
@@ -446,6 +463,62 @@ const App: React.FC = () => {
     }
   };
 
+  // Handle initial mall selection (first launch phase 1 → phase 2)
+  const handleMallSelect = async (selectedMallId: MallId) => {
+    try {
+      setMallId(selectedMallId);
+
+      // Ensure per-mall settings file and load it
+      await ensureMallSettingsFile(selectedMallId);
+      const mallData = await loadMallSettings(selectedMallId);
+
+      setMallSettings({ ...mallData.mallSettings, mallId: selectedMallId });
+      setLocationSettings(mallData.locationIcons);
+      setImageSettings(mergeWithDefaultImages(mallData.imageSettings, selectedMallId));
+      setShopPositions(mallData.shopPositions);
+      setPictoSettings(mallData.pictoSettings);
+      setFloor("1F");
+
+      addDebug(`Mall selected: ${selectedMallId}, opening settings`);
+
+      // Move to settings phase — open settings screen
+      setIsSettingsOpen(true);
+      setAppPhase("settings");
+    } catch (e) {
+      logError("app", "Failed during mall selection", { error: e });
+    }
+  };
+
+  // Handle save during initial setup (phase 2 → phase 3)
+  const handleInitialSetupSave = async (
+    global: { mallId: string; floor: string },
+    mallData: MallSettingsFile,
+  ) => {
+    // Delegate to normal save handler first
+    await handleSaveAllSettings(global, mallData);
+
+    // Mark setup as completed
+    await saveGlobalSettings({
+      mallId: global.mallId as MallId,
+      floor: global.floor,
+      setupCompleted: true,
+    });
+
+    setAppPhase("running");
+    logInfo("app", "Initial setup completed", { mallId: global.mallId });
+  };
+
+  // Handle settings cancel during initial setup (phase 2 → phase 1)
+  const handleSettingsClose = () => {
+    if (appPhase === "settings") {
+      // During initial setup, cancel returns to mall selection
+      setIsSettingsOpen(false);
+      setAppPhase("mall_select");
+    } else {
+      setIsSettingsOpen(false);
+    }
+  };
+
   // Merge shops with positions
   const mergedShops = useMemo(() => {
     return shops.map((shop) => {
@@ -462,6 +535,41 @@ const App: React.FC = () => {
 
   const currentMallConfig = getMallConfig(mallSettings.mallId);
 
+  // --- Phase: Loading ---
+  if (appPhase === "loading") {
+    return (
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: "#1C1C1C",
+      }} />
+    );
+  }
+
+  // --- Phase: Mall Selection (first launch) ---
+  if (appPhase === "mall_select") {
+    return <MallSelectScreen onSelect={handleMallSelect} />;
+  }
+
+  // --- Phase: Initial Settings (first launch, after mall selection) ---
+  if (appPhase === "settings") {
+    return (
+      <UnifiedSettingsScreen
+        isOpen={true}
+        onClose={handleSettingsClose}
+        mallId={mallId}
+        floor={floor}
+        locationIconSettings={locationSettings}
+        imageSettings={imageSettings}
+        shopPositions={shopPositions}
+        shops={mergedShops}
+        pictoSettings={pictoSettings}
+        mallSettings={mallSettings}
+        onSave={handleInitialSetupSave}
+      />
+    );
+  }
+
+  // --- Phase: Running (normal operation) ---
   return (
     <ContextMenu
       onOpenSettings={() => setIsSettingsOpen(true)}
@@ -560,12 +668,12 @@ const App: React.FC = () => {
       pictoSettings={pictoSettings}
       genres={currentMallConfig.genres}
       floorMaps={imageSettings.floorMaps}
-      openTimeImage={imageSettings.openTimeImage} // Pass openTimeImage
+      openTimeImage={imageSettings.openTimeImage}
       mallSettings={mallSettings}
     />
     <UnifiedSettingsScreen
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={handleSettingsClose}
         mallId={mallId}
         floor={floor}
         locationIconSettings={locationSettings}
