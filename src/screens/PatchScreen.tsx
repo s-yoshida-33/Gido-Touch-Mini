@@ -109,12 +109,12 @@ export function PatchScreen() {
     <div
       style={{
         display: 'flex',
-        width: '100%',
-        height: '100%',
+        width: '100vw',
+        height: '100vh',
         fontFamily: "system-ui, sans-serif",
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'transparent',
+        backgroundColor: '#000000',
         color: '#fff',
       }}
     >
