@@ -107,47 +107,58 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+/**
+ * Check if an image path is a user-saved custom path (absolute file path or data URL).
+ * Vite-bundled asset URLs (relative paths like "/assets/...") are NOT considered custom
+ * because they can become stale after reinstall/update when content hashes change.
+ */
+const isCustomImagePath = (path: string): boolean => {
+  if (!path) return false;
+  if (path.startsWith("data:")) return true;
+  // Windows absolute path (e.g. C:\Users\...\images\floormap-1F.svg)
+  if (/^[A-Za-z]:[/\\]/.test(path)) return true;
+  // UNC path
+  if (path.startsWith("\\\\")) return true;
+  // Unix absolute path (unlikely on Windows but defensive)
+  if (path.startsWith("/") && !path.startsWith("/assets/")) return true;
+  return false;
+};
+
 const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageSettings => {
   const config = getMallConfig(mallId as any);
-  // Default open time image path based on mallId
-  // const defaultOpenTime = getMallAssetUrl(mallId, "open-time/ja", "open-time.svg");
 
   let openTimeImage = settings.openTimeImage;
+
+  // Only use saved openTimeImage if it's a custom path (not a stale Vite URL)
+  if (openTimeImage && !isCustomImagePath(openTimeImage)) {
+    openTimeImage = "";
+  }
 
   // Check if the current openTimeImage belongs to a different mall's default asset
   // This prevents showing Suzaka's open time when switched to Sendai, and vice versa.
   if (openTimeImage) {
-    // Check known mall IDs in the path
-    const isSuzakaAsset = openTimeImage.includes("malls/suzaka");
-    const isSendaiAsset = openTimeImage.includes("malls/sendaikamisugi");
+    const isSuzakaAsset = openTimeImage.includes("malls/suzaka") || openTimeImage.includes("malls\\suzaka");
+    const isSendaiAsset = openTimeImage.includes("malls/sendaikamisugi") || openTimeImage.includes("malls\\sendaikamisugi");
 
-    // If current mall is Suzaka but image is from Sendai -> Reset to default
     if (mallId === "suzaka" && isSendaiAsset) {
       openTimeImage = "";
-    }
-    // If current mall is Sendai but image is from Suzaka -> Reset to default
-    else if (mallId === "sendaikamisugi" && isSuzakaAsset) {
+    } else if (mallId === "sendaikamisugi" && isSuzakaAsset) {
       openTimeImage = "";
-    }
-    // Fallback: If current mall ID is not in path but another mall ID is -> Reset
-    else if (mallId === "suzaka" && !isSuzakaAsset && openTimeImage.includes("malls/")) {
-        // e.g. some other mall
-        openTimeImage = "";
-    }
-    else if (mallId === "sendaikamisugi" && !isSendaiAsset && openTimeImage.includes("malls/")) {
-        openTimeImage = "";
+    } else if (mallId === "suzaka" && !isSuzakaAsset && (openTimeImage.includes("malls/") || openTimeImage.includes("malls\\"))) {
+      openTimeImage = "";
+    } else if (mallId === "sendaikamisugi" && !isSendaiAsset && (openTimeImage.includes("malls/") || openTimeImage.includes("malls\\"))) {
+      openTimeImage = "";
     }
   }
 
   return {
     ...settings,
     floorMaps: {
-      "1F": settings.floorMaps["1F"] || config.floorMaps["1F"],
-      "2F": settings.floorMaps["2F"] || config.floorMaps["2F"],
-      "3F": settings.floorMaps["3F"] || config.floorMaps["3F"],
-      "4F": settings.floorMaps["4F"] || config.floorMaps["4F"],
+      "1F": (isCustomImagePath(settings.floorMaps["1F"]) ? settings.floorMaps["1F"] : "") || config.floorMaps["1F"],
+      "2F": (isCustomImagePath(settings.floorMaps["2F"]) ? settings.floorMaps["2F"] : "") || config.floorMaps["2F"],
+      "3F": (isCustomImagePath(settings.floorMaps["3F"]) ? settings.floorMaps["3F"] : "") || config.floorMaps["3F"],
+      "4F": (isCustomImagePath(settings.floorMaps["4F"]) ? settings.floorMaps["4F"] : "") || config.floorMaps["4F"],
     },
-    // Use validated settings value or default
     openTimeImage: openTimeImage || "",
   };
 };
@@ -498,6 +509,10 @@ const App: React.FC = () => {
           const filename = `floormap-${floorKey}.${ext}`;
           const savedPath = await saveImageFile(filename, uint8Array);
           processedImageSettings.floorMaps[floorKey] = savedPath;
+        } else if (!isCustomImagePath(mapValue)) {
+          // Don't persist Vite-bundled asset URLs — they become stale after reinstall/update.
+          // Only custom paths (absolute file paths, data URLs) should be saved.
+          processedImageSettings.floorMaps[floorKey] = "";
         }
       }
 
@@ -510,6 +525,8 @@ const App: React.FC = () => {
         const filename = `open-time.${ext}`;
         const savedPath = await saveImageFile(filename, uint8Array);
         processedImageSettings.openTimeImage = savedPath;
+      } else if (!isCustomImagePath(processedImageSettings.openTimeImage)) {
+        processedImageSettings.openTimeImage = "";
       }
 
       const processedMallData: MallSettingsFile = {
