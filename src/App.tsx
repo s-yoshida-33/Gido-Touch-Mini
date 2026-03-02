@@ -489,6 +489,9 @@ const App: React.FC = () => {
     }
   };
 
+  // Track whether initial setup completed (ref to avoid stale closure in handleSettingsClose)
+  const setupJustCompleted = useRef(false);
+
   // Handle save during initial setup (phase 2 → phase 3)
   const handleInitialSetupSave = async (
     global: { mallId: string; floor: string },
@@ -504,13 +507,16 @@ const App: React.FC = () => {
       setupCompleted: true,
     });
 
+    // Set ref BEFORE state update so handleSettingsClose (called by UnifiedSettingsScreen
+    // after onSave resolves) knows not to revert to mall_select
+    setupJustCompleted.current = true;
     setAppPhase("running");
     logInfo("app", "Initial setup completed", { mallId: global.mallId });
   };
 
-  // Handle settings cancel during initial setup (phase 2 → phase 1)
+  // Handle settings close (cancel or after save)
   const handleSettingsClose = () => {
-    if (appPhase === "settings") {
+    if (appPhase === "settings" && !setupJustCompleted.current) {
       // During initial setup, cancel returns to mall selection
       setIsSettingsOpen(false);
       setAppPhase("mall_select");
