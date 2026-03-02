@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import appIcon from '../../build/icon.ico';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import { getVersion } from '@tauri-apps/api/app';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 export function PatchScreen() {
   const { updateStatus, installUpdate } = useAutoUpdate();
@@ -36,8 +37,15 @@ export function PatchScreen() {
     }
   }, [updateStatus.status]);
 
-  // Navigate to main app (set #app hash to switch from PatchScreen to App)
-  const finishWait = () => {
+  // Switch to fullscreen main app
+  const finishWait = async () => {
+    try {
+      const appWindow = getCurrentWindow();
+      await appWindow.setAlwaysOnTop(true);
+      await appWindow.setFullscreen(true);
+    } catch {
+      // Fallback: proceed even if window API fails
+    }
     window.location.hash = '#app';
     window.location.reload();
   };
@@ -107,6 +115,7 @@ export function PatchScreen() {
 
   return (
     <div
+      data-tauri-drag-region
       style={{
         display: 'flex',
         width: '100vw',
@@ -114,15 +123,14 @@ export function PatchScreen() {
         fontFamily: "system-ui, sans-serif",
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#000000',
+        backgroundColor: 'transparent',
         color: '#fff',
       }}
     >
       {/* Center Card */}
       <div
         style={{
-          minWidth: 800,
-          maxWidth: 860,
+          width: 860,
           minHeight: 600,
           maxHeight: 660,
           padding: 32,
@@ -135,15 +143,17 @@ export function PatchScreen() {
           gap: 24,
         }}
       >
-        {/* Header */}
+        {/* Header (drag region) */}
         <div
+          data-tauri-drag-region
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            cursor: 'grab',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div data-tauri-drag-region style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {/* ICON */}
             <div
               style={{
@@ -169,7 +179,7 @@ export function PatchScreen() {
               />
             </div>
 
-            <div>
+            <div data-tauri-drag-region>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#ffffff' }}>Gido Touch Mini</div>
               <div style={{ fontSize: 12, color: '#888888' }}>
                 Preparing latest map &amp; shop data…
