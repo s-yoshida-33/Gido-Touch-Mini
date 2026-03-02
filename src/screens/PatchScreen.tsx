@@ -36,9 +36,9 @@ export function PatchScreen() {
     }
   }, [updateStatus.status]);
 
-  // Navigate to main app (reload without #patch hash)
+  // Navigate to main app (set #app hash to switch from PatchScreen to App)
   const finishWait = () => {
-    window.location.hash = '';
+    window.location.hash = '#app';
     window.location.reload();
   };
 
