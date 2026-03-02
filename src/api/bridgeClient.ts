@@ -2,6 +2,7 @@
 import { getApiBaseUrl, APP_CONFIG } from "../config";
 import type { BridgeShop, Shop, FloorId } from "../types/shop";
 import type { ShopNews } from "../types/shopNews";
+import { fetch } from "@tauri-apps/plugin-http";
 
 import { logWarn, logError, logDebug } from "../logs/logging";
 
