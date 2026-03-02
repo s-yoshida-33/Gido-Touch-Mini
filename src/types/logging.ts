@@ -11,8 +11,11 @@ export type LogTag =
   | 'SYS_SHUTDOWN'
   | 'SYSTEM'          // [ALERT] Uncaught global errors, unhandled rejections
 
-  // Data fetching (Shop SSE / REST)
-  | 'DATA_FETCH'      // [ALERT] API communication errors
+  // Data fetching (Shop REST)
+  | 'DATA_FETCH'      // [ALERT] Shop API communication errors
+
+  // News (Event News + Shop News)
+  | 'NEWS'            // [ALERT] News fetch / SSE update errors
 
   // Asset resolution (image load, picto icons)
   | 'ASSET_RESOLVE'   // [ALERT] Asset/image resolution failures

@@ -1,6 +1,6 @@
 import { getApiBaseUrl } from "../config";
 import { fetch } from "@tauri-apps/plugin-http";
-import { logError, logDebug } from "../logs/logging";
+import { logInfo, logError, logDebug } from "../logs/logging";
 
 export type SseConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -59,7 +59,7 @@ class SSEService {
       }
 
       this.setStatus('connected');
-      logDebug("sse", "SSE connection opened");
+      logInfo("sse", "SSE connection opened");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();

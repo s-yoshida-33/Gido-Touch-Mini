@@ -340,7 +340,7 @@ const App: React.FC = () => {
              const news = parseShopNewsData(payload.data);
              setShopNews(news);
              saveShopNewsToCache(news);
-             logInfo("app", "Updated shop news from SSE", { count: news.length });
+             logInfo("NEWS", "Updated shop news from SSE", { count: news.length, endpoint: "/api/shop-news" });
           }
           break;
 
@@ -349,7 +349,7 @@ const App: React.FC = () => {
              const news = parseEventNewsData(payload.data);
              setEventNews(news);
              saveEventNewsToCache(news);
-             logInfo("app", "Updated event news from SSE", { count: news.length });
+             logInfo("NEWS", "Updated event news from SSE", { count: news.length, endpoint: "/api/event-news" });
           }
           break;
 

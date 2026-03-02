@@ -126,7 +126,7 @@ fn write_log(
 
     // Slack notification target scopes
     let alert_scopes = [
-        "map", "shopList", "DATA_FETCH", "ASSET_RESOLVE",
+        "map", "shopList", "NEWS", "DATA_FETCH", "ASSET_RESOLVE",
         "sse", "app", "UPDATER", "CONFIG",
         "SYSTEM", "RENDERER_ERROR"
     ];
