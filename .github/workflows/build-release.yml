@@ -37,7 +37,7 @@ jobs:
           name: "Release v${{ steps.get_version.outputs.version }}"
           generate_release_notes: true
           draft: false
-          prerelease: false
+          prerelease: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build:
