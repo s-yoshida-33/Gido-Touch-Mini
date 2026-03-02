@@ -17,6 +17,7 @@
     {
       "identifier": "http:default",
       "allow": [
+        "http://localhost:8090/**",
         "https://api.github.com/**",
         "https://github.com/**",
         "https://*.githubusercontent.com/**"

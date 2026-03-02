@@ -1,12 +1,20 @@
 import { getApiBaseUrl } from "../config";
+import { fetch } from "@tauri-apps/plugin-http";
 import { logError, logDebug } from "../logs/logging";
 
 export type SseConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 type Listener = (data: any) => void;
 
+/**
+ * SSE client implemented over Tauri HTTP plugin's fetch (streaming).
+ *
+ * The native EventSource API cannot reach http://localhost:8090 from the
+ * Tauri WebView because it is a cross-origin request without CORS headers.
+ * Using the Tauri HTTP plugin routes the request through Rust, bypassing CORS.
+ */
 class SSEService {
-  private eventSource: EventSource | null = null;
+  private abortController: AbortController | null = null;
   private listeners: Map<string, Set<Listener>> = new Map();
   private isDestroyed = false;
   private retryTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -36,71 +44,107 @@ class SSEService {
       const baseUrl = await getApiBaseUrl();
       const url = `${baseUrl}/api/events`;
 
-      logDebug("sse", "Connecting to SSE endpoint", { url });
+      logDebug("sse", "Connecting to SSE endpoint via Tauri HTTP", { url });
 
-      this.eventSource = new EventSource(url);
+      this.abortController = new AbortController();
 
-      this.eventSource.addEventListener("open", () => {
-        logDebug("sse", "SSE connection opened");
-        this.setStatus('connected');
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Accept": "text/event-stream" },
+        signal: this.abortController.signal,
       });
 
-      this.eventSource.addEventListener("connected", (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          this.emit("connected", data);
-        } catch (error) {
-          logError("sse", "Failed to parse connected event", { error });
+      if (!response.ok || !response.body) {
+        throw new Error(`SSE connection failed: HTTP ${response.status}`);
+      }
+
+      this.setStatus('connected');
+      logDebug("sse", "SSE connection opened");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      // Read the stream
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE events (delimited by double newlines)
+        const parts = buffer.split("\n\n");
+        // The last element may be an incomplete event — keep it in the buffer
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          if (!part.trim()) continue;
+          this.parseAndDispatch(part);
         }
-      });
+      }
 
-      this.eventSource.addEventListener("heartbeat", () => {
-        try {
-          // const data = JSON.parse(e.data);
-          // Optional: log heartbeat only occasionally or not at all to avoid noise
-          // this.emit("heartbeat", data); 
-        } catch (error) {
-           // ignore heartbeat errors
-        }
-      });
+      // Stream ended cleanly
+      logDebug("sse", "SSE stream ended");
+      this.setStatus('disconnected');
+      this.reconnect();
 
-      const handleUpdate = (e: MessageEvent) => {
-        try {
-          const data = JSON.parse(e.data);
-          logDebug("sse", `Received ${e.type} event`, data);
-          this.emit("update", data);
-        } catch (error) {
-          logError("sse", `Failed to parse ${e.type} event`, { error });
-        }
-      };
-
-      // Listen for specific event types sent by the server
-      this.eventSource.addEventListener("update", handleUpdate);
-      this.eventSource.addEventListener("shops", handleUpdate);
-      this.eventSource.addEventListener("shop_news", handleUpdate);
-      this.eventSource.addEventListener("event_news", handleUpdate);
-      this.eventSource.addEventListener("specials", handleUpdate);
-
-      this.eventSource.onerror = (e) => {
-        logError("sse", "SSE Error occurred", { event: e });
-        this.setStatus('error');
-        this.reconnect();
-      };
-
-    } catch (error) {
-      logError("sse", "Failed to initialize SSE connection", { error });
+    } catch (error: any) {
+      if (error?.name === "AbortError") {
+        logDebug("sse", "SSE connection aborted");
+        return;
+      }
+      logError("sse", "SSE Error occurred", { error: error?.message ?? error });
       this.setStatus('error');
       this.reconnect();
     }
   }
 
+  /**
+   * Parse a single SSE block and dispatch to listeners.
+   * SSE format:
+   *   event: <type>\n
+   *   data: <json>\n
+   */
+  private parseAndDispatch(block: string) {
+    let eventType = "message";
+    let dataLines: string[] = [];
+
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event:")) {
+        eventType = line.slice(6).trim();
+      } else if (line.startsWith("data:")) {
+        dataLines.push(line.slice(5).trim());
+      } else if (line.startsWith(":")) {
+        // SSE comment — ignore (heartbeat keepalive)
+      }
+    }
+
+    if (dataLines.length === 0) return;
+
+    const rawData = dataLines.join("\n");
+
+    // Heartbeat events — silently ignore
+    if (eventType === "heartbeat") return;
+
+    try {
+      const data = JSON.parse(rawData);
+      logDebug("sse", `Received ${eventType} event`, data);
+
+      if (eventType === "connected") {
+        this.emit("connected", data);
+      } else {
+        // update, shops, shop_news, event_news, specials → all go through "update"
+        this.emit("update", data);
+      }
+    } catch {
+      // Non-JSON data — ignore
+    }
+  }
+
   private reconnect() {
     if (this.isDestroyed) return;
-    
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
-    }
+
+    this.disconnect();
 
     if (this.retryTimeout) return;
 
@@ -109,6 +153,13 @@ class SSEService {
       this.retryTimeout = null;
       this.connect();
     }, 5000);
+  }
+
+  private disconnect() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
   }
 
   public on(event: string, callback: Listener): () => void {
@@ -137,20 +188,15 @@ class SSEService {
 
   public destroy() {
     this.isDestroyed = true;
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
-    }
+    this.disconnect();
     this.setStatus('disconnected');
     if (this.retryTimeout) {
       clearTimeout(this.retryTimeout);
       this.retryTimeout = null;
     }
-
     this.listeners.clear();
   }
 }
 
 // Singleton instance
 export const sseService = new SSEService();
-
