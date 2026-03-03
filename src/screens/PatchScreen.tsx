@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import appIcon from '../../build/icon.ico';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
-export function PatchScreen() {
+interface PatchScreenProps {
+  onComplete: () => void;
+}
+
+export function PatchScreen({ onComplete }: PatchScreenProps) {
   const { updateStatus, installUpdate } = useAutoUpdate();
   const [appVersion, setAppVersion] = useState<string>('');
 
@@ -37,18 +41,17 @@ export function PatchScreen() {
     }
   }, [updateStatus.status]);
 
-  // Switch to fullscreen main app
-  const finishWait = async () => {
+  // Switch window to fullscreen main app (no reload — React state transition)
+  const finishWait = useCallback(async () => {
     try {
       const appWindow = getCurrentWindow();
       await appWindow.setAlwaysOnTop(true);
       await appWindow.setFullscreen(true);
     } catch {
-      // Fallback: proceed even if window API fails
+      // Proceed even if window API fails
     }
-    window.location.hash = '#app';
-    window.location.reload();
-  };
+    onComplete();
+  }, [onComplete]);
 
   // 90秒タイマーのロジック
   useEffect(() => {
@@ -76,7 +79,7 @@ export function PatchScreen() {
     }, 100);
 
     return () => clearInterval(timer);
-  }, [isWaiting]);
+  }, [isWaiting, finishWait]);
 
   // Map Tauri update status to display title
   const titleLabel = (() => {
