@@ -1,6 +1,6 @@
 // src/main.tsx
 // Main entry point for the React application
-import { StrictMode } from 'react'
+import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/index.css'
 import App from './App.tsx'
@@ -8,13 +8,17 @@ import './styles/fonts.css'
 import './styles/location-icons.css'
 import { PatchScreen } from './screens/PatchScreen'
 
-// Decide which screen to render based on URL hash.
-// Default: show PatchScreen (update check + startup wait).
-// After PatchScreen completes, it navigates to #app to show the main App.
-const isAppMode = window.location.hash === '#app';
+// Root component: manages the PatchScreen → App transition via React state.
+// No page reload needed — window properties persist across the state change.
+function Root() {
+  const [showApp, setShowApp] = useState(false);
+
+  if (showApp) return <App />;
+  return <PatchScreen onComplete={() => setShowApp(true)} />;
+}
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
-    {isAppMode ? <App /> : <PatchScreen />}
+    <Root />
   </StrictMode>,
 );
