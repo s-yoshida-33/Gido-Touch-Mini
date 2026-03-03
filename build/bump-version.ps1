@@ -114,8 +114,25 @@ try {
     exit 1
 }
 
+# Update lock files
+Write-Host ""
+Write-Host "[*] Syncing lock files..." -ForegroundColor Cyan
+
+# Update package-lock.json
+Write-Host "[*] Running npm install..." -ForegroundColor Cyan
+try {
+    Push-Location $rootDir
+    npm install 2>&1 | Out-Null
+    Pop-Location
+    Write-Host "[+] package-lock.json updated successfully" -ForegroundColor Green
+} catch {
+    Pop-Location -ErrorAction SilentlyContinue
+    Write-Host "[!] Warning: npm install failed: $_" -ForegroundColor Yellow
+    Write-Host "    You may need to run 'npm install' manually" -ForegroundColor Yellow
+}
+
 # Update Cargo.lock
-Write-Host "[*] Updating Cargo.lock..." -ForegroundColor Cyan
+Write-Host "[*] Running cargo generate-lockfile..." -ForegroundColor Cyan
 try {
     $srcTauriDir = Join-Path $rootDir "src-tauri"
     Push-Location $srcTauriDir
@@ -123,11 +140,9 @@ try {
     Pop-Location
     Write-Host "[+] Cargo.lock updated successfully" -ForegroundColor Green
 } catch {
+    Pop-Location -ErrorAction SilentlyContinue
     Write-Host "[!] Warning: Failed to update Cargo.lock: $_" -ForegroundColor Yellow
     Write-Host "    You may need to run 'cargo generate-lockfile' manually in src-tauri/" -ForegroundColor Yellow
-    if ($null -ne (Get-Variable -Name 'LASTEXITCODE' -ErrorAction SilentlyContinue)) {
-        Pop-Location -ErrorAction SilentlyContinue
-    }
 }
 
 Write-Host ""
@@ -138,17 +153,17 @@ Write-Host ""
 
 Write-Host "[+] Files updated:" -ForegroundColor Green
 Write-Host "   - package.json" -ForegroundColor Green
+Write-Host "   - package-lock.json" -ForegroundColor Green
 Write-Host "   - tauri.conf.json" -ForegroundColor Green
 Write-Host "   - Cargo.toml" -ForegroundColor Green
 Write-Host "   - Cargo.lock" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "[*] Next steps:" -ForegroundColor Cyan
-Write-Host "   1. Run: npm install" -ForegroundColor Cyan
-Write-Host "   2. Review changes: git diff" -ForegroundColor Cyan
-Write-Host "   3. Commit version change" -ForegroundColor Cyan
-Write-Host "   4. Tag release: git tag v$newVersion" -ForegroundColor Cyan
-Write-Host "   5. Push changes" -ForegroundColor Cyan
+Write-Host "   1. Review changes: git diff" -ForegroundColor Cyan
+Write-Host "   2. Commit version change" -ForegroundColor Cyan
+Write-Host "   3. Tag release: git tag v$newVersion" -ForegroundColor Cyan
+Write-Host "   4. Push changes" -ForegroundColor Cyan
 Write-Host ""
 
 Write-Host "[+] Script completed successfully" -ForegroundColor Green
