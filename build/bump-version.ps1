@@ -114,6 +114,22 @@ try {
     exit 1
 }
 
+# Update Cargo.lock
+Write-Host "[*] Updating Cargo.lock..." -ForegroundColor Cyan
+try {
+    $srcTauriDir = Join-Path $rootDir "src-tauri"
+    Push-Location $srcTauriDir
+    cargo generate-lockfile 2>&1 | Out-Null
+    Pop-Location
+    Write-Host "[+] Cargo.lock updated successfully" -ForegroundColor Green
+} catch {
+    Write-Host "[!] Warning: Failed to update Cargo.lock: $_" -ForegroundColor Yellow
+    Write-Host "    You may need to run 'cargo generate-lockfile' manually in src-tauri/" -ForegroundColor Yellow
+    if ($null -ne (Get-Variable -Name 'LASTEXITCODE' -ErrorAction SilentlyContinue)) {
+        Pop-Location -ErrorAction SilentlyContinue
+    }
+}
+
 Write-Host ""
 Write-Host "========================================"  -ForegroundColor Green
 Write-Host "   Version Update Complete!"             -ForegroundColor Green
@@ -124,6 +140,7 @@ Write-Host "[+] Files updated:" -ForegroundColor Green
 Write-Host "   - package.json" -ForegroundColor Green
 Write-Host "   - tauri.conf.json" -ForegroundColor Green
 Write-Host "   - Cargo.toml" -ForegroundColor Green
+Write-Host "   - Cargo.lock" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "[*] Next steps:" -ForegroundColor Cyan
