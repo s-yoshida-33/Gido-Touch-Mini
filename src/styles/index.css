@@ -1,12 +1,5 @@
 @import "tailwindcss";
 
-/* Transparent background for Tauri window transparency support.
-   PatchScreen relies on this to show desktop behind the card.
-   App components set their own opaque backgrounds. */
-html, body {
-  background: transparent !important;
-}
-
 /* Prevent text selection globally */
 * {
   -webkit-user-select: none;

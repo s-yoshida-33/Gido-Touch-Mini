@@ -13,14 +13,13 @@
     "windows": [
       {
         "title": "Gido Touch Mini",
-        "width": 900,
-        "height": 700,
+        "width": 1920,
+        "height": 1080,
         "resizable": false,
-        "fullscreen": false,
+        "fullscreen": true,
         "decorations": false,
-        "transparent": true,
-        "alwaysOnTop": false,
-        "center": true,
+        "transparent": false,
+        "alwaysOnTop": true,
         "visible": true
       }
     ],
