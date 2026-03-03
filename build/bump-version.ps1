@@ -122,10 +122,14 @@ Write-Host "[*] Syncing lock files..." -ForegroundColor Cyan
 Write-Host "[*] Running npm install..." -ForegroundColor Cyan
 try {
     Push-Location $rootDir
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     npm install 2>&1 | Out-Null
+    $ErrorActionPreference = $prevEAP
     Pop-Location
     Write-Host "[+] package-lock.json updated successfully" -ForegroundColor Green
 } catch {
+    $ErrorActionPreference = $prevEAP
     Pop-Location -ErrorAction SilentlyContinue
     Write-Host "[!] Warning: npm install failed: $_" -ForegroundColor Yellow
     Write-Host "    You may need to run 'npm install' manually" -ForegroundColor Yellow
@@ -136,10 +140,21 @@ Write-Host "[*] Running cargo generate-lockfile..." -ForegroundColor Cyan
 try {
     $srcTauriDir = Join-Path $rootDir "src-tauri"
     Push-Location $srcTauriDir
-    cargo generate-lockfile 2>&1 | Out-Null
+    # Temporarily relax error preference: cargo writes progress messages to stderr
+    # which PowerShell treats as terminating errors under $ErrorActionPreference = "Stop"
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $output = & cargo generate-lockfile 2>&1
+    $cargoExit = $LASTEXITCODE
+    $ErrorActionPreference = $prevEAP
     Pop-Location
+    if ($cargoExit -ne 0) {
+        $errorLines = $output | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | ForEach-Object { $_.ToString() }
+        throw "cargo exited with code $cargoExit : $($errorLines -join ' ')"
+    }
     Write-Host "[+] Cargo.lock updated successfully" -ForegroundColor Green
 } catch {
+    $ErrorActionPreference = $prevEAP
     Pop-Location -ErrorAction SilentlyContinue
     Write-Host "[!] Warning: Failed to update Cargo.lock: $_" -ForegroundColor Yellow
     Write-Host "    You may need to run 'cargo generate-lockfile' manually in src-tauri/" -ForegroundColor Yellow
