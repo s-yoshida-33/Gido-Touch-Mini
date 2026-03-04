@@ -11,6 +11,7 @@ import { ContextMenu } from "./components/ContextMenu";
 import VersionInfoScreen from "./screens/VersionInfoScreen";
 import UnifiedSettingsScreen from "./screens/UnifiedSettingsScreen";
 import MallSelectScreen from "./screens/MallSelectScreen";
+import BlackScreenOverlay from "./components/BlackScreenOverlay";
 import {
   DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
 } from "./config";
@@ -22,6 +23,8 @@ import type { PictoSettings } from "./types/picto";
 import { DEFAULT_PICTO_SETTINGS } from "./types/picto";
 import type { MallSettings, MallId } from "./types/mall";
 import { DEFAULT_MALL_SETTINGS } from "./types/mall";
+import type { BlackScreenSettings } from "./types/blackScreenSettings";
+import { DEFAULT_BLACK_SCREEN_SETTINGS } from "./types/blackScreenSettings";
 import { getMallConfig } from "./config/malls";
 // import { getMallAssetUrl } from "./utils/assets";
 import type { Shop } from "./types/shop";
@@ -206,6 +209,11 @@ const App: React.FC = () => {
   // "loading" → reading settings | "mall_select" → first launch | "settings" → initial config | "running" → main screen
   type AppPhase = "loading" | "mall_select" | "settings" | "running";
   const [appPhase, setAppPhase] = useState<AppPhase>("loading");
+
+  // Black screen settings state
+  const [blackScreenSettings, setBlackScreenSettings] = useState<BlackScreenSettings>(
+    DEFAULT_BLACK_SCREEN_SETTINGS
+  );
 
   // Settings screen open state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -440,6 +448,7 @@ const App: React.FC = () => {
         setImageSettings(mergeWithDefaultImages(mallData.imageSettings, currentMallId));
         setShopPositions(mallData.shopPositions);
         setPictoSettings(mallData.pictoSettings);
+        setBlackScreenSettings(mallData.blackScreenSettings);
 
         addDebug(`Mall settings loaded for ${currentMallId}`);
         logInfo("app", "Settings loaded", {
@@ -551,6 +560,7 @@ const App: React.FC = () => {
       setImageSettings(mergeWithDefaultImages(processedMallData.imageSettings, global.mallId));
       setShopPositions(processedMallData.shopPositions);
       setPictoSettings(processedMallData.pictoSettings);
+      setBlackScreenSettings(processedMallData.blackScreenSettings);
 
       logInfo("app", "All settings saved", { mallId: global.mallId });
     } catch (e) {
@@ -573,6 +583,7 @@ const App: React.FC = () => {
       setImageSettings(mergeWithDefaultImages(mallData.imageSettings, selectedMallId));
       setShopPositions(mallData.shopPositions);
       setPictoSettings(mallData.pictoSettings);
+      setBlackScreenSettings(mallData.blackScreenSettings);
       setFloor("1F");
 
       addDebug(`Mall selected: ${selectedMallId}, opening settings`);
@@ -780,6 +791,11 @@ const App: React.FC = () => {
       openTimeImage={imageSettings.openTimeImage}
       mallSettings={mallSettings}
     />
+    <BlackScreenOverlay
+      settings={blackScreenSettings}
+      onOpenSettings={() => setIsSettingsOpen(true)}
+      isSettingsOpen={isSettingsOpen}
+    />
     <UnifiedSettingsScreen
         isOpen={isSettingsOpen}
         onClose={handleSettingsClose}
@@ -791,6 +807,7 @@ const App: React.FC = () => {
         shops={mergedShops}
         pictoSettings={pictoSettings}
         mallSettings={mallSettings}
+        blackScreenSettings={blackScreenSettings}
         onSave={handleSaveAllSettings}
       />
       <VersionInfoScreen isOpen={isVersionInfoOpen} onClose={() => setIsVersionInfoOpen(false)} />

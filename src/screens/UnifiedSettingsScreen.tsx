@@ -8,6 +8,7 @@ import type { FloorId } from "../types/floorLayout";
 import { ImageSettingsTab } from "../components/ImageSettingsTab";
 import { ShopPositionSettingsTab } from "../components/ShopPositionSettingsTab";
 import { FloorSettingsTab } from "../components/FloorSettingsTab";
+import { BlackScreenSettingsTab } from "../components/BlackScreenSettingsTab";
 // iconSvg import removed - loading from common assets
 import type { ImageSettings } from "../types/imageSettings";
 import type { ShopPositionSettings } from "../types/shopPosition";
@@ -21,13 +22,15 @@ import { DEFAULT_MALL_SETTINGS } from "../types/mall";
 import { getMallConfig } from "../config/malls";
 import { getAssetUrl } from "../utils/assets"; // Import
 import type { MallSettingsFile } from "../utils/settings";
+import type { BlackScreenSettings } from '../types/blackScreenSettings';
+import { DEFAULT_BLACK_SCREEN_SETTINGS } from '../types/blackScreenSettings';
 
 const iconSvg = getAssetUrl("icon.svg"); // Assuming icon.svg moved to common or use getAssetUrl('icon.svg') if root // Import
 
 // Remove unused import if any
 // Helper function removed
 
-type TabType = "image" | "shopPosition" | "floor" | "picto" | "mall";
+type TabType = "image" | "shopPosition" | "floor" | "picto" | "mall" | "blackScreen";
 
 // Export props interface to ensure visibility
 export interface UnifiedSettingsScreenProps {
@@ -41,6 +44,7 @@ export interface UnifiedSettingsScreenProps {
   shops: Shop[];
   pictoSettings: PictoSettings;
   mallSettings: MallSettings;
+  blackScreenSettings?: BlackScreenSettings;
   onSave: (
     global: { mallId: string; floor: string },
     mallData: MallSettingsFile,
@@ -58,6 +62,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   shops,
   pictoSettings: initialPictoSettings,
   mallSettings: initialMallSettings,
+  blackScreenSettings: initialBlackScreenSettings = DEFAULT_BLACK_SCREEN_SETTINGS,
   onSave,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>("floor");
@@ -77,6 +82,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   const [mallSettings, setMallSettings] = useState<MallSettings>(initialMallSettings || DEFAULT_MALL_SETTINGS);
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [selectedPictoId, setSelectedPictoId] = useState<string | null>(null);
+    // Black screen settings
+  const [blackScreenSettings, setBlackScreenSettings] = useState<BlackScreenSettings>(initialBlackScreenSettings);
 
   // Transform wrapper ref for programmatic control
   const transformRef = useRef<{
@@ -206,6 +213,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
           shopPositions,
           pictoSettings,
           imageSettings,
+          blackScreenSettings,
         },
       );
 
@@ -417,6 +425,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               { id: "shopPosition" as TabType, label: "座標設定" },
               { id: "picto" as TabType, label: "ピクトグラム設定" },
               { id: "mall" as TabType, label: "ジャンル設定" },
+              { id: "blackScreen" as TabType, label: "ブラックスクリーン" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -639,6 +648,12 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
             <MallSettingsTab
               mallSettings={mallSettings}
               onChangeMallSettings={setMallSettings}
+            />
+          )}
+          {activeTab === "blackScreen" && (
+            <BlackScreenSettingsTab
+              settings={blackScreenSettings}
+              onChangeSettings={setBlackScreenSettings}
             />
           )}
         </div>

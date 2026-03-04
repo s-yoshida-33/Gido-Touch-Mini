@@ -9,6 +9,8 @@ import { DEFAULT_PICTO_SETTINGS } from '../types/picto';
 import { DEFAULT_MALL_SETTINGS } from '../types/mall';
 import { DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from '../config';
 import { logInfo, logError } from '../logs/logging';
+import type { BlackScreenSettings } from '../types/blackScreenSettings';
+import { DEFAULT_BLACK_SCREEN_SETTINGS } from '../types/blackScreenSettings';
 
 // ============================================================================
 // Type definitions
@@ -34,6 +36,7 @@ export interface MallSettingsFile {
   shopPositions: ShopPositionSettings;
   pictoSettings: PictoSettings;
   imageSettings: ImageSettings;
+  blackScreenSettings: BlackScreenSettings;
 }
 
 /** Legacy settings structure for migration */
@@ -45,11 +48,13 @@ interface LegacySettings {
   shopPositions?: ShopPositionSettings;
   pictoSettings?: PictoSettings;
   imageSettings?: ImageSettings;
+  blackScreenSettings?: BlackScreenSettings;
   dataByMall?: Record<string, {
     shopPositions?: ShopPositionSettings;
     pictoSettings?: PictoSettings;
     locationIcons?: LocationIconSettingsPerFloor;
     imageSettings?: ImageSettings;
+    blackScreenSettings?: BlackScreenSettings;
     genreMemoIgnoreKeywords?: string[];
     maxDisplayCount?: number;
     keywordsInitialized?: boolean;
@@ -77,6 +82,7 @@ export function getDefaultMallSettingsFile(mallId: string): MallSettingsFile {
     shopPositions: DEFAULT_SHOP_POSITIONS,
     pictoSettings: DEFAULT_PICTO_SETTINGS,
     imageSettings: DEFAULT_IMAGE_SETTINGS,
+    blackScreenSettings: DEFAULT_BLACK_SCREEN_SETTINGS,
   };
 }
 
@@ -136,6 +142,7 @@ export async function loadMallSettings(mallId: string): Promise<MallSettingsFile
       shopPositions: raw.shopPositions ?? DEFAULT_SHOP_POSITIONS,
       pictoSettings: raw.pictoSettings ?? DEFAULT_PICTO_SETTINGS,
       imageSettings: raw.imageSettings ?? DEFAULT_IMAGE_SETTINGS,
+      blackScreenSettings: raw.blackScreenSettings ?? DEFAULT_BLACK_SCREEN_SETTINGS,
     };
   } catch (error) {
     logError('CONFIG', 'Failed to load mall settings', {
@@ -256,6 +263,10 @@ export async function migrateFromLegacyIfNeeded(): Promise<boolean> {
           data.imageSettings ??
           (isGlobal ? raw.imageSettings : undefined) ??
           DEFAULT_IMAGE_SETTINGS,
+        blackScreenSettings:
+          data.blackScreenSettings ??
+          (isGlobal ? raw.blackScreenSettings : undefined) ??
+          DEFAULT_BLACK_SCREEN_SETTINGS,
       };
 
       await saveMallSettings(mallId, settings);
