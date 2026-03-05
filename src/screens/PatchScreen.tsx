@@ -237,7 +237,7 @@ export function PatchScreen({ onComplete }: PatchScreenProps) {
                 backgroundColor: '#00ff4c',
                 borderRight: displayPercent < 100 ? '2px solid #00cc3d' : 'none',
                 transition: 'width 0.2s linear',
-                boxShadow: displayPercent > 0 ? 'inset 0 0 8px rgba(0,255,76,0.3)' : 'none',
+                boxShadow: displayPercent > 0 ? 'inset 0 0 8px rgba(255,0,0,0.3)' : 'none',
               }}
             />
           </div>
