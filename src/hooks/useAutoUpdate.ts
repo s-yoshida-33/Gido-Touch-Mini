@@ -34,7 +34,15 @@ export const useAutoUpdate = () => {
     message: '',
   });
 
+  // Track whether update check has already been performed this session
+  const updateCheckPerformed = React.useRef(false);
+
   useEffect(() => {
+    // Only check for updates once per app session
+    if (updateCheckPerformed.current) {
+      return;
+    }
+
     const checkForUpdates = async () => {
       try {
         setUpdateStatus({ status: 'checking', progress: 0, message: 'アップデートを確認中...' });
@@ -60,7 +68,14 @@ export const useAutoUpdate = () => {
         setUpdateStatus({ status: 'error', progress: 0, message: 'アップデート確認に失敗しました' });
       }
     };
-    checkForUpdates();
+
+    // Wait 3 seconds before checking (allows app to fully initialize)
+    const timeout = setTimeout(() => {
+      checkForUpdates();
+      updateCheckPerformed.current = true;
+    }, 3000);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   const downloadAndInstallUpdate = async (update: Update) => {

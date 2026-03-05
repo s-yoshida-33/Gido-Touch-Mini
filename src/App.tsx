@@ -547,6 +547,7 @@ const App: React.FC = () => {
       await saveGlobalSettings({
         mallId: global.mallId as MallId,
         floor: global.floor,
+        setupCompleted: true,
       });
 
       // 3. Save per-mall settings ([mallId]-settings.json)
