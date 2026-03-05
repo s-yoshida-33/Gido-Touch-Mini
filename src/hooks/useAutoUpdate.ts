@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { check } from '@tauri-apps/plugin-updater';
 import type { Update, DownloadEvent } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
@@ -35,7 +35,7 @@ export const useAutoUpdate = () => {
   });
 
   // Track whether update check has already been performed this session
-  const updateCheckPerformed = React.useRef(false);
+  const updateCheckPerformed = useRef(false);
 
   useEffect(() => {
     // Only check for updates once per app session
