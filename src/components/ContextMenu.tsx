@@ -21,19 +21,36 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
+      // タッチ操作（2本指長押し等）によるコンテキストメニューを無視し、
+      // マウスの右クリックのみ許可する
+      if (event.button !== 2) {
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
       setPosition({ x: event.clientX, y: event.clientY });
       setVisible(true);
+    };
+
+    // タッチデバイスでのデフォルトコンテキストメニューも抑制
+    const preventTouchContextMenu = (event: TouchEvent) => {
+      // contextmenuイベントがtouch由来で発火するのを防ぐため、
+      // 長押し時のデフォルト動作を無効化
+      if (event.touches.length >= 2) {
+        event.preventDefault();
+      }
     };
 
     const handleClick = () => hideMenu();
 
     window.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('click', handleClick);
+    window.addEventListener('touchstart', preventTouchContextMenu, { passive: false });
 
     return () => {
       window.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('click', handleClick);
+      window.removeEventListener('touchstart', preventTouchContextMenu);
     };
   }, [hideMenu]);
 

@@ -53,6 +53,7 @@ import {
   saveMallSettings as saveMallSettingsToFile,
   ensureMallSettingsFile,
   migrateFromLegacyIfNeeded,
+  migrateFloorToMallSettings,
   saveImageFile,
 } from "./utils/settings";
 import type { MallSettingsFile } from "./utils/settings";
@@ -423,7 +424,17 @@ const App: React.FC = () => {
         addDebug(`Migration check failed: ${e}`);
       }
 
-      // 3. Load global settings (mallId, floor, setupCompleted)
+      // 2b. Migrate floor from global settings to per-mall settings
+      try {
+        const floorMigrated = await migrateFloorToMallSettings();
+        if (floorMigrated) {
+          addDebug("Migrated floor from global to per-mall settings");
+        }
+      } catch (e) {
+        addDebug(`Floor migration check failed: ${e}`);
+      }
+
+      // 3. Load global settings (mallId, setupCompleted)
       try {
         const global = await loadGlobalSettings();
 
@@ -436,12 +447,13 @@ const App: React.FC = () => {
 
         const currentMallId = global.mallId ?? "suzaka";
         setMallId(currentMallId);
-        setFloor(global.floor as FloorId);
-        addDebug(`Global settings loaded: mallId=${currentMallId}, floor=${global.floor}`);
 
         // 4. Ensure per-mall settings file exists, then load it
         await ensureMallSettingsFile(currentMallId);
         const mallData = await loadMallSettings(currentMallId);
+
+        setFloor((mallData.floor ?? "1F") as FloorId);
+        addDebug(`Global settings loaded: mallId=${currentMallId}, floor=${mallData.floor}`);
 
         setMallSettings(mallData.mallSettings);
         setLocationSettings(mallData.locationIcons);
@@ -540,13 +552,13 @@ const App: React.FC = () => {
 
       const processedMallData: MallSettingsFile = {
         ...mallData,
+        floor: global.floor,
         imageSettings: processedImageSettings,
       };
 
-      // 2. Save global settings (settings.json)
+      // 2. Save global settings (settings.json) — floor is no longer stored here
       await saveGlobalSettings({
         mallId: global.mallId as MallId,
-        floor: global.floor,
         setupCompleted: true,
       });
 
@@ -585,13 +597,17 @@ const App: React.FC = () => {
       setShopPositions(mallData.shopPositions);
       setPictoSettings(mallData.pictoSettings);
       setBlackScreenSettings(mallData.blackScreenSettings);
-      setFloor("1F");
+      setFloor((mallData.floor ?? "1F") as FloorId);
 
-      addDebug(`Mall selected: ${selectedMallId}, opening settings`);
+      // Mark setup as completed and go directly to running phase
+      await saveGlobalSettings({
+        mallId: selectedMallId,
+        setupCompleted: true,
+      });
 
-      // Move to settings phase — open settings screen
-      setIsSettingsOpen(true);
-      setAppPhase("settings");
+      addDebug(`Mall selected: ${selectedMallId}, skipping settings, going to main screen`);
+      setAppPhase("running");
+      logInfo("app", "Initial setup completed (settings skipped)", { mallId: selectedMallId });
     } catch (e) {
       logError("app", "Failed during mall selection", { error: e });
     }
@@ -611,7 +627,6 @@ const App: React.FC = () => {
     // Mark setup as completed
     await saveGlobalSettings({
       mallId: global.mallId as MallId,
-      floor: global.floor,
       setupCompleted: true,
     });
 

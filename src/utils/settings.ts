@@ -18,20 +18,22 @@ import { DEFAULT_BLACK_SCREEN_SETTINGS } from '../types/blackScreenSettings';
 
 /**
  * Global app settings stored in settings.json.
- * Contains only the active mall selection and current floor.
+ * Contains only the active mall selection.
+ * Floor is stored per-mall in [mallId]-settings.json.
  */
 export interface GlobalSettings {
   mallId: MallId;
-  floor: string;
   setupCompleted?: boolean;
 }
 
 /**
  * Per-mall settings stored in [mallId]-settings.json.
  * Each mall has its own independent settings file.
+ * Includes the current floor for this mall.
  */
 export interface MallSettingsFile {
   mallSettings: MallSettings;
+  floor: string;
   locationIcons: LocationIconSettingsPerFloor;
   shopPositions: ShopPositionSettings;
   pictoSettings: PictoSettings;
@@ -78,6 +80,7 @@ const LEGACY_MALL_ID_MAP: Record<string, string> = {
 export function getDefaultMallSettingsFile(mallId: string): MallSettingsFile {
   return {
     mallSettings: { ...DEFAULT_MALL_SETTINGS, mallId: mallId as MallId },
+    floor: '1F',
     locationIcons: DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
     shopPositions: DEFAULT_SHOP_POSITIONS,
     pictoSettings: DEFAULT_PICTO_SETTINGS,
@@ -96,14 +99,13 @@ export async function loadGlobalSettings(): Promise<GlobalSettings> {
     const raw = JSON.parse(json);
     return {
       mallId: (raw.mallId ?? 'suzaka') as MallId,
-      floor: raw.floor ?? '1F',
       setupCompleted: raw.setupCompleted ?? false,
     };
   } catch (error) {
     logError('CONFIG', 'Failed to load global settings', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { mallId: 'suzaka', floor: '1F', setupCompleted: false };
+    return { mallId: 'suzaka', setupCompleted: false };
   }
 }
 
@@ -138,6 +140,7 @@ export async function loadMallSettings(mallId: string): Promise<MallSettingsFile
         ...raw.mallSettings,
         mallId: mallId as MallId,
       },
+      floor: raw.floor ?? '1F',
       locationIcons: raw.locationIcons ?? DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR,
       shopPositions: raw.shopPositions ?? DEFAULT_SHOP_POSITIONS,
       pictoSettings: raw.pictoSettings ?? DEFAULT_PICTO_SETTINGS,
@@ -247,6 +250,7 @@ export async function migrateFromLegacyIfNeeded(): Promise<boolean> {
             (isGlobal ? raw.mallSettings?.keywordsInitialized : undefined) ??
             true,
         },
+        floor: (isGlobal ? (raw.floor ?? '1F') : '1F'),
         locationIcons:
           data.locationIcons ??
           (isGlobal ? raw.locationIcons : undefined) ??
@@ -275,7 +279,7 @@ export async function migrateFromLegacyIfNeeded(): Promise<boolean> {
     // Overwrite settings.json with clean global-only format (using normalized ID)
     await saveGlobalSettings({
       mallId: normalizedGlobalMallId as MallId,
-      floor: raw.floor ?? '1F',
+      setupCompleted: true,
     });
 
     logInfo('CONFIG', 'Legacy settings migration completed', {
@@ -285,6 +289,54 @@ export async function migrateFromLegacyIfNeeded(): Promise<boolean> {
     return true;
   } catch (error) {
     logError('CONFIG', 'Failed to migrate legacy settings', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+/**
+ * Migrate floor from global settings.json into per-mall settings file.
+ * This handles the case where floor was previously stored globally.
+ * After migration, the floor key is removed from settings.json.
+ */
+export async function migrateFloorToMallSettings(): Promise<boolean> {
+  try {
+    const json = await invoke<string>('get_settings');
+    const raw = JSON.parse(json);
+
+    // If there's no floor in global settings, migration not needed
+    if (!raw.floor) {
+      return false;
+    }
+
+    const mallId = (raw.mallId ?? 'suzaka') as string;
+    const floor = raw.floor as string;
+
+    logInfo('CONFIG', 'Migrating floor from global to per-mall settings', { mallId, floor });
+
+    // Load existing mall settings and update floor
+    const mallData = await loadMallSettings(mallId);
+    // Only update if mall settings still has default floor
+    if (mallData.floor === '1F' && floor !== '1F') {
+      mallData.floor = floor;
+      await saveMallSettings(mallId, mallData);
+    } else if (mallData.floor === '1F') {
+      // floor is also 1F, just ensure it's written
+      mallData.floor = floor;
+      await saveMallSettings(mallId, mallData);
+    }
+
+    // Remove floor from global settings
+    await saveGlobalSettings({
+      mallId: mallId as MallId,
+      setupCompleted: raw.setupCompleted ?? true,
+    });
+
+    logInfo('CONFIG', 'Floor migration completed', { mallId, floor });
+    return true;
+  } catch (error) {
+    logError('CONFIG', 'Failed to migrate floor to mall settings', {
       error: error instanceof Error ? error.message : String(error),
     });
     return false;

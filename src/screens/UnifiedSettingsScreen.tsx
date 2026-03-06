@@ -209,6 +209,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
         { mallId, floor: currentFloor },
         {
           mallSettings,
+          floor: currentFloor,
           locationIcons: locationIconSettings,
           shopPositions,
           pictoSettings,

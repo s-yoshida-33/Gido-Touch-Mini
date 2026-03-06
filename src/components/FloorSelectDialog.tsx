@@ -1,10 +1,11 @@
 // src/components/FloorSelectDialog.tsx
 import React, { useState } from 'react';
-import { loadGlobalSettings, saveGlobalSettings } from '../utils/settings';
+import { loadMallSettings, saveMallSettings } from '../utils/settings';
 
 interface FloorSelectDialogProps {
   isOpen: boolean;
   initialFloor: string;
+  mallId: string;
   onClose: () => void;
   onFloorChange?: (floor: string) => void;
 }
@@ -14,6 +15,7 @@ const FLOORS = ['1F', '2F', '3F', '4F'];
 export const FloorSelectDialog: React.FC<FloorSelectDialogProps> = ({
   isOpen,
   initialFloor,
+  mallId,
   onClose,
   onFloorChange,
 }) => {
@@ -22,8 +24,8 @@ export const FloorSelectDialog: React.FC<FloorSelectDialogProps> = ({
   if (!isOpen) return null;
 
   const handleSave = async () => {
-    const global = await loadGlobalSettings();
-    await saveGlobalSettings({ ...global, floor: selected });
+    const mallData = await loadMallSettings(mallId);
+    await saveMallSettings(mallId, { ...mallData, floor: selected });
     onFloorChange?.(selected);
     onClose();
   };
