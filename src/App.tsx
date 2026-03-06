@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo, useRef } from "react";
 import "./styles/global-image.css"; // Global image styles
 import ShopListScreen from "./screens/ShopListScreen";
 import { useHeartbeat } from "./hooks/useHeartbeat";
+import { useWebViewPing } from "./hooks/useWebViewPing";
 import { ContextMenu } from "./components/ContextMenu";
 
 // floor maps imports removed - managed by mall config and assets
@@ -170,6 +171,9 @@ const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageS
 const App: React.FC = () => {
   // Heartbeat (system info + hourly logging)
   useHeartbeat();
+
+  // WebView watchdog ping
+  useWebViewPing();
 
   // DEBUG STATE
   const [debugLog, setDebugLog] = useState<string[]>([]);

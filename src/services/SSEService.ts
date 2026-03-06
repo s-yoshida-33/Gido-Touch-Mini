@@ -19,6 +19,9 @@ class SSEService {
   private isDestroyed = false;
   private retryTimeout: ReturnType<typeof setTimeout> | null = null;
   private _status: SseConnectionStatus = 'disconnected';
+  private reconnectAttempt: number = 0;
+  private static readonly BASE_DELAY_MS = 3000;
+  private static readonly MAX_DELAY_MS = 60000;
 
   public get status(): SseConnectionStatus {
     return this._status;
@@ -59,6 +62,7 @@ class SSEService {
       }
 
       this.setStatus('connected');
+      this.reconnectAttempt = 0;
       logInfo("sse", "SSE connection opened");
 
       const reader = response.body.getReader();
@@ -148,11 +152,19 @@ class SSEService {
 
     if (this.retryTimeout) return;
 
-    logDebug("sse", "Scheduling reconnect in 5s...");
+    const delay = Math.min(
+      SSEService.BASE_DELAY_MS * Math.pow(2, this.reconnectAttempt),
+      SSEService.MAX_DELAY_MS,
+    );
+    const jitter = Math.random() * delay * 0.3;
+    const finalDelay = Math.round(delay + jitter);
+    this.reconnectAttempt++;
+
+    logDebug("sse", `Scheduling reconnect in ${finalDelay}ms (attempt ${this.reconnectAttempt})...`);
     this.retryTimeout = setTimeout(() => {
       this.retryTimeout = null;
       this.connect();
-    }, 5000);
+    }, finalDelay);
   }
 
   private disconnect() {
