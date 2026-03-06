@@ -134,6 +134,8 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            touchAction: "none",
+            overscrollBehavior: "none",
           }}
         >
           {/* Backdrop */}
@@ -338,6 +340,8 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
                           style={{
                             flex: 1, 
                             overflowY: "auto", 
+                            overscrollBehavior: "contain",
+                            touchAction: "pan-y",
                             paddingRight: "0px"
                           }}
                         >
@@ -406,6 +410,8 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
                   alignContent: "flex-start",
                   gap: "10px",
                   overflowY: "auto",
+                  overscrollBehavior: "contain",
+                  touchAction: "pan-y",
                 }}
               >
                 {/* Scrollbar Style for Right Side */}

@@ -121,6 +121,8 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            touchAction: "none",
+            overscrollBehavior: "none",
           }}
         >
           {/* Backdrop */}
@@ -294,6 +296,8 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                           style={{
                             flex: 1, 
                             overflowY: "auto", 
+                            overscrollBehavior: "contain",
+                            touchAction: "pan-y",
                             paddingRight: "0px"
                           }}
                         >
@@ -362,6 +366,8 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
                   alignContent: "flex-start",
                   gap: "10px",
                   overflowY: "auto",
+                  overscrollBehavior: "contain",
+                  touchAction: "pan-y",
                 }}
               >
                 {/* Scrollbar Style for Right Side */}

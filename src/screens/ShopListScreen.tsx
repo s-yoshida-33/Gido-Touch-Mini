@@ -2469,6 +2469,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 width: "100%",
                 height: "100%",
                 overflowY: "auto",
+                overscrollBehavior: "contain",
                 paddingTop: "15px",
                 paddingBottom: "15px",
                 boxSizing: "border-box",
@@ -2849,6 +2850,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       width: "100%",
                       height: "100%",
                       overflowY: "auto",
+                      overscrollBehavior: "contain",
                       // Apply padding here to content
                       paddingRight: "5px", // Slight padding for scrollbar space if needed
                     }}

@@ -121,6 +121,11 @@ const GidoApp: React.FC<GidoAppProps> = ({
         width: "100vw",
         height: "100vh",
         overflow: "hidden", // Prevent scrolling
+        overscrollBehavior: "none",
+        touchAction: "none",
+        position: "fixed",
+        top: 0,
+        left: 0,
         fontFamily: "'Rounded Mplus 1c', sans-serif",
         fontWeight: 700,
       }}
