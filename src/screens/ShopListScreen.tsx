@@ -1649,16 +1649,19 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
             alignmentAnimation={{ animationTime: 0, sizeX: 0, sizeY: 0 }}
             velocityAnimation={{ disabled: true }}
             zoomAnimation={{ disabled: true }}
-            onPanningStart={() => {
-              setShowHint(false);
-              setShowFloorLabel(false);
+            onPanningStart={(ref) => {
+              // Only hide hint/floor label if map is already zoomed in
+              const scale = ref.state.scale;
+              if (scale > 1.01) {
+                setShowHint(false);
+                setShowFloorLabel(false);
+              }
             }}
             onPanningStop={() => {
               // No-op
             }}
             onZoomStart={() => {
-              setShowHint(false);
-              setShowFloorLabel(false);
+              // Handled by onTransformed based on actual scale
             }}
             onInit={(ref) => {
               setCurrentScale(ref.state.scale);
