@@ -129,9 +129,14 @@ fn send_slack_notification(level: &str, tag: &str, message: &str, is_recovery: b
         format!("ALERT: {}", tag)
     };
 
+    let app_version = env!("CARGO_PKG_VERSION");
+    let hostname = hostname::get()
+        .map(|h| h.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| "unknown".to_string());
+
     let payload = serde_json::json!({
         "text": format!(
-            "*{title}*\n*Level*: {level}\n*Scope*: {tag}\n*App*: Gido Touch Mini\n*Message*: {message}\n*Context*: {context_str}"
+            "*{title}*\n*Level*: {level}\n*Scope*: {tag}\n*App*: Gido Touch Mini\n*Version*: {app_version}\n*Host*: {hostname}\n*Message*: {message}\n*Context*: {context_str}"
         )
     });
 
@@ -253,15 +258,25 @@ fn get_settings() -> Result<String, String> {
 }
 
 #[tauri::command]
+/// Atomic write: writes to a temporary file then renames to the target path.
+/// Prevents data corruption if the app crashes mid-write.
+fn atomic_write(path: &std::path::Path, data: &str) -> Result<(), String> {
+    let tmp = path.with_extension("tmp");
+    fs::write(&tmp, data)
+        .map_err(|e| format!("Failed to write temp file: {}", e))?;
+    fs::rename(&tmp, path)
+        .map_err(|e| format!("Failed to rename temp file: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
 fn save_settings(json: String) -> Result<String, String> {
     // Validate JSON before writing
     let _: serde_json::Value = serde_json::from_str(&json)
         .map_err(|e| format!("Invalid JSON: {}", e))?;
 
     let path = get_settings_path()?;
-
-    fs::write(&path, &json)
-        .map_err(|e| format!("Failed to write settings: {}", e))?;
+    atomic_write(&path, &json)?;
 
     Ok(json)
 }
@@ -302,8 +317,7 @@ fn save_named_settings(filename: String, json: String) -> Result<String, String>
         fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create directory: {}", e))?;
     }
-    fs::write(&path, &json)
-        .map_err(|e| format!("Failed to write {}: {}", filename, e))?;
+    atomic_write(&path, &json)?;
     Ok(json)
 }
 
@@ -604,19 +618,31 @@ fn get_gpu_name() -> String {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
-        let output = Command::new("wmic")
-            .args(["path", "win32_VideoController", "get", "name"])
-            .output();
-        if let Ok(out) = output {
-            let text = String::from_utf8_lossy(&out.stdout);
-            let name = text.lines()
-                .skip(1)
-                .find(|l| !l.trim().is_empty())
-                .map(|l| l.trim().to_string())
-                .unwrap_or_default();
-            if !name.is_empty() {
-                return name;
+        // Run wmic in a background thread with a 10-second timeout to avoid
+        // hanging the caller if the wmic process stalls.
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let result = Command::new("wmic")
+                .args(["path", "win32_VideoController", "get", "name"])
+                .output();
+            let _ = tx.send(result);
+        });
+        match rx.recv_timeout(std::time::Duration::from_secs(10)) {
+            Ok(Ok(out)) if out.status.success() => {
+                let text = String::from_utf8_lossy(&out.stdout);
+                let name = text.lines()
+                    .skip(1)
+                    .find(|l| !l.trim().is_empty())
+                    .map(|l| l.trim().to_string())
+                    .unwrap_or_default();
+                if !name.is_empty() {
+                    return name;
+                }
             }
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                eprintln!("[SYSTEM_INFO] wmic timed out after 10s");
+            }
+            _ => {}
         }
     }
     "Unknown".to_string()
@@ -642,6 +668,9 @@ static FORCE_QUIT: AtomicBool = AtomicBool::new(false);
 /// Set to true after the first successful webview_ping, so the restart
 /// counter file is only reset once per process lifetime.
 static WATCHDOG_COUNTER_RESET: AtomicBool = AtomicBool::new(false);
+/// When true, the watchdog skips timeout checks. Used during app updates
+/// where downloadAndInstall blocks the WebView and prevents ping responses.
+static WATCHDOG_PAUSED: AtomicBool = AtomicBool::new(false);
 
 /// Maximum consecutive watchdog-triggered restarts before giving up.
 /// Prevents infinite restart loops when the WebView cannot recover.
@@ -684,6 +713,28 @@ fn webview_ping() -> Result<String, String> {
     Ok("pong".to_string())
 }
 
+/// Pause the watchdog during operations that block the WebView (e.g., app updates).
+/// While paused, the watchdog refreshes the last-ping timestamp on each check cycle
+/// so it won't trigger a restart when resumed.
+#[tauri::command]
+fn pause_watchdog() -> Result<String, String> {
+    WATCHDOG_PAUSED.store(true, Ordering::Relaxed);
+    LAST_PING
+        .get_or_init(|| AtomicI64::new(now_epoch_secs()))
+        .store(now_epoch_secs(), Ordering::Relaxed);
+    Ok("paused".to_string())
+}
+
+/// Resume the watchdog after the blocking operation completes.
+#[tauri::command]
+fn resume_watchdog() -> Result<String, String> {
+    LAST_PING
+        .get_or_init(|| AtomicI64::new(now_epoch_secs()))
+        .store(now_epoch_secs(), Ordering::Relaxed);
+    WATCHDOG_PAUSED.store(false, Ordering::Relaxed);
+    Ok("resumed".to_string())
+}
+
 fn start_webview_watchdog(app_handle: tauri::AppHandle) {
     let handle = Arc::new(app_handle);
     let timeout_secs: i64 = 60;
@@ -699,6 +750,15 @@ fn start_webview_watchdog(app_handle: tauri::AppHandle) {
                 .map(|a| a.load(Ordering::Relaxed))
                 .unwrap_or(now_epoch_secs());
             let elapsed = now_epoch_secs() - last;
+
+            // Skip timeout check while paused (e.g., during app update download).
+            // Keep refreshing the timestamp so we don't see stale elapsed time on resume.
+            if WATCHDOG_PAUSED.load(Ordering::Relaxed) {
+                LAST_PING
+                    .get()
+                    .map(|a| a.store(now_epoch_secs(), Ordering::Relaxed));
+                continue;
+            }
 
             if elapsed > timeout_secs {
                 let count = read_watchdog_counter();
@@ -841,6 +901,8 @@ fn main() {
             get_system_info,
             quit_app,
             webview_ping,
+            pause_watchdog,
+            resume_watchdog,
         ]);
 
     let app = builder
