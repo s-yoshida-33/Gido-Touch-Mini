@@ -172,6 +172,11 @@ class SSEService {
       this.abortController.abort();
       this.abortController = null;
     }
+    // Clear pending reconnection timer to prevent reconnecting after disconnect
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = null;
+    }
   }
 
   public on(event: string, callback: Listener): () => void {
