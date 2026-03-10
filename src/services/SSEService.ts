@@ -47,7 +47,7 @@ class SSEService {
       const baseUrl = await getApiBaseUrl();
       const url = `${baseUrl}/api/events`;
 
-      logDebug("sse", "Connecting to SSE endpoint via Tauri HTTP", { url });
+      logDebug("SSE", "Connecting to SSE endpoint via Tauri HTTP", { url });
 
       this.abortController = new AbortController();
 
@@ -63,7 +63,7 @@ class SSEService {
 
       this.setStatus('connected');
       this.reconnectAttempt = 0;
-      logInfo("sse", "SSE connection opened");
+      logInfo("SSE", "SSE connection opened");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -88,16 +88,16 @@ class SSEService {
       }
 
       // Stream ended cleanly
-      logDebug("sse", "SSE stream ended");
+      logDebug("SSE", "SSE stream ended");
       this.setStatus('disconnected');
       this.reconnect();
 
     } catch (error: any) {
       if (error?.name === "AbortError") {
-        logDebug("sse", "SSE connection aborted");
+        logDebug("SSE", "SSE connection aborted");
         return;
       }
-      logError("sse", "SSE Error occurred", { error: error?.message ?? error });
+      logError("SSE", "SSE Error occurred", { error: error?.message ?? error });
       this.setStatus('error');
       this.reconnect();
     }
@@ -132,7 +132,7 @@ class SSEService {
 
     try {
       const data = JSON.parse(rawData);
-      logDebug("sse", `Received ${eventType} event`, data);
+      logDebug("SSE", `Received ${eventType} event`, data);
 
       if (eventType === "connected") {
         this.emit("connected", data);
@@ -160,7 +160,7 @@ class SSEService {
     const finalDelay = Math.round(delay + jitter);
     this.reconnectAttempt++;
 
-    logDebug("sse", `Scheduling reconnect in ${finalDelay}ms (attempt ${this.reconnectAttempt})...`);
+    logDebug("SSE", `Scheduling reconnect in ${finalDelay}ms (attempt ${this.reconnectAttempt})...`);
     this.retryTimeout = setTimeout(() => {
       this.retryTimeout = null;
       this.connect();
@@ -197,7 +197,7 @@ class SSEService {
         try {
           cb(data);
         } catch (e) {
-          logError("sse", "Error in event listener", { error: e });
+          logError("SSE", "Error in event listener", { error: e });
         }
       });
     }
