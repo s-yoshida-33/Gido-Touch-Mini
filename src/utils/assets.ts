@@ -15,7 +15,7 @@ export function getAssetUrl(path: string): string {
 
   if (!module) {
       if (import.meta.env.DEV) {
-          logWarn("ASSET_RESOLVE", "Asset not found in glob", {
+          logWarn("ASSET_CHECK", "Asset not found in glob", {
             path,
             fullPath,
             reason: "FILE_NOT_EXISTS"
@@ -174,7 +174,7 @@ export function findMallPictoUrl(mallId: string, filename: string): string {
             .map(p => p.replace(`../assets/malls/${mallId}/pictos/`, ''))
             .filter(p => !p.includes('-highlight') && !p.includes('button-'));
 
-        logWarn("ASSET_RESOLVE", "Picto icon not found", {
+        logWarn("ASSET_CHECK", "Picto icon not found", {
             mallId,
             filename,
             baseFilename,

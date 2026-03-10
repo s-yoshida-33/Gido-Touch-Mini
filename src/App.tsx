@@ -236,21 +236,21 @@ const App: React.FC = () => {
           name: s.name.replace(/【.*?】/g, "").trim(),
         }));
         setShops(cleaned);
-        logInfo("app", "Shops loaded from cache", { count: cleaned.length });
+        logInfo("APP", "Shops loaded from cache", { count: cleaned.length });
       }
 
       // Load Shop News Cache
       const cachedShopNews = loadShopNewsFromCache();
       if (cachedShopNews && cachedShopNews.length > 0) {
         setShopNews(cachedShopNews);
-        logInfo("app", "Shop News loaded from cache", { count: cachedShopNews.length });
+        logInfo("APP", "Shop News loaded from cache", { count: cachedShopNews.length });
       }
 
       // Load Event News Cache
       const cachedEventNews = loadEventNewsFromCache();
       if (cachedEventNews && cachedEventNews.length > 0) {
         setEventNews(cachedEventNews);
-        logInfo("app", "Event News loaded from cache", { count: cachedEventNews.length });
+        logInfo("APP", "Event News loaded from cache", { count: cachedEventNews.length });
       }
     }
 
@@ -274,13 +274,13 @@ const App: React.FC = () => {
       setEventNews(eNews);
       saveEventNewsToCache(eNews);
 
-      logInfo("app", "Data loaded from API", {
+      logInfo("APP", "Data loaded from API", {
         shops: cleanedShops.length,
         shopNews: sNews.length,
         eventNews: eNews.length
       });
     } catch (e) {
-      logError("app", "Failed to load data from API", { error: e });
+      logError("APP", "Failed to load data from API", { error: e });
     }
   };
 
@@ -342,7 +342,7 @@ const App: React.FC = () => {
 
     // Subscribe to SSE updates
     const unsubscribe = sseService.on("update", (payload: any) => {
-      logInfo("app", "Received update event from SSE", { type: payload.type });
+      logInfo("APP", "Received update event from SSE", { type: payload.type });
 
       switch (payload.type) {
         case "shops":
@@ -355,7 +355,7 @@ const App: React.FC = () => {
              }));
              setShops(cleaned);
              saveShopsToCache(newShops);
-             logInfo("app", "Updated shops from SSE", { count: cleaned.length });
+             logInfo("APP", "Updated shops from SSE", { count: cleaned.length });
           }
           break;
 
@@ -378,7 +378,7 @@ const App: React.FC = () => {
           break;
 
         default:
-          logInfo("app", "Unknown or unhandled SSE event type", { type: payload.type });
+          logInfo("APP", "Unknown or unhandled SSE event type", { type: payload.type });
           // If unsure, reload all data (fallback behavior, optional)
           // loadData(false);
       }
@@ -467,7 +467,7 @@ const App: React.FC = () => {
         setBlackScreenSettings(mallData.blackScreenSettings);
 
         addDebug(`Mall settings loaded for ${currentMallId}`);
-        logInfo("app", "Settings loaded", {
+        logInfo("APP", "Settings loaded", {
           mallId: currentMallId,
           shopPositions: Object.keys(mallData.shopPositions.positions).length,
         });
@@ -476,7 +476,7 @@ const App: React.FC = () => {
         logInfo("SYSTEM", "Application initialized successfully");
       } catch (e) {
         addDebug(`Failed to load settings: ${e}`);
-        logError("app", "Failed to load settings from Tauri", { error: e });
+        logError("APP", "Failed to load settings from Tauri", { error: e });
         setAppPhase("mall_select");
       }
     };
@@ -579,9 +579,9 @@ const App: React.FC = () => {
       setPictoSettings(processedMallData.pictoSettings);
       setBlackScreenSettings(processedMallData.blackScreenSettings);
 
-      logInfo("app", "All settings saved", { mallId: global.mallId });
+      logInfo("APP", "All settings saved", { mallId: global.mallId });
     } catch (e) {
-      logError("app", "Failed to save settings", { error: e });
+      logError("APP", "Failed to save settings", { error: e });
       throw e;
     }
   };
@@ -611,9 +611,9 @@ const App: React.FC = () => {
 
       addDebug(`Mall selected: ${selectedMallId}, skipping settings, going to main screen`);
       setAppPhase("running");
-      logInfo("app", "Initial setup completed (settings skipped)", { mallId: selectedMallId });
+      logInfo("APP", "Initial setup completed (settings skipped)", { mallId: selectedMallId });
     } catch (e) {
-      logError("app", "Failed during mall selection", { error: e });
+      logError("APP", "Failed during mall selection", { error: e });
     }
   };
 
@@ -638,7 +638,7 @@ const App: React.FC = () => {
     // after onSave resolves) knows not to revert to mall_select
     setupJustCompleted.current = true;
     setAppPhase("running");
-    logInfo("app", "Initial setup completed", { mallId: global.mallId });
+    logInfo("APP", "Initial setup completed", { mallId: global.mallId });
   };
 
   // Handle settings close (cancel or after save)

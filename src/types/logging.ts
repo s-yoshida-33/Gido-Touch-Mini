@@ -9,43 +9,29 @@ export type LogTag =
   // System lifecycle
   | 'SYS_INIT'
   | 'SYS_SHUTDOWN'
-  | 'SYSTEM'          // [ALERT] Uncaught global errors, unhandled rejections
 
-  // Data fetching (Shop REST)
-  | 'DATA_FETCH'      // [ALERT] Shop API communication errors
+  // UI / Screen features
+  | 'MAP'             // [ALERT] Floor map display / interaction errors
+  | 'SHOPLIST'        // [ALERT] Shop list rendering errors
+  | 'NEWS'            // [ALERT] News / event information errors
 
-  // News (Event News + Shop News)
-  | 'NEWS'            // [ALERT] News fetch / SSE update errors
+  // Data fetching / communication
+  | 'DATA_SYNC'       // [ALERT] Shop API data sync errors
+  | 'SSE'             // [ALERT] SSE connection errors
 
-  // Asset resolution (image load, picto icons)
-  | 'ASSET_RESOLVE'   // [ALERT] Asset/image resolution failures
+  // Asset (file) management
+  | 'ASSET_CHECK'     // [ALERT] Asset file existence / download errors
 
-  // SSE connection
-  | 'sse'             // [ALERT] SSE connection errors
-
-  // Application general
-  | 'app'             // [ALERT] App-level data load / settings errors
-
-  // Map rendering
-  | 'map'             // [ALERT] Floor map image load errors
-
-  // Shop list
-  | 'shopList'        // [ALERT] Shop list rendering errors
-
-  // Configuration
+  // System / App infrastructure
+  | 'SYSTEM'          // [ALERT] Rust backend crashes, watchdog timeouts
+  | 'RENDERER_ERROR'  // [ALERT] WebView/React rendering errors
+  | 'APP'             // [ALERT] App lifecycle errors
+  | 'UPDATER'         // [ALERT] Tauri auto-update errors
   | 'CONFIG'          // [ALERT] Settings file read/write errors
 
-  // Auto-updater
-  | 'UPDATER'         // [ALERT] Update check/download/install failures
-
-  // Error handling
-  | 'RENDERER_ERROR'  // [ALERT] React ErrorBoundary caught errors
+  // Non-alert scopes
   | 'IPC_ERROR'
-
-  // UI / Analytics
   | 'SCREEN_VIEW'
-  | 'idle'
-  | 'repository'
 
   // Catch-all for compatibility
   | string;

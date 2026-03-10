@@ -198,12 +198,12 @@ const GidoApp: React.FC<GidoAppProps> = ({
               padding: "1em",
             }}
             onLoad={() => {
-              logInfo("ASSET_RESOLVE", "Open-time image loaded", {
+              logInfo("ASSET_CHECK", "Open-time image loaded", {
                 src: imageSettings?.openTimeImage || defaultOpenTimeImage,
               });
             }}
             onError={(event) => {
-              logError("ASSET_RESOLVE", "Failed to load open-time image", {
+              logError("ASSET_CHECK", "Failed to load open-time image", {
                 src: imageSettings?.openTimeImage || defaultOpenTimeImage,
               });
               (event.target as HTMLImageElement).style.visibility = "hidden";
@@ -523,11 +523,11 @@ const ShopPinsOverlay: React.FC<{
           display: "block"
         }}
         onLoad={() => {
-          logInfo("map", "Floor map image loaded", { floor, src: floorMap });
+          logInfo("MAP", "Floor map image loaded", { floor, src: floorMap });
           updateMetrics();
         }}
         onError={(event) => {
-          logError("map", "Failed to load floor map image", { floor, src: floorMap });
+          logError("MAP", "Failed to load floor map image", { floor, src: floorMap });
           (event.target as HTMLImageElement).style.visibility = "hidden";
         }}
       />
