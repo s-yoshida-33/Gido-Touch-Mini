@@ -538,13 +538,15 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Calculate animation duration based on rapid switching
   const animationDuration = isRapidSwitch ? 0.15 : 0.35;
 
-  // Animate floor layer transitions via direct DOM manipulation for maximum performance
-  // Using useLayoutEffect + forced reflow to guarantee the browser registers the starting
-  // position before applying the CSS transition, preventing animation skips.
+  // Animate floor layer transitions via direct DOM manipulation for maximum performance.
+  // - Normal speed: slide + fade with CSS transitions (forced reflow to register start position)
+  // - Rapid switching: instant crossfade without slide to avoid reflow jank
+  // - Initial render: no animation at all
   useLayoutEffect(() => {
     const newFloor = selectedFloor || "1F";
     const duration = animationDuration;
     const isInitial = isInitialFloorRenderRef.current;
+    const rapid = isRapidSwitch;
 
     ALL_FLOORS.forEach(floor => {
       const el = floorLayerRefs.current[floor];
@@ -552,14 +554,26 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
       if (floor === newFloor) {
         if (isInitial || floorDirection === 0) {
-          // Initial render or same floor: show immediately without animation
+          // Initial render or same floor: show immediately
           el.style.transition = "none";
           el.style.transform = "translateY(0)";
           el.style.opacity = "1";
           el.style.visibility = "visible";
           el.style.zIndex = "1";
+        } else if (rapid) {
+          // Rapid switching: instant crossfade (no slide, no forced reflow)
+          el.style.transition = "none";
+          el.style.transform = "translateY(0)";
+          el.style.opacity = "0";
+          el.style.visibility = "visible";
+          el.style.zIndex = "1";
+
+          el.getBoundingClientRect();
+
+          el.style.transition = `opacity ${duration}s ease-out`;
+          el.style.opacity = "1";
         } else {
-          // Step 1: Position at entry point without transition
+          // Normal: slide + fade
           const entryY = floorDirection > 0 ? -200 : 200;
           el.style.transition = "none";
           el.style.transform = `translateY(${entryY}px)`;
@@ -570,7 +584,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           // Force reflow so browser registers the starting position
           el.getBoundingClientRect();
 
-          // Step 2: Animate to center
           el.style.transition = `transform ${duration}s ease-in-out, opacity ${duration}s ease-in-out`;
           el.style.transform = "translateY(0)";
           el.style.opacity = "1";
@@ -583,8 +596,14 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           el.style.opacity = "0";
           el.style.visibility = "hidden";
           el.style.zIndex = "0";
+        } else if (rapid) {
+          // Rapid switching: quick fade out without slide
+          el.style.transition = `opacity ${duration}s ease-out`;
+          el.style.transform = "translateY(0)";
+          el.style.opacity = "0";
+          el.style.zIndex = "0";
         } else {
-          // Animate exit
+          // Normal: slide + fade exit
           const exitY = floorDirection > 0 ? 200 : -200;
           el.style.transition = `transform ${duration}s ease-in-out, opacity ${duration}s ease-in-out`;
           el.style.transform = `translateY(${exitY}px)`;
@@ -607,7 +626,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     }, duration * 1000 + 50);
 
     return () => clearTimeout(hideTimeout);
-  }, [selectedFloor, floorDirection, animationDuration, ALL_FLOORS]);
+  }, [selectedFloor, floorDirection, animationDuration, isRapidSwitch, ALL_FLOORS]);
 
   // Ref to track the latest floor request to ensure we always process the most recent one
   // This helps prevent race conditions during rapid floor switching
@@ -620,14 +639,17 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   const setSelectedFloor = useCallback((newFloor: string | null) => {
     // Store the latest request immediately
     latestFloorRequestRef.current = newFloor;
-    
+
+    // Reset genre direction to 0 so shop list uses fade (not slide) on floor change
+    setGenreDirection(0);
+
     // Update state synchronously to ensure immediate consistency
     // Always use the latest request from the ref to handle rapid switching
     setSelectedFloorState((prevFloor) => {
       const latestFloor = latestFloorRequestRef.current;
-      
+
       if (latestFloor === prevFloor) return prevFloor;
-      
+
       // Reset zoom on floor change
       if (transformComponentRef.current) {
         transformComponentRef.current.resetTransform();
@@ -2528,8 +2550,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               exit="exit"
               className="shop-list-scroll-container"
               transition={{
-                x: { type: "tween", duration: 0.5, ease: "easeInOut" },
-                opacity: { duration: 0.5 }
+                x: { type: "tween", duration: genreDirection === 0 ? animationDuration : 0.5, ease: "easeInOut" },
+                opacity: { duration: genreDirection === 0 ? animationDuration : 0.5 }
               }}
               style={{
                 width: "100%",

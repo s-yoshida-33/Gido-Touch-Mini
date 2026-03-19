@@ -27,7 +27,8 @@ export const FloorSelectButton: React.FC<FloorSelectButtonProps> = ({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    transition: "background-color 0.3s ease-in-out",
+    // Transition both background and color together to prevent white flash
+    transition: "background-color 0.15s ease-in-out, color 0.15s ease-in-out",
     ...style,
   };
 
@@ -47,6 +48,7 @@ export const FloorSelectButton: React.FC<FloorSelectButtonProps> = ({
           fontWeight: "bold",
           fontFamily: "'Rounded Mplus 1c', sans-serif",
           userSelect: "none",
+          transition: "color 0.15s ease-in-out",
         }}
       >
         {floor}
