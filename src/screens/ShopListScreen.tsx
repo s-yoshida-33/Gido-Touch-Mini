@@ -469,7 +469,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
   // Track floor change timing for rapid switching detection
   const floorChangeTimestampsRef = useRef<number[]>([]);
-  const RAPID_SWITCH_THRESHOLD_MS = 300; // If floor changes within 300ms, consider it rapid
+  const RAPID_SWITCH_THRESHOLD_MS = 300;
   const MAX_TRACKED_CHANGES = 5;
 
   // Map zoom scale state
@@ -478,133 +478,104 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Pin animation delay state
   const [pinDelay, setPinDelay] = useState(0);
 
-  // Removed useTransition to ensure synchronous state updates
-  // This prevents floor display and map from getting out of sync during rapid switching
+  // Floor animation is handled entirely inside useLayoutEffect via refs.
+  // No useMemo with side effects — direction and rapid-switch detection are
+  // calculated at animation time from ref values, avoiding React 19
+  // concurrent-mode pitfalls (double-invocation, discarded results, etc.).
 
-  // Detect rapid floor switching
-  const isRapidSwitch = useMemo(() => {
-    const timestamps = floorChangeTimestampsRef.current;
-    if (timestamps.length < 2) return false;
-    
-    const recentChanges = timestamps.slice(-3); // Check last 3 changes
-    const timeSpan = recentChanges[recentChanges.length - 1] - recentChanges[0];
-    return timeSpan < RAPID_SWITCH_THRESHOLD_MS * 2; // If 3 changes within 600ms, it's rapid
-  }, [selectedFloor]);
+  // Animation duration constants
+  const NORMAL_DURATION = 0.35;
+  const RAPID_DURATION = 0.15;
 
-  // Calculate floor direction from selectedFloor and previous floor
-  // This ensures direction is always correct even during rapid floor switching
-  // Use useMemo to calculate synchronously during render
-  // Update prevFloorRef inside useMemo to ensure we always use the correct previous value
-  const floorDirection = useMemo(() => {
+  // Animate floor layer transitions via direct DOM manipulation.
+  // All side effects (prevFloor tracking, timestamp recording) live here.
+  useLayoutEffect(() => {
+    const newFloor = selectedFloor || "1F";
+    const isInitial = isInitialFloorRenderRef.current;
+
+    // --- Calculate direction from refs (no useMemo side effects) ---
     const getFloorNum = (f: string | null) => parseInt(f?.replace("F", "") || "1");
-    
-    // Read the previous floor before calculation
     const prevFloor = prevFloorRef.current;
     const current = getFloorNum(prevFloor || "1F");
-    const next = getFloorNum(selectedFloor || "1F");
+    const next = getFloorNum(newFloor);
 
-    // Track floor change timestamp
+    let direction = 0;
+    if (next !== current) {
+      if (next === 1) direction = -1;
+      else if (next === 4) direction = 1;
+      else if (next > current) direction = 1;
+      else direction = -1;
+    }
+
+    // --- Detect rapid switching from timestamps ---
     const now = Date.now();
     floorChangeTimestampsRef.current.push(now);
     if (floorChangeTimestampsRef.current.length > MAX_TRACKED_CHANGES) {
       floorChangeTimestampsRef.current.shift();
     }
+    const ts = floorChangeTimestampsRef.current;
+    const isRapid = ts.length >= 3 &&
+      (ts[ts.length - 1] - ts[ts.length - 3]) < RAPID_SWITCH_THRESHOLD_MS * 2;
 
-    // Update prevFloorRef for next calculation (after reading current value)
-    // This ensures the next render will use the correct previous floor
+    // Update prevFloor ref for next invocation
     prevFloorRef.current = selectedFloor;
 
-    if (next === current) return 0;
+    const duration = isRapid ? RAPID_DURATION : NORMAL_DURATION;
 
-    // Special handling for edge floors (1F and 4F)
-    // 1F (lowest floor): Always comes from below (direction = -1, enters from y: 200)
-    // 4F (highest floor): Always comes from above (direction = 1, enters from y: -200)
-    // direction > 0 means enter from top, direction < 0 means enter from bottom
-    if (next === 1) {
-      // Moving to 1F: always from below (direction = -1, y: 200)
-      return -1;
-    } else if (next === 4) {
-      // Moving to 4F: always from above (direction = 1, y: -200)
-      return 1;
-    } else if (next > current) {
-      // Moving up (e.g. 1F -> 2F, 2F -> 3F)
-      return 1;
-    } else {
-      // Moving down (e.g. 3F -> 2F, 2F -> 1F)
-      return -1;
+    // --- Reset zoom/pan (moved out of state updater to avoid sync reflow) ---
+    if (!isInitial && direction !== 0 && transformComponentRef.current) {
+      transformComponentRef.current.resetTransform(0); // 0ms = instant, no animation
     }
-  }, [selectedFloor]);
 
-  // Calculate animation duration based on rapid switching
-  const animationDuration = isRapidSwitch ? 0.15 : 0.35;
-
-  // Animate floor layer transitions via direct DOM manipulation for maximum performance.
-  // - Normal speed: slide + fade with CSS transitions (forced reflow to register start position)
-  // - Rapid switching: instant crossfade without slide to avoid reflow jank
-  // - Initial render: no animation at all
-  useLayoutEffect(() => {
-    const newFloor = selectedFloor || "1F";
-    const duration = animationDuration;
-    const isInitial = isInitialFloorRenderRef.current;
-    const rapid = isRapidSwitch;
-
+    // --- Apply animations to each floor layer ---
     ALL_FLOORS.forEach(floor => {
       const el = floorLayerRefs.current[floor];
       if (!el) return;
 
       if (floor === newFloor) {
-        if (isInitial || floorDirection === 0) {
-          // Initial render or same floor: show immediately
+        if (isInitial || direction === 0) {
           el.style.transition = "none";
           el.style.transform = "translateY(0)";
           el.style.opacity = "1";
           el.style.visibility = "visible";
           el.style.zIndex = "1";
-        } else if (rapid) {
-          // Rapid switching: instant crossfade (no slide, no forced reflow)
+        } else if (isRapid) {
+          // Rapid: crossfade only (no slide → no forced reflow)
           el.style.transition = "none";
           el.style.transform = "translateY(0)";
           el.style.opacity = "0";
           el.style.visibility = "visible";
           el.style.zIndex = "1";
-
-          el.getBoundingClientRect();
-
+          el.getBoundingClientRect(); // single reflow for opacity start
           el.style.transition = `opacity ${duration}s ease-out`;
           el.style.opacity = "1";
         } else {
           // Normal: slide + fade
-          const entryY = floorDirection > 0 ? -200 : 200;
+          const entryY = direction > 0 ? -200 : 200;
           el.style.transition = "none";
           el.style.transform = `translateY(${entryY}px)`;
           el.style.opacity = "0";
           el.style.visibility = "visible";
           el.style.zIndex = "1";
-
-          // Force reflow so browser registers the starting position
-          el.getBoundingClientRect();
-
+          el.getBoundingClientRect(); // reflow for starting position
           el.style.transition = `transform ${duration}s ease-in-out, opacity ${duration}s ease-in-out`;
           el.style.transform = "translateY(0)";
           el.style.opacity = "1";
         }
       } else {
         if (isInitial) {
-          // Initial render: hide immediately
           el.style.transition = "none";
           el.style.transform = "translateY(0)";
           el.style.opacity = "0";
           el.style.visibility = "hidden";
           el.style.zIndex = "0";
-        } else if (rapid) {
-          // Rapid switching: quick fade out without slide
+        } else if (isRapid) {
           el.style.transition = `opacity ${duration}s ease-out`;
           el.style.transform = "translateY(0)";
           el.style.opacity = "0";
           el.style.zIndex = "0";
         } else {
-          // Normal: slide + fade exit
-          const exitY = floorDirection > 0 ? 200 : -200;
+          const exitY = direction > 0 ? 200 : -200;
           el.style.transition = `transform ${duration}s ease-in-out, opacity ${duration}s ease-in-out`;
           el.style.transform = `translateY(${exitY}px)`;
           el.style.opacity = "0";
@@ -615,7 +586,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
     isInitialFloorRenderRef.current = false;
 
-    // Hide exited floors after animation completes to save GPU compositing resources
+    // Hide exited floors after animation to free GPU compositing layers
     const hideTimeout = setTimeout(() => {
       ALL_FLOORS.forEach(floor => {
         const el = floorLayerRefs.current[floor];
@@ -626,7 +597,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     }, duration * 1000 + 50);
 
     return () => clearTimeout(hideTimeout);
-  }, [selectedFloor, floorDirection, animationDuration, isRapidSwitch, ALL_FLOORS]);
+  }, [selectedFloor, ALL_FLOORS]);
 
   // Ref to track the latest floor request to ensure we always process the most recent one
   // This helps prevent race conditions during rapid floor switching
@@ -644,17 +615,11 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     setGenreDirection(0);
 
     // Update state synchronously to ensure immediate consistency
-    // Always use the latest request from the ref to handle rapid switching
     setSelectedFloorState((prevFloor) => {
       const latestFloor = latestFloorRequestRef.current;
-
       if (latestFloor === prevFloor) return prevFloor;
-
-      // Reset zoom on floor change
-      if (transformComponentRef.current) {
-        transformComponentRef.current.resetTransform();
-      }
-
+      // Note: zoom/pan reset is handled in the useLayoutEffect animation to avoid
+      // triggering a synchronous reflow inside the state updater
       return latestFloor;
     });
   }, []);
@@ -2550,8 +2515,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               exit="exit"
               className="shop-list-scroll-container"
               transition={{
-                x: { type: "tween", duration: genreDirection === 0 ? animationDuration : 0.5, ease: "easeInOut" },
-                opacity: { duration: genreDirection === 0 ? animationDuration : 0.5 }
+                x: { type: "tween", duration: genreDirection === 0 ? NORMAL_DURATION : 0.5, ease: "easeInOut" },
+                opacity: { duration: genreDirection === 0 ? NORMAL_DURATION : 0.5 }
               }}
               style={{
                 width: "100%",
