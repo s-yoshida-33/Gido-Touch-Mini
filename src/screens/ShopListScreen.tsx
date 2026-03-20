@@ -518,9 +518,18 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
     }
 
     // --- Apply animations to each floor layer ---
+    // Enable will-change during animation for GPU acceleration, then remove it
+    // after completion so the browser can re-rasterize SVGs at the current zoom level.
+    const animating = !isInitial && direction !== 0;
+
     ALL_FLOORS.forEach(floor => {
       const el = floorLayerRefs.current[floor];
       if (!el) return;
+
+      // Promote to GPU compositing layer during animation
+      if (animating) {
+        el.style.willChange = "transform, opacity";
+      }
 
       if (floor === newFloor) {
         if (isInitial || direction === 0) {
@@ -564,17 +573,22 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
     isInitialFloorRenderRef.current = false;
 
-    // Hide exited floors after animation to free GPU compositing layers
-    const hideTimeout = setTimeout(() => {
+    // After animation completes:
+    // 1. Hide exited floors
+    // 2. Remove will-change so the browser re-rasterizes SVGs at current zoom
+    //    (permanent will-change locks the raster at scale=1, causing blur on zoom)
+    const cleanupTimeout = setTimeout(() => {
       ALL_FLOORS.forEach(floor => {
         const el = floorLayerRefs.current[floor];
-        if (el && floor !== (selectedFloor || "1F")) {
+        if (!el) return;
+        el.style.willChange = "auto";
+        if (floor !== (selectedFloor || "1F")) {
           el.style.visibility = "hidden";
         }
       });
     }, duration * 1000 + 50);
 
-    return () => clearTimeout(hideTimeout);
+    return () => clearTimeout(cleanupTimeout);
   }, [selectedFloor, ALL_FLOORS]);
 
   // Ref to track the latest floor request to ensure we always process the most recent one
@@ -1742,7 +1756,10 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                         width: "100%",
                         height: "100%",
                         pointerEvents: "none",
-                        willChange: "transform, opacity",
+                        // NOTE: will-change is NOT set here. It is applied only during
+                        // animation (useLayoutEffect) and removed after completion.
+                        // Permanent will-change causes the browser to rasterize the layer
+                        // at scale=1, making SVGs blurry when zoomed via CSS transform.
                         // Initial state: only the default floor is visible
                         opacity: isSelected ? 1 : 0,
                         visibility: isSelected ? "visible" : "hidden",
