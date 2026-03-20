@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CloseButton } from "./CloseButton";
-import { NewsImage } from "./NewsImage";
+import { NewsImage, preloadNewsImages } from "./NewsImage";
 import { getCommonAssetUrl } from "../utils/assets";
 import type { ShopNews } from "../types/shopNews";
 import { logInfo } from "../logs/logging";
@@ -24,6 +24,14 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
 }) => {
   const [isPressed, setIsPressed] = useState(false);
   const [selectedNews, setSelectedNews] = useState<ShopNews | null>(null);
+
+  // Pre-resolve all news image URLs as soon as data arrives (before modal opens).
+  // This populates the NewsImage cache so images appear instantly on first open.
+  useEffect(() => {
+    if (news.length > 0) {
+      preloadNewsImages(news.map(n => n.imageUrl));
+    }
+  }, [news]);
 
   // Sort news when props change
   const sortedNews = React.useMemo(() => {

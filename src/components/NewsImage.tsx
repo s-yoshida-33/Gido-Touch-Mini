@@ -6,6 +6,51 @@ import { toFileUrl, getShopImageDataUrl } from '../utils/imageUtils';
 // When a news modal re-opens, images appear instantly from cache.
 const resolvedUrlCache = new Map<string, string>();
 
+/**
+ * Resolve a single image URL (Tauri IPC for local paths, passthrough for http/data).
+ * Result is cached in the module-level cache for instant subsequent access.
+ */
+export async function resolveNewsImageUrl(imageUrl: string): Promise<string | null> {
+  if (!imageUrl) return null;
+
+  const cached = resolvedUrlCache.get(imageUrl);
+  if (cached) return cached;
+
+  // http(s) and data: URLs can be used directly
+  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("data:")) {
+    resolvedUrlCache.set(imageUrl, imageUrl);
+    return imageUrl;
+  }
+
+  // Local path — load via Tauri IPC
+  try {
+    const normalizedPath = imageUrl.replace(/\\/g, "/");
+    const dataUrl = await getShopImageDataUrl(normalizedPath);
+    if (dataUrl) {
+      resolvedUrlCache.set(imageUrl, dataUrl);
+      return dataUrl;
+    }
+  } catch {
+    // Tauri IPC failed — fall through to file:// fallback
+  }
+
+  const fileUrl = toFileUrl(imageUrl);
+  resolvedUrlCache.set(imageUrl, fileUrl);
+  return fileUrl;
+}
+
+/**
+ * Pre-resolve multiple image URLs in parallel so they are cached before
+ * components mount. Call this when news data arrives (before modal opens).
+ */
+export function preloadNewsImages(imageUrls: (string | undefined)[]): void {
+  for (const url of imageUrls) {
+    if (url && !resolvedUrlCache.has(url)) {
+      resolveNewsImageUrl(url);
+    }
+  }
+}
+
 interface NewsImageProps {
   imageUrl: string | undefined;
   alt?: string;
@@ -31,38 +76,13 @@ export const NewsImage: React.FC<NewsImageProps> = ({ imageUrl, alt = "", style 
     // Already resolved from cache
     if (cached) return;
 
-    // http(s) and data: URLs can be used directly
-    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("data:")) {
-      resolvedUrlCache.set(imageUrl, imageUrl);
-      setResolvedUrl(imageUrl);
-      setHasError(false);
-      return;
-    }
-
-    // Local path — load via Tauri IPC
     let cancelled = false;
-    const load = async () => {
-      try {
-        const normalizedPath = imageUrl.replace(/\\/g, "/");
-        const dataUrl = await getShopImageDataUrl(normalizedPath);
-        if (!cancelled && dataUrl) {
-          resolvedUrlCache.set(imageUrl, dataUrl);
-          setResolvedUrl(dataUrl);
-          setHasError(false);
-          return;
-        }
-      } catch {
-        // Tauri IPC failed — fall through to file:// fallback
-      }
-
-      if (!cancelled) {
-        const fileUrl = toFileUrl(imageUrl);
-        resolvedUrlCache.set(imageUrl, fileUrl);
-        setResolvedUrl(fileUrl);
+    resolveNewsImageUrl(imageUrl).then((url) => {
+      if (!cancelled && url) {
+        setResolvedUrl(url);
         setHasError(false);
       }
-    };
-    load();
+    });
 
     return () => { cancelled = true; };
   }, [imageUrl, cached]);
