@@ -106,18 +106,25 @@ const IDLE_TIMEOUT_MS = 30000;
 // ShopLogoImage moved to src/components/ShopLogoImage.tsx
 
 /**
- * Shop image component that loads images via Tauri IPC or falls back to file:// URL
+ * Shop image component that loads images via Tauri IPC or falls back to file:// URL.
+ * Uses module-level cache so re-opening the same shop detail panel is instant.
  */
+const shopImageCache = new Map<string, string>();
 const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefined }> = ({ photo, shopId }) => {
-  const [imageUrl, setImageUrl] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
+  const cacheKey = `${photo ?? ""}::${shopId ?? ""}`;
+  const cached = shopImageCache.get(cacheKey);
+
+  const [imageUrl, setImageUrl] = useState<string>(cached ?? "");
+  const [isLoading, setIsLoading] = useState(!cached);
 
   useEffect(() => {
+    if (cached) return;
     if (!photo) {
       setIsLoading(false);
       return;
     }
 
+    let cancelled = false;
     const loadImage = async () => {
       const imagePath = buildImagePath(photo, shopId);
       if (!imagePath) {
@@ -127,7 +134,8 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
 
       try {
         const dataUrl = await getShopImageDataUrl(imagePath);
-        if (dataUrl) {
+        if (!cancelled && dataUrl) {
+          shopImageCache.set(cacheKey, dataUrl);
           setImageUrl(dataUrl);
           setIsLoading(false);
           return;
@@ -136,14 +144,17 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
         console.error("Failed to load image via IPC:", error);
       }
 
-      // Fallback to file:// URL
-      const fileUrl = toFileUrl(imagePath);
-      setImageUrl(fileUrl);
-      setIsLoading(false);
+      if (!cancelled) {
+        const fileUrl = toFileUrl(imagePath);
+        shopImageCache.set(cacheKey, fileUrl);
+        setImageUrl(fileUrl);
+        setIsLoading(false);
+      }
     };
 
     loadImage();
-  }, [photo, shopId]);
+    return () => { cancelled = true; };
+  }, [photo, shopId, cacheKey, cached]);
 
   if (!photo || (!imageUrl && !isLoading)) {
     return (
@@ -2567,7 +2578,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       
                       if (shopFloor !== current) {
                         ignoreFloorChangeRef.current = true;
-                        setPinDelay(0.6); // Wait for map transition (approx 0.5-0.6s)
+                        setPinDelay(FLOOR_ANIM_DURATION + 0.05); // Wait for floor slide animation to complete
                         setSelectedFloor(shopFloor);
                       } else {
                         setPinDelay(0);

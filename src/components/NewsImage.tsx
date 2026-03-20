@@ -2,6 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { toFileUrl, getShopImageDataUrl } from '../utils/imageUtils';
 
+// Module-level cache: resolved URLs persist across mount/unmount cycles.
+// When a news modal re-opens, images appear instantly from cache.
+const resolvedUrlCache = new Map<string, string>();
+
 interface NewsImageProps {
   imageUrl: string | undefined;
   alt?: string;
@@ -13,7 +17,8 @@ interface NewsImageProps {
  * Handles Windows paths, relative paths, file:// URLs, http(s) URLs, and data: URLs.
  */
 export const NewsImage: React.FC<NewsImageProps> = ({ imageUrl, alt = "", style }) => {
-  const [resolvedUrl, setResolvedUrl] = useState<string>("");
+  const cached = imageUrl ? resolvedUrlCache.get(imageUrl) : undefined;
+  const [resolvedUrl, setResolvedUrl] = useState<string>(cached ?? "");
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
@@ -23,8 +28,12 @@ export const NewsImage: React.FC<NewsImageProps> = ({ imageUrl, alt = "", style 
       return;
     }
 
+    // Already resolved from cache
+    if (cached) return;
+
     // http(s) and data: URLs can be used directly
     if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("data:")) {
+      resolvedUrlCache.set(imageUrl, imageUrl);
       setResolvedUrl(imageUrl);
       setHasError(false);
       return;
@@ -37,6 +46,7 @@ export const NewsImage: React.FC<NewsImageProps> = ({ imageUrl, alt = "", style 
         const normalizedPath = imageUrl.replace(/\\/g, "/");
         const dataUrl = await getShopImageDataUrl(normalizedPath);
         if (!cancelled && dataUrl) {
+          resolvedUrlCache.set(imageUrl, dataUrl);
           setResolvedUrl(dataUrl);
           setHasError(false);
           return;
@@ -47,6 +57,7 @@ export const NewsImage: React.FC<NewsImageProps> = ({ imageUrl, alt = "", style 
 
       if (!cancelled) {
         const fileUrl = toFileUrl(imageUrl);
+        resolvedUrlCache.set(imageUrl, fileUrl);
         setResolvedUrl(fileUrl);
         setHasError(false);
       }
@@ -54,7 +65,7 @@ export const NewsImage: React.FC<NewsImageProps> = ({ imageUrl, alt = "", style 
     load();
 
     return () => { cancelled = true; };
-  }, [imageUrl]);
+  }, [imageUrl, cached]);
 
   if (!imageUrl || hasError || !resolvedUrl) return null;
 
