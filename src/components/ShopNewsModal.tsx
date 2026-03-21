@@ -5,7 +5,7 @@ import { getCommonAssetUrl } from "../utils/assets";
 import type { ShopNews } from "../types/shopNews";
 import type { Shop } from "../types/shop";
 import { ShopLogoImage } from "./ShopLogoImage";
-import { NewsImage } from "./NewsImage";
+import { NewsImage, preloadNewsImages } from "./NewsImage";
 import { logInfo } from "../logs/logging";
 
 const iconDate = getCommonAssetUrl("date.svg");
@@ -29,6 +29,13 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
 }) => {
   const [isPressed, setIsPressed] = useState(false);
   const [selectedNews, setSelectedNews] = useState<ShopNews | null>(null);
+
+  // Pre-resolve all news image URLs as soon as data arrives (before modal opens).
+  useEffect(() => {
+    if (news.length > 0) {
+      preloadNewsImages(news.map(n => n.imageUrl));
+    }
+  }, [news]);
 
   // Sort news when props change
   const sortedNews = React.useMemo(() => {
@@ -151,7 +158,6 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
               width: "100%",
               height: "100%",
               backgroundColor: "rgba(0, 0, 0, 0.5)",
-              backdropFilter: "blur(5px)",
             }}
             onClick={onClose}
           />

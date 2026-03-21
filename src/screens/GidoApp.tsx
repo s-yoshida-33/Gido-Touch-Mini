@@ -1,6 +1,6 @@
 // src/screens/GidoApp.tsx
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+// framer-motion removed — picto pins now render directly without animation
 
 import ShopList from "../components/ShopList";
 import type { Shop } from "../types/shop";
@@ -252,41 +252,7 @@ function calculateImageRect(
   };
 }
 
-// Animation variants for PictoPins (same logic as map)
-const pictoVariants: Variants = {
-  enter: (direction: number) => {
-      // If direction is 0 (initial load), don't slide
-      if (direction === 0) {
-        return {
-          y: 0,
-          opacity: 0,
-        };
-      }
-      return {
-        y: direction > 0 ? -200 : 200,
-        opacity: 0,
-      };
-    },
-  center: {
-    zIndex: 1,
-    y: 0,
-    opacity: 1,
-  },
-  exit: (direction: number) => {
-       // If direction is 0, just fade out
-       if (direction === 0) {
-        return {
-          zIndex: 0,
-          opacity: 0,
-        };
-      }
-      return {
-        zIndex: 0,
-        y: direction > 0 ? 200 : -200,
-        opacity: 0,
-      };
-    },
-};
+// pictoVariants removed — picto pins now render directly without animation
 
 /**
  * ShopPinsOverlay Component
@@ -553,75 +519,58 @@ const ShopPinsOverlay: React.FC<{
 
       {shopPins}
 
-      {/* Picto Pins */}
-      <AnimatePresence initial={false} custom={floor === "2F" ? 1 : -1} mode="popLayout"> 
+      {/* Picto Pins — rendered directly without AnimatePresence for instant display */}
       {/* Ripple Layer */}
       {pictoData.map(({ instance, scaledInstance, iconUrl, pixelX, pixelY }) => (
-             <motion.div
-               key={`${instance.id}-ripple`}
-               variants={pictoVariants}
-               initial="enter"
-               animate="center"
-               exit="exit"
-               custom={floor === "2F" ? 1 : -1}
-               style={{
-                 position: "absolute",
-                 top: 0,
-                 left: 0,
-                 width: "100%",
-                 height: "100%",
-                 pointerEvents: "none",
-                 zIndex: 1 // Ripple layer - low z-index
-               }}
-             >
-               <PictoPin
-                 instance={scaledInstance}
-                 iconUrl={iconUrl}
-                 usePixelPosition={true}
-                 pixelX={pixelX}
-                 pixelY={pixelY}
-                 // Add highlight logic if needed (e.g. matching selectedShopId equivalent for pictos)
-                 isSelected={instance.id === selectedPictoId} 
-                 renderMode="ripple"
-               />
-             </motion.div>
-           ))
-      }
-      </AnimatePresence>
+        <div
+          key={`${instance.id}-ripple`}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        >
+          <PictoPin
+            instance={scaledInstance}
+            iconUrl={iconUrl}
+            usePixelPosition={true}
+            pixelX={pixelX}
+            pixelY={pixelY}
+            isSelected={instance.id === selectedPictoId}
+            renderMode="ripple"
+          />
+        </div>
+      ))}
 
-      <AnimatePresence initial={false} custom={floor === "2F" ? 1 : -1} mode="popLayout">
       {/* Icon Layer */}
       {pictoData.map(({ instance, scaledInstance, iconUrl, pixelX, pixelY }) => (
-             <motion.div
-               key={`${instance.id}-icon`}
-               variants={pictoVariants}
-               initial="enter"
-               animate="center"
-               exit="exit"
-               custom={floor === "2F" ? 1 : -1}
-               style={{
-                 position: "absolute",
-                 top: 0,
-                 left: 0,
-                 width: "100%",
-                height: "100%",
-                pointerEvents: "none",
-                zIndex: instance.id === selectedPictoId ? 200 : 5 // Icon layer - higher z-index if selected
-              }}
-            >
-               <PictoPin
-                 instance={scaledInstance}
-                 iconUrl={iconUrl}
-                 usePixelPosition={true}
-                 pixelX={pixelX}
-                 pixelY={pixelY}
-                 isSelected={instance.id === selectedPictoId} 
-                 renderMode="icon"
-               />
-             </motion.div>
-           ))
-      }
-      </AnimatePresence>
+        <div
+          key={`${instance.id}-icon`}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: instance.id === selectedPictoId ? 200 : 5,
+          }}
+        >
+          <PictoPin
+            instance={scaledInstance}
+            iconUrl={iconUrl}
+            usePixelPosition={true}
+            pixelX={pixelX}
+            pixelY={pixelY}
+            isSelected={instance.id === selectedPictoId}
+            renderMode="icon"
+          />
+        </div>
+      ))}
     </div>
   );
 };

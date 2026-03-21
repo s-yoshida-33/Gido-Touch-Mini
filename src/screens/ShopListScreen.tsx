@@ -21,7 +21,7 @@ import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
 import { KeyboardModal } from "../components/KeyboardModal";
 import { EventNewsModal } from "../components/EventNewsModal";
 import { ShopNewsModal } from "../components/ShopNewsModal";
-import { ShopLogoImage } from "../components/ShopLogoImage";
+import { ShopLogoImage, preloadShopLogos } from "../components/ShopLogoImage";
 import { TwoLineAutoScaleText } from "../components/TwoLineAutoScaleText";
 import { AutoScaleText } from "../components/AutoScaleText";
 import { buildImagePath, toFileUrl, getShopImageDataUrl } from "../utils/imageUtils";
@@ -35,6 +35,7 @@ import type { PictoSettings } from "../types/picto";
 import type { Genre } from "../types/mall"; // Update import
 import type { ShopPositionSettings } from "../types/shopPosition";
 import { logInfo } from "../logs/logging";
+import { usePreloadImages } from "../hooks/usePreloadImages";
 import { getLocationIconSettingsForFloor, DEFAULT_LOCATION_ICON_SETTINGS_PER_FLOOR } from "../config";
 import { getMallConfig } from "../config/malls";
 import { PictoPin } from "../components/PictoPin";
@@ -105,18 +106,52 @@ const IDLE_TIMEOUT_MS = 30000;
 // ShopLogoImage moved to src/components/ShopLogoImage.tsx
 
 /**
- * Shop image component that loads images via Tauri IPC or falls back to file:// URL
+ * Shop image component that loads images via Tauri IPC or falls back to file:// URL.
+ * Uses module-level cache so re-opening the same shop detail panel is instant.
  */
+const shopImageCache = new Map<string, string>();
+
+/**
+ * Pre-resolve shop detail images (photo1, photo2, shopLogo) in parallel
+ * so they display instantly when a shop detail panel opens.
+ */
+function preloadShopImages(shops: Shop[]): void {
+  for (const shop of shops) {
+    const photos = [shop.photo2, shop.photo1, shop.shopLogo].filter(Boolean) as string[];
+    for (const photo of photos) {
+      const cacheKey = `${photo}::${shop.shopId ?? ""}`;
+      if (shopImageCache.has(cacheKey)) continue;
+
+      const imagePath = buildImagePath(photo, shop.shopId);
+      if (!imagePath) continue;
+
+      getShopImageDataUrl(imagePath).then((dataUrl) => {
+        if (dataUrl) {
+          shopImageCache.set(cacheKey, dataUrl);
+        } else {
+          shopImageCache.set(cacheKey, toFileUrl(imagePath));
+        }
+      }).catch(() => {
+        shopImageCache.set(cacheKey, toFileUrl(imagePath));
+      });
+    }
+  }
+}
 const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefined }> = ({ photo, shopId }) => {
-  const [imageUrl, setImageUrl] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
+  const cacheKey = `${photo ?? ""}::${shopId ?? ""}`;
+  const cached = shopImageCache.get(cacheKey);
+
+  const [imageUrl, setImageUrl] = useState<string>(cached ?? "");
+  const [isLoading, setIsLoading] = useState(!cached);
 
   useEffect(() => {
+    if (cached) return;
     if (!photo) {
       setIsLoading(false);
       return;
     }
 
+    let cancelled = false;
     const loadImage = async () => {
       const imagePath = buildImagePath(photo, shopId);
       if (!imagePath) {
@@ -126,7 +161,8 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
 
       try {
         const dataUrl = await getShopImageDataUrl(imagePath);
-        if (dataUrl) {
+        if (!cancelled && dataUrl) {
+          shopImageCache.set(cacheKey, dataUrl);
           setImageUrl(dataUrl);
           setIsLoading(false);
           return;
@@ -135,14 +171,17 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
         console.error("Failed to load image via IPC:", error);
       }
 
-      // Fallback to file:// URL
-      const fileUrl = toFileUrl(imagePath);
-      setImageUrl(fileUrl);
-      setIsLoading(false);
+      if (!cancelled) {
+        const fileUrl = toFileUrl(imagePath);
+        shopImageCache.set(cacheKey, fileUrl);
+        setImageUrl(fileUrl);
+        setIsLoading(false);
+      }
     };
 
     loadImage();
-  }, [photo, shopId]);
+    return () => { cancelled = true; };
+  }, [photo, shopId, cacheKey, cached]);
 
   if (!photo || (!imageUrl && !isLoading)) {
     return (
@@ -206,24 +245,6 @@ function normalizeFloor(value: string): string {
 
 // Remove CURRENT_FLOOR constant as it is now passed via props
 // const CURRENT_FLOOR: string = "1F";
-
-// Map switch animation variants
-const mapVariants: Variants = {
-  enter: (direction: number) => ({
-    y: direction > 0 ? -200 : 200,
-    opacity: 0,
-  }),
-  center: {
-    zIndex: 1,
-    y: 0,
-    opacity: 1,
-  },
-  exit: (direction: number) => ({
-    zIndex: 0,
-    y: direction > 0 ? 200 : -200,
-    opacity: 0,
-  }),
-};
 
 // List switch animation variants
 const listVariants: Variants = {
@@ -361,9 +382,26 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   mallSettings,
 }) => {
 
+  // Preload all floor map images on mount so switching is instant
+  usePreloadImages(floorMaps);
+
+  // Preload shop logo and detail images so they appear instantly
+  useEffect(() => {
+    if (shops.length > 0) {
+      preloadShopLogos(shops);
+      preloadShopImages(shops);
+    }
+  }, [shops]);
+
+  // All available floors for pre-rendering
+  const ALL_FLOORS = useMemo(() => ["1F", "2F", "3F", "4F"], []);
+
   // Map content ref for direct style manipulation (zoom scale)
   const mapContentRef = useRef<HTMLDivElement>(null);
-  
+
+  // Refs for direct DOM manipulation of floor layers (avoids React re-renders during animation)
+  const floorLayerRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const isInitialFloorRenderRef = useRef(true);
 
   // Map transform ref
   const transformComponentRef = useRef<ReactZoomPanPinchContentRef>(null);
@@ -472,13 +510,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   const [selectedFacility, setSelectedFacility] = useState<string | null>(null);
 
   // Previous floor ref to track direction changes
-  // Use ref to avoid re-renders and ensure we always have the previous value
   const prevFloorRef = useRef<string | null>(selectedFloor);
-
-  // Track floor change timing for rapid switching detection
-  const floorChangeTimestampsRef = useRef<number[]>([]);
-  const RAPID_SWITCH_THRESHOLD_MS = 300; // If floor changes within 300ms, consider it rapid
-  const MAX_TRACKED_CHANGES = 5;
 
   // Map zoom scale state
   const [currentScale, setCurrentScale] = useState(1);
@@ -486,65 +518,113 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   // Pin animation delay state
   const [pinDelay, setPinDelay] = useState(0);
 
-  // Removed useTransition to ensure synchronous state updates
-  // This prevents floor display and map from getting out of sync during rapid switching
+  // Floor animation duration (constant — never skipped, even during rapid switching).
+  // CSS transitions naturally handle interruption: when a new transition starts
+  // mid-animation, the browser smoothly redirects from the current interpolated
+  // position, so every switch always plays a visible slide+fade.
+  const FLOOR_ANIM_DURATION = 0.35;
 
-  // Detect rapid floor switching
-  const isRapidSwitch = useMemo(() => {
-    const timestamps = floorChangeTimestampsRef.current;
-    if (timestamps.length < 2) return false;
-    
-    const recentChanges = timestamps.slice(-3); // Check last 3 changes
-    const timeSpan = recentChanges[recentChanges.length - 1] - recentChanges[0];
-    return timeSpan < RAPID_SWITCH_THRESHOLD_MS * 2; // If 3 changes within 600ms, it's rapid
-  }, [selectedFloor]);
+  // Animate floor layer transitions via direct DOM manipulation.
+  useLayoutEffect(() => {
+    const newFloor = selectedFloor || "1F";
+    const isInitial = isInitialFloorRenderRef.current;
+    const duration = FLOOR_ANIM_DURATION;
 
-  // Calculate floor direction from selectedFloor and previous floor
-  // This ensures direction is always correct even during rapid floor switching
-  // Use useMemo to calculate synchronously during render
-  // Update prevFloorRef inside useMemo to ensure we always use the correct previous value
-  const floorDirection = useMemo(() => {
+    // --- Calculate direction from refs ---
     const getFloorNum = (f: string | null) => parseInt(f?.replace("F", "") || "1");
-    
-    // Read the previous floor before calculation
     const prevFloor = prevFloorRef.current;
     const current = getFloorNum(prevFloor || "1F");
-    const next = getFloorNum(selectedFloor || "1F");
+    const next = getFloorNum(newFloor);
 
-    // Track floor change timestamp
-    const now = Date.now();
-    floorChangeTimestampsRef.current.push(now);
-    if (floorChangeTimestampsRef.current.length > MAX_TRACKED_CHANGES) {
-      floorChangeTimestampsRef.current.shift();
+    let direction = 0;
+    if (next !== current) {
+      if (next === 1) direction = -1;
+      else if (next === 4) direction = 1;
+      else if (next > current) direction = 1;
+      else direction = -1;
     }
 
-    // Update prevFloorRef for next calculation (after reading current value)
-    // This ensures the next render will use the correct previous floor
+    // Update prevFloor ref for next invocation
     prevFloorRef.current = selectedFloor;
 
-    if (next === current) return 0;
-
-    // Special handling for edge floors (1F and 4F)
-    // 1F (lowest floor): Always comes from below (direction = -1, y: 200 from bottom)
-    // 4F (highest floor): Always comes from above (direction = 1, y: -200 from top)
-    // Note: In mapVariants, direction > 0 means enter from top (y: -200), direction < 0 means enter from bottom (y: 200)
-    if (next === 1) {
-      // Moving to 1F: always from below (direction = -1, y: 200)
-      return -1;
-    } else if (next === 4) {
-      // Moving to 4F: always from above (direction = 1, y: -200)
-      return 1;
-    } else if (next > current) {
-      // Moving up (e.g. 1F -> 2F, 2F -> 3F)
-      return 1;
-    } else {
-      // Moving down (e.g. 3F -> 2F, 2F -> 1F)
-      return -1;
+    // Reset zoom/pan instantly on floor change
+    if (!isInitial && direction !== 0 && transformComponentRef.current) {
+      transformComponentRef.current.resetTransform(0);
     }
-  }, [selectedFloor]);
 
-  // Calculate animation duration based on rapid switching
-  const animationDuration = isRapidSwitch ? 0.2 : 0.5;
+    // --- Apply animations to each floor layer ---
+    // Enable will-change during animation for GPU acceleration, then remove it
+    // after completion so the browser can re-rasterize SVGs at the current zoom level.
+    const animating = !isInitial && direction !== 0;
+
+    ALL_FLOORS.forEach(floor => {
+      const el = floorLayerRefs.current[floor];
+      if (!el) return;
+
+      // Promote to GPU compositing layer during animation
+      if (animating) {
+        el.style.willChange = "transform, opacity";
+      }
+
+      if (floor === newFloor) {
+        if (isInitial || direction === 0) {
+          // First render or same floor: show immediately
+          el.style.transition = "none";
+          el.style.transform = "translateY(0)";
+          el.style.opacity = "1";
+          el.style.visibility = "visible";
+          el.style.zIndex = "1";
+        } else {
+          // Slide + fade in (always — even during rapid switching)
+          const entryY = direction > 0 ? -200 : 200;
+          el.style.transition = "none";
+          el.style.transform = `translateY(${entryY}px)`;
+          el.style.opacity = "0";
+          el.style.visibility = "visible";
+          el.style.zIndex = "1";
+          el.getBoundingClientRect(); // reflow to register starting position
+          el.style.transition = `transform ${duration}s ease-in-out, opacity ${duration}s ease-in-out`;
+          el.style.transform = "translateY(0)";
+          el.style.opacity = "1";
+        }
+      } else {
+        if (isInitial) {
+          el.style.transition = "none";
+          el.style.transform = "translateY(0)";
+          el.style.opacity = "0";
+          el.style.visibility = "hidden";
+          el.style.zIndex = "0";
+        } else {
+          // Slide + fade out. If this floor was mid-animation, CSS transitions
+          // smoothly redirect from its current position — no visual skip.
+          const exitY = direction > 0 ? 200 : -200;
+          el.style.transition = `transform ${duration}s ease-in-out, opacity ${duration}s ease-in-out`;
+          el.style.transform = `translateY(${exitY}px)`;
+          el.style.opacity = "0";
+          el.style.zIndex = "0";
+        }
+      }
+    });
+
+    isInitialFloorRenderRef.current = false;
+
+    // After animation completes:
+    // 1. Hide exited floors
+    // 2. Remove will-change so the browser re-rasterizes SVGs at current zoom
+    //    (permanent will-change locks the raster at scale=1, causing blur on zoom)
+    const cleanupTimeout = setTimeout(() => {
+      ALL_FLOORS.forEach(floor => {
+        const el = floorLayerRefs.current[floor];
+        if (!el) return;
+        el.style.willChange = "auto";
+        if (floor !== (selectedFloor || "1F")) {
+          el.style.visibility = "hidden";
+        }
+      });
+    }, duration * 1000 + 50);
+
+    return () => clearTimeout(cleanupTimeout);
+  }, [selectedFloor, ALL_FLOORS]);
 
   // Ref to track the latest floor request to ensure we always process the most recent one
   // This helps prevent race conditions during rapid floor switching
@@ -557,19 +637,16 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   const setSelectedFloor = useCallback((newFloor: string | null) => {
     // Store the latest request immediately
     latestFloorRequestRef.current = newFloor;
-    
+
+    // Reset genre direction to 0 so shop list uses fade (not slide) on floor change
+    setGenreDirection(0);
+
     // Update state synchronously to ensure immediate consistency
-    // Always use the latest request from the ref to handle rapid switching
     setSelectedFloorState((prevFloor) => {
       const latestFloor = latestFloorRequestRef.current;
-      
       if (latestFloor === prevFloor) return prevFloor;
-      
-      // Reset zoom on floor change
-      if (transformComponentRef.current) {
-        transformComponentRef.current.resetTransform();
-      }
-
+      // Note: zoom/pan reset is handled in the useLayoutEffect animation to avoid
+      // triggering a synchronous reflow inside the state updater
       return latestFloor;
     });
   }, []);
@@ -1695,129 +1772,136 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 onPointerDown={handleMapPointerDown}
                 onClick={handleMapClick}
               >
-                {/* Map with all overlays (icons, pictos) as a single animated unit */}
-                {/* Use "popLayout" mode to allow smooth animations while ensuring latest floor is always shown */}
-                <AnimatePresence initial={false} custom={floorDirection} mode="popLayout">
-                  <motion.div
-                    key={selectedFloor || "1F"}
-                    custom={floorDirection}
-                    variants={mapVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{
-                      y: { type: "tween", duration: animationDuration, ease: "easeInOut" },
-                      opacity: { duration: animationDuration }
-                    }}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    {/* Map Image */}
-                    <img
-                      src={floorMaps[selectedFloor || "1F"] || undefined}
-                      alt={`${selectedFloor || "1F"} Map`}
+                {/* All floors pre-rendered in DOM for instant switching.
+                    Animation is handled by useLayoutEffect via direct DOM style manipulation.
+                    This eliminates mount/unmount overhead and ensures map + picto + location
+                    icons appear simultaneously without rendering lag. */}
+                {ALL_FLOORS.map(floor => {
+                  const isSelected = floor === (selectedFloor || "1F");
+                  const normalizedFloor = normalizeFloor(floor);
+
+                  return (
+                    <div
+                      key={floor}
+                      ref={(el) => { floorLayerRefs.current[floor] = el; }}
                       style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
                         width: "100%",
                         height: "100%",
-                        objectFit: "contain",
-                        display: "block",
+                        pointerEvents: "none",
+                        // NOTE: will-change is NOT set here. It is applied only during
+                        // animation (useLayoutEffect) and removed after completion.
+                        // Permanent will-change causes the browser to rasterize the layer
+                        // at scale=1, making SVGs blurry when zoomed via CSS transform.
+                        // Initial state: only the default floor is visible
+                        opacity: isSelected ? 1 : 0,
+                        visibility: isSelected ? "visible" : "hidden",
+                        zIndex: isSelected ? 1 : 0,
                       }}
-                    />
-
-                    {/* Current Location Icons Overlay - part of the map */}
-                    {normalizeFloor(selectedFloor || "1F") === normalizeFloor(currentFloor) && (
-                      <div
+                    >
+                      {/* Map Image */}
+                      <img
+                        src={floorMaps[floor] || undefined}
+                        alt={`${floor} Map`}
+                        decoding="async"
                         style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
                           width: "100%",
                           height: "100%",
-                          pointerEvents: "none",
-                          zIndex: 20,
+                          objectFit: "contain",
+                          display: "block",
                         }}
-                      >
-                        <LocationIconsOverlay
-                          settings={(() => {
-                            const baseSettings = getLocationIconSettingsForFloor(locationIconSettings, (selectedFloor || "1F") as FloorId);
-                            // Apply scale ratio to location icon settings
-                            return {
-                              speechBubble: {
-                                ...baseSettings.speechBubble,
-                                size: baseSettings.speechBubble.size * scaleRatio
-                              },
-                              location: {
-                                ...baseSettings.location,
-                                size: baseSettings.location.size * scaleRatio
-                              }
+                      />
+
+                      {/* Current Location Icons Overlay - rendered on the matching floor */}
+                      {normalizedFloor === normalizeFloor(currentFloor) && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            pointerEvents: "none",
+                            zIndex: 20,
+                          }}
+                        >
+                          <LocationIconsOverlay
+                            settings={(() => {
+                              const baseSettings = getLocationIconSettingsForFloor(locationIconSettings, floor as FloorId);
+                              return {
+                                speechBubble: {
+                                  ...baseSettings.speechBubble,
+                                  size: baseSettings.speechBubble.size * scaleRatio
+                                },
+                                location: {
+                                  ...baseSettings.location,
+                                  size: baseSettings.location.size * scaleRatio
+                                }
+                              };
+                            })()}
+                            mapMetrics={{ width: CURRENT_MAP_WIDTH, height: 1080 }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Picto Pins - Split into Ripple and Icon layers for proper z-indexing */}
+                      {(() => {
+                        if (!pictoSettings) return null;
+
+                        const items = Object.values(pictoSettings.instances)
+                          .filter(instance => instance.floor === normalizedFloor)
+                          .map(instance => {
+                            const iconUrl = findMallPictoUrl(mallId, instance.iconName);
+                            if (!iconUrl) return null;
+
+                            const scaledInstance = {
+                              ...instance,
+                              size: (instance.size ?? 80) * scaleRatio
                             };
-                          })()}
-                          mapMetrics={{ width: CURRENT_MAP_WIDTH, height: 1080 }}
-                        />
-                      </div>
-                    )}
 
-                    {/* Picto Pins - Split into Ripple and Icon layers for proper z-indexing */}
-                    {(() => {
-                      if (!pictoSettings) return null;
-                      
-                      const items = Object.values(pictoSettings.instances)
-                        .filter(instance => instance.floor === normalizeFloor(selectedFloor || "1F"))
-                        .map(instance => {
-                          const iconUrl = findMallPictoUrl(mallId, instance.iconName);
-                          if (!iconUrl) return null;
+                            const isHighlighted = selectedFacility === instance.tag;
 
-                          const scaledInstance = {
-                            ...instance,
-                            size: (instance.size ?? 80) * scaleRatio
-                          };
-                          
-                          const isHighlighted = selectedFacility === instance.tag;
-                          
-                          return { instance, scaledInstance, iconUrl, isHighlighted };
-                        })
-                        .filter((item): item is NonNullable<typeof item> => item !== null);
+                            return { instance, scaledInstance, iconUrl, isHighlighted };
+                          })
+                          .filter((item): item is NonNullable<typeof item> => item !== null);
 
-                      return (
-                        <>
-                          {/* Ripple Layer (z-index: 190) - Below highlighted icons but above normal icons/map */}
-                          {items.map(({ instance, scaledInstance, iconUrl, isHighlighted }) => (
-                            isHighlighted ? (
-                              <div key={`picto-ripple-${instance.id}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 190 }}>
+                        return (
+                          <>
+                            {/* Ripple Layer (z-index: 190) */}
+                            {items.map(({ instance, scaledInstance, iconUrl, isHighlighted }) => (
+                              isHighlighted ? (
+                                <div key={`picto-ripple-${instance.id}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 190 }}>
+                                  <PictoPin
+                                    instance={scaledInstance}
+                                    iconUrl={iconUrl}
+                                    usePixelPosition={false}
+                                    isSelected={true}
+                                    renderMode="ripple"
+                                  />
+                                </div>
+                              ) : null
+                            ))}
+
+                            {/* Icon Layer (z-index: 200 for highlighted, 5 for normal) */}
+                            {items.map(({ instance, scaledInstance, iconUrl, isHighlighted }) => (
+                              <div key={`picto-icon-${instance.id}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: isHighlighted ? 200 : 5 }}>
                                 <PictoPin
                                   instance={scaledInstance}
                                   iconUrl={iconUrl}
                                   usePixelPosition={false}
-                                  isSelected={true}
-                                  renderMode="ripple"
+                                  isSelected={isHighlighted}
+                                  renderMode="icon"
                                 />
                               </div>
-                            ) : null
-                          ))}
-
-                          {/* Icon Layer (z-index: 200 for highlighted, 5 for normal) */}
-                          {items.map(({ instance, scaledInstance, iconUrl, isHighlighted }) => (
-                            <div key={`picto-icon-${instance.id}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: isHighlighted ? 200 : 5 }}>
-                              <PictoPin
-                                instance={scaledInstance}
-                                iconUrl={iconUrl}
-                                usePixelPosition={false}
-                                isSelected={isHighlighted}
-                                renderMode="icon"
-                              />
-                            </div>
-                          ))}
-                        </>
-                      );
-                    })()}
-                  </motion.div>
-                </AnimatePresence>
+                            ))}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  );
+                })}
 
                 {/* Selected Shop Pin */}
                 <AnimatePresence>
@@ -1868,11 +1952,11 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Floor Label */}
+        {/* Floor Label - no key change on floor switch to avoid unnecessary re-mount */}
         <AnimatePresence mode="sync">
           {showFloorLabel && (
             <motion.div
-              key={selectedFloor || "1F"}
+              key="floor-label"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -2462,8 +2546,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               exit="exit"
               className="shop-list-scroll-container"
               transition={{
-                x: { type: "tween", duration: 0.5, ease: "easeInOut" },
-                opacity: { duration: 0.5 }
+                x: { type: "tween", duration: genreDirection === 0 ? FLOOR_ANIM_DURATION : 0.5, ease: "easeInOut" },
+                opacity: { duration: genreDirection === 0 ? FLOOR_ANIM_DURATION : 0.5 }
               }}
               style={{
                 width: "100%",
@@ -2547,7 +2631,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       
                       if (shopFloor !== current) {
                         ignoreFloorChangeRef.current = true;
-                        setPinDelay(0.6); // Wait for map transition (approx 0.5-0.6s)
+                        setPinDelay(FLOOR_ANIM_DURATION + 0.05); // Wait for floor slide animation to complete
                         setSelectedFloor(shopFloor);
                       } else {
                         setPinDelay(0);
