@@ -21,7 +21,7 @@ import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
 import { KeyboardModal } from "../components/KeyboardModal";
 import { EventNewsModal } from "../components/EventNewsModal";
 import { ShopNewsModal } from "../components/ShopNewsModal";
-import { ShopLogoImage } from "../components/ShopLogoImage";
+import { ShopLogoImage, preloadShopLogos } from "../components/ShopLogoImage";
 import { TwoLineAutoScaleText } from "../components/TwoLineAutoScaleText";
 import { AutoScaleText } from "../components/AutoScaleText";
 import { buildImagePath, toFileUrl, getShopImageDataUrl } from "../utils/imageUtils";
@@ -110,6 +110,33 @@ const IDLE_TIMEOUT_MS = 30000;
  * Uses module-level cache so re-opening the same shop detail panel is instant.
  */
 const shopImageCache = new Map<string, string>();
+
+/**
+ * Pre-resolve shop detail images (photo1, photo2, shopLogo) in parallel
+ * so they display instantly when a shop detail panel opens.
+ */
+function preloadShopImages(shops: Shop[]): void {
+  for (const shop of shops) {
+    const photos = [shop.photo2, shop.photo1, shop.shopLogo].filter(Boolean) as string[];
+    for (const photo of photos) {
+      const cacheKey = `${photo}::${shop.shopId ?? ""}`;
+      if (shopImageCache.has(cacheKey)) continue;
+
+      const imagePath = buildImagePath(photo, shop.shopId);
+      if (!imagePath) continue;
+
+      getShopImageDataUrl(imagePath).then((dataUrl) => {
+        if (dataUrl) {
+          shopImageCache.set(cacheKey, dataUrl);
+        } else {
+          shopImageCache.set(cacheKey, toFileUrl(imagePath));
+        }
+      }).catch(() => {
+        shopImageCache.set(cacheKey, toFileUrl(imagePath));
+      });
+    }
+  }
+}
 const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefined }> = ({ photo, shopId }) => {
   const cacheKey = `${photo ?? ""}::${shopId ?? ""}`;
   const cached = shopImageCache.get(cacheKey);
@@ -357,6 +384,14 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
   // Preload all floor map images on mount so switching is instant
   usePreloadImages(floorMaps);
+
+  // Preload shop logo and detail images so they appear instantly
+  useEffect(() => {
+    if (shops.length > 0) {
+      preloadShopLogos(shops);
+      preloadShopImages(shops);
+    }
+  }, [shops]);
 
   // All available floors for pre-rendering
   const ALL_FLOORS = useMemo(() => ["1F", "2F", "3F", "4F"], []);
@@ -1770,6 +1805,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       <img
                         src={floorMaps[floor] || undefined}
                         alt={`${floor} Map`}
+                        decoding="async"
                         style={{
                           width: "100%",
                           height: "100%",

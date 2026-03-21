@@ -8,6 +8,40 @@ import { buildImagePath, toFileUrl, getShopImageDataUrl } from '../utils/imageUt
 // the component on every key change.
 const resolvedUrlCache = new Map<string, string>();
 
+/**
+ * Pre-resolve shop logo URLs in parallel so they are cached before
+ * components mount. Call this when shop data arrives.
+ */
+export async function resolveShopLogoUrl(photo: string, shopId: string | undefined): Promise<string | null> {
+  const cacheKey = `${photo}::${shopId ?? ""}`;
+  if (resolvedUrlCache.has(cacheKey)) return resolvedUrlCache.get(cacheKey)!;
+
+  const imagePath = buildImagePath(photo, shopId);
+  if (!imagePath) return null;
+
+  try {
+    const normalizedPath = imagePath.replace(/\\/g, "/");
+    const dataUrl = await getShopImageDataUrl(normalizedPath);
+    if (dataUrl) {
+      resolvedUrlCache.set(cacheKey, dataUrl);
+      return dataUrl;
+    }
+  } catch { /* fall through */ }
+
+  const fileUrl = toFileUrl(imagePath);
+  resolvedUrlCache.set(cacheKey, fileUrl);
+  return fileUrl;
+}
+
+export function preloadShopLogos(shops: { shopLogo?: string; shopId?: string }[]): void {
+  for (const shop of shops) {
+    const photo = shop.shopLogo || (shop.shopId ? `files/shop/${shop.shopId}/shop_logo.png` : undefined);
+    if (photo) {
+      resolveShopLogoUrl(photo, shop.shopId);
+    }
+  }
+}
+
 interface ShopLogoImageProps {
   photo: string | undefined;
   shopId: string | undefined;

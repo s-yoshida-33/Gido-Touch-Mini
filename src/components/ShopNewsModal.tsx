@@ -158,7 +158,6 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
               width: "100%",
               height: "100%",
               backgroundColor: "rgba(0, 0, 0, 0.5)",
-              backdropFilter: "blur(5px)",
             }}
             onClick={onClose}
           />

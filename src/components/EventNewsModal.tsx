@@ -146,7 +146,6 @@ export const EventNewsModal: React.FC<EventNewsModalProps> = ({
               width: "100%",
               height: "100%",
               backgroundColor: "rgba(0, 0, 0, 0.5)",
-              backdropFilter: "blur(5px)",
             }}
             onClick={onClose}
           />
