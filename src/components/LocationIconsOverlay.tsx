@@ -119,23 +119,20 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
     const rippleSize = animation.rippleSize || 1.5;
     const rippleCenterSize = animation.rippleCenterSize ?? 0.95;
     const size = config.size;
-    // 波紋の位置は常に中心（50%）に設定
-    // 回転時に中心からずれないようにするため
-    const topOffset = "50%";
 
     return (
       <>
         <style>{`
           @keyframes ripple-animation-${uniqueId} {
             0% {
-              transform: translate(-50%, -50%) scale(${rippleCenterSize});
+              transform: scale(${rippleCenterSize});
               opacity: 1;
             }
             90% {
               opacity: 0.1;
             }
             100% {
-              transform: translate(-50%, -50%) scale(${rippleSize * 1.2});
+              transform: scale(${rippleSize * 1.2});
               opacity: 0;
             }
           }
@@ -150,8 +147,8 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
           className={`ripple-${uniqueId}-1`}
           style={{
             position: "absolute",
-            top: topOffset,
-            left: "50%",
+            top: 0,
+            left: 0,
             width: `${size}px`,
             height: `${size}px`,
             borderRadius: "50%",
@@ -159,7 +156,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
             pointerEvents: "none",
             zIndex: -1,
             opacity: 0,
-            transform: `translate(-50%, -50%) scale(${rippleCenterSize})`,
+            transform: `scale(${rippleCenterSize})`,
             transformOrigin: "center center",
           }}
         />
@@ -167,8 +164,8 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
           className={`ripple-${uniqueId}-2`}
           style={{
             position: "absolute",
-            top: topOffset,
-            left: "50%",
+            top: 0,
+            left: 0,
             width: `${size}px`,
             height: `${size}px`,
             borderRadius: "50%",
@@ -176,7 +173,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
             pointerEvents: "none",
             zIndex: -1,
             opacity: 0,
-            transform: `translate(-50%, -50%) scale(${rippleCenterSize})`,
+            transform: `scale(${rippleCenterSize})`,
             transformOrigin: "center center",
           }}
         />
