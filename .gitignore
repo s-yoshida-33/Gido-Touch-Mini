@@ -34,9 +34,9 @@ out/
 *.dmg
 
 # Media directory (local content files)
-# Exclude all files in media/ but keep the directory structure
-media/*
-!media/.gitkeep
+# Exclude all files in medias/ but keep the directory structure
+medias/*
+!medias/.gitkeep
 
 # Private keys / secrets
 ~/*
