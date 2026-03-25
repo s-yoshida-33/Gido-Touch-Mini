@@ -24,21 +24,21 @@ function buildWrapperStyle(config: IconPositionConfig): React.CSSProperties {
 function buildStaticImageStyle(config: IconPositionConfig): React.CSSProperties {
   return {
     width: `${config.size}px`,
-    height: "auto",
+    height: `${config.size}px`,
     display: "block",
     overflow: "visible",
   };
 }
 
-// 回転を制御するコンテナのスタイル
-function buildRotationContainerStyle(rotation: number): React.CSSProperties {
+// 回転を制御するコンテナのスタイル（明示サイズを持つことで波紋の50%が正しく解決される）
+function buildRotationContainerStyle(rotation: number, size: number): React.CSSProperties {
   return {
     position: "relative",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    width: "100%",
-    height: "100%",
+    width: `${size}px`,
+    height: `${size}px`,
     transform: `rotate(${rotation}deg)`,
     transformOrigin: "center center",
   };
@@ -199,13 +199,11 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
             {(() => {
               const animation = speechBubble.animation;
               let animClass = "";
-              let animStyle: React.CSSProperties = { 
-                display: "flex", 
-                justifyContent: "center", 
+              let animStyle: React.CSSProperties = {
+                display: "flex",
+                justifyContent: "center",
                 alignItems: "center",
                 position: "relative",
-                width: "100%",
-                height: "100%"
               };
 
               if (isReady && animation && animation.enabled && animation.type !== "none" && animation.type !== "blink") {
@@ -220,7 +218,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
               return (
                 <div className={animClass} style={animStyle}>
                   {/* 回転コンテナを追加 */}
-                  <div style={buildRotationContainerStyle(speechBubble.rotation)}>
+                  <div style={buildRotationContainerStyle(speechBubble.rotation, speechBubble.size)}>
                     {renderRippleAnimation(speechBubble, "speech-bubble")}
                     <UserLocationIcon
                       style={buildStaticImageStyle(speechBubble)}
@@ -245,13 +243,11 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
             {(() => {
               const animation = location.animation;
               let animClass = "";
-              let animStyle: React.CSSProperties = { 
-                display: "flex", 
-                justifyContent: "center", 
+              let animStyle: React.CSSProperties = {
+                display: "flex",
+                justifyContent: "center",
                 alignItems: "center",
                 position: "relative",
-                width: "100%",
-                height: "100%"
               };
 
               if (isReady && animation && animation.enabled && animation.type !== "none" && animation.type !== "blink") {
@@ -266,7 +262,7 @@ export const LocationIconsOverlay: React.FC<Props> = ({ settings, mapMetrics }) 
               return (
                 <div className={animClass} style={animStyle}>
                    {/* 回転コンテナを追加 */}
-                   <div style={buildRotationContainerStyle(location.rotation)}>
+                   <div style={buildRotationContainerStyle(location.rotation, location.size)}>
                     {renderRippleAnimation(location, "location")}
                     <LocationIcon
                       style={buildStaticImageStyle(location)}
