@@ -20,7 +20,8 @@
         "http://localhost:8090/**",
         "https://api.github.com/**",
         "https://github.com/**",
-        "https://*.githubusercontent.com/**"
+        "https://*.githubusercontent.com/**",
+        "https://dl.tti.ninja/**"
       ]
     }
   ]
