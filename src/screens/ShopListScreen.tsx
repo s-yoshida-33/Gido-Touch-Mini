@@ -919,13 +919,9 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   useEffect(() => {
     const loadMallConfig = async () => {
       try {
-        // Set loading state or clear previous config
-        setMallGenreConfig([]);
-        setMallPictoConfig([]);
-        setGenreIcons({});
-        setPictoIcons({});
-
         // ジャンルとピクトの設定を並列取得（逐次取得より遅延を短縮）
+        // NOTE: 先にリセットしないことで、バンドル済みアイコン（f.icon）が
+        //       非同期ロード完了まで表示され続け、起動時の一瞬消えを防ぐ
         const [genreConfig, pictoConfig] = await Promise.all([
           loadMallGenreConfig(mallId) as Promise<GenreConfig | null>,
           loadMallPictoConfig(mallId) as Promise<PictoConfig | null>,
