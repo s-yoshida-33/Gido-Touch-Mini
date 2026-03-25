@@ -229,9 +229,10 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isVersionInfoOpen, setIsVersionInfoOpen] = useState(false);
 
-  // Load S3-downloaded floor maps from disk into diskFloorMaps state.
-  const loadDiskFloorMaps = async (currentMallId: string, currentHostname: string) => {
-    if (!currentMallId || !currentHostname || currentHostname === 'unknown') return;
+  // Load S3-downloaded floor maps from disk. Returns the maps (does not set state).
+  // Call site is responsible for calling setDiskFloorMaps with the result.
+  const loadDiskFloorMaps = async (currentMallId: string, currentHostname: string): Promise<Partial<Record<FloorId, string>>> => {
+    if (!currentMallId || !currentHostname || currentHostname === 'unknown') return {};
     try {
       const assetMap = await invoke<Record<string, string>>('list_mall_assets', {
         mallId: currentMallId,
@@ -242,9 +243,10 @@ const App: React.FC = () => {
         const key = `maps/${floorId}-map.svg`;
         if (assetMap[key]) maps[floorId] = assetMap[key];
       }
-      setDiskFloorMaps(maps);
+      return maps;
     } catch {
       // non-critical: disk maps unavailable, bundled defaults will be used
+      return {};
     }
   };
 
@@ -496,8 +498,9 @@ const App: React.FC = () => {
           shopPositions: Object.keys(mallData.shopPositions.positions).length,
         });
 
-        // Load S3-downloaded maps from disk (async, non-blocking)
-        loadDiskFloorMaps(currentMallId, global.hostname ?? '');
+        // Load S3-downloaded maps from disk before first render to avoid white flash
+        const diskMaps = await loadDiskFloorMaps(currentMallId, global.hostname ?? '');
+        setDiskFloorMaps(diskMaps);
 
         setAppPhase("running");
         logInfo("SYSTEM", "Application initialized successfully");

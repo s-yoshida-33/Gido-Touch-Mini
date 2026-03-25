@@ -925,119 +925,106 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
         setGenreIcons({});
         setPictoIcons({});
 
-        // ジャンル設定を読み込む
-        const genreConfig = await loadMallGenreConfig(mallId) as GenreConfig;
-        if (genreConfig && genreConfig.genres) {
-          setMallGenreConfig(genreConfig.genres);
-          
-          // ジャンルアイコンを読み込む
-          const iconPromises = genreConfig.genres.map(async (genre) => {
-            const normal = await loadGenreIcon(mallId, selectedLanguage, genre.iconFile, false);
-            const highlight = await loadGenreIcon(mallId, selectedLanguage, genre.iconFile, true);
-            return {
-              id: genre.id,
-              normal: normal || "",
-              highlight: highlight || "",
-            };
-          });
-          
-          const loadedIcons = await Promise.all(iconPromises);
-          const iconMap: Record<string, { normal: string; highlight: string }> = {};
-          loadedIcons.forEach((icon) => {
-            if (icon.normal && icon.highlight) {
-              iconMap[icon.id] = { normal: icon.normal, highlight: icon.highlight };
+        // ジャンルとピクトの設定を並列取得（逐次取得より遅延を短縮）
+        const [genreConfig, pictoConfig] = await Promise.all([
+          loadMallGenreConfig(mallId) as Promise<GenreConfig | null>,
+          loadMallPictoConfig(mallId) as Promise<PictoConfig | null>,
+        ]);
+
+        // ジャンルアイコンとピクトアイコンを並列読み込み
+        await Promise.all([
+          // ジャンル設定・アイコンの処理
+          (async () => {
+            if (genreConfig && genreConfig.genres) {
+              setMallGenreConfig(genreConfig.genres);
+
+              const loadedIcons = await Promise.all(genreConfig.genres.map(async (genre) => {
+                const normal = await loadGenreIcon(mallId, selectedLanguage, genre.iconFile, false);
+                const highlight = await loadGenreIcon(mallId, selectedLanguage, genre.iconFile, true);
+                return { id: genre.id, normal: normal || "", highlight: highlight || "" };
+              }));
+              const iconMap: Record<string, { normal: string; highlight: string }> = {};
+              loadedIcons.forEach((icon) => {
+                if (icon.normal && icon.highlight) {
+                  iconMap[icon.id] = { normal: icon.normal, highlight: icon.highlight };
+                }
+              });
+              setGenreIcons(iconMap);
+            } else {
+              // フォールバック: Config (malls.ts) から生成
+              const config = getMallConfig(mallId);
+              const fallbackGenreConfig: GenreItem[] = config.genres.map((g, index) => ({
+                id: g.id,
+                order: index,
+                name: { ja: g.name, en: g.name_en },
+                iconFile: g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0]
+              }));
+              setMallGenreConfig(fallbackGenreConfig);
+
+              const iconMap: Record<string, { normal: string; highlight: string }> = {};
+              config.genres.forEach(g => {
+                const iconFilename = g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0];
+                const highlightFilename = g.iconFile
+                  ? g.iconFile.replace('.svg', '-highlight.svg')
+                  : (g.highlightIcon.split('/').pop() || `${g.id}-highlight.svg`).split('?')[0];
+                const langIcon = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, iconFilename);
+                const langHighlight = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, highlightFilename);
+                iconMap[g.id] = {
+                  normal: langIcon || g.icon,
+                  highlight: langHighlight || g.highlightIcon
+                };
+              });
+              setGenreIcons(iconMap);
             }
-          });
-          setGenreIcons(iconMap);
-        } else {
-             // フォールバック: Config (malls.ts) から生成
-                 // mallGenreConfig が空だとフィルタリング時に参照できないため、ここで初期化する
-             const config = getMallConfig(mallId);
-             const fallbackGenreConfig: GenreItem[] = config.genres.map((g, index) => ({
-                 id: g.id,
-                 order: index,
-                 name: { ja: g.name, en: g.name_en },
-                 iconFile: g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0]
-             }));
-             setMallGenreConfig(fallbackGenreConfig);
-             
-             // アイコンマップの生成（フォールバック用）
-             const iconMap: Record<string, { normal: string; highlight: string }> = {};
-             config.genres.forEach(g => {
-                 // 言語に応じたパスを動的に生成
-                 const iconFilename = g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0];
-                 const highlightFilename = g.iconFile 
-                    ? g.iconFile.replace('.svg', '-highlight.svg')
-                    : (g.highlightIcon.split('/').pop() || `${g.id}-highlight.svg`).split('?')[0];
+          })(),
 
-                 const langIcon = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, iconFilename);
-                 const langHighlight = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, highlightFilename);
+          // ピクト設定・アイコンの処理
+          (async () => {
+            if (pictoConfig && pictoConfig.pictos) {
+              setMallPictoConfig(pictoConfig.pictos);
 
-                 iconMap[g.id] = { 
-                     normal: langIcon || g.icon, 
-                     highlight: langHighlight || g.highlightIcon 
-                 };
-             });
-             setGenreIcons(iconMap);
-        }
-
-        // ピクト設定を読み込む
-        const pictoConfig = await loadMallPictoConfig(mallId) as PictoConfig;
-        if (pictoConfig && pictoConfig.pictos) {
-          setMallPictoConfig(pictoConfig.pictos);
-          
-          // ピクトボタンアイコンを読み込む
-          const buttonIconPromises = pictoConfig.pictos.map(async (picto) => {
-            const button = await loadPictoIcon(mallId, selectedLanguage, picto.buttonFile.replace("button-", "").replace(".svg", ""), false, true);
-            const buttonHighlight = await loadPictoIcon(mallId, selectedLanguage, picto.buttonFile.replace("button-", "").replace(".svg", ""), true, true);
-            return {
-              id: picto.id,
-              button: button || "",
-              buttonHighlight: buttonHighlight || "",
-            };
-          });
-          
-          const loadedButtonIcons = await Promise.all(buttonIconPromises);
-          const buttonIconMap: Record<string, { button: string; buttonHighlight: string }> = {};
-          loadedButtonIcons.forEach((icon) => {
-            if (icon.button && icon.buttonHighlight) {
-              buttonIconMap[icon.id] = { button: icon.button, buttonHighlight: icon.buttonHighlight };
-            }
-          });
-          setPictoIcons(buttonIconMap);
-        } else {
-             // Electron環境外などでconfigが見つからない場合のフォールバック
-            const config = getMallConfig(mallId);
-            const facilities = config.facilities;
-            const pIcons: Record<string, { button: string; buttonHighlight: string }> = {};
-            const mallPictoList = facilities.map((f, index) => ({
+              const loadedButtonIcons = await Promise.all(pictoConfig.pictos.map(async (picto) => {
+                const name = picto.buttonFile.replace("button-", "").replace(".svg", "");
+                const button = await loadPictoIcon(mallId, selectedLanguage, name, false, true);
+                const buttonHighlight = await loadPictoIcon(mallId, selectedLanguage, name, true, true);
+                return { id: picto.id, button: button || "", buttonHighlight: buttonHighlight || "" };
+              }));
+              const buttonIconMap: Record<string, { button: string; buttonHighlight: string }> = {};
+              loadedButtonIcons.forEach((icon) => {
+                if (icon.button && icon.buttonHighlight) {
+                  buttonIconMap[icon.id] = { button: icon.button, buttonHighlight: icon.buttonHighlight };
+                }
+              });
+              setPictoIcons(buttonIconMap);
+            } else {
+              // フォールバック: Config (malls.ts) から生成
+              const config = getMallConfig(mallId);
+              const facilities = config.facilities;
+              const mallPictoList = facilities.map((f, index) => ({
                 id: f.id,
                 order: index,
                 name: { ja: f.name, en: f.name_en || f.name },
                 iconFile: f.iconFile || `${f.id.replace(/_/g, '-')}.svg`,
                 buttonFile: `${f.id.replace(/_/g, '-')}.svg`
-            }));
-            
-            setMallPictoConfig(mallPictoList);
+              }));
+              setMallPictoConfig(mallPictoList);
 
-            await Promise.all(facilities.map(async (facility) => {
-                 // アイコンパスの推測
-                 const buttonName = facility.id.replace(/_/g, '-');
-                 const button = await loadPictoIcon(mallId, selectedLanguage, buttonName, false, true);
-                 const buttonHighlight = await loadPictoIcon(mallId, selectedLanguage, buttonName, true, true);
-                 
-                 // フォールバック: Configから取得 (getMallAssetUrl)
-                 // selectedLanguage を考慮したパスに変更
-                 const fallbackButton = getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, facility.iconFile || facility.id.replace(/_/g, '-') + '.svg');
-                 const fallbackHighlight = getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, (facility.iconFile?.replace('.svg', '') || facility.id.replace(/_/g, '-')) + '-highlight.svg');
-
-                 pIcons[facility.id] = {
-                     button: button || fallbackButton,
-                     buttonHighlight: buttonHighlight || fallbackHighlight
-                 };
-            }));
-            setPictoIcons(pIcons);
-        }
+              const pIcons: Record<string, { button: string; buttonHighlight: string }> = {};
+              await Promise.all(facilities.map(async (facility) => {
+                const buttonName = facility.id.replace(/_/g, '-');
+                const button = await loadPictoIcon(mallId, selectedLanguage, buttonName, false, true);
+                const buttonHighlight = await loadPictoIcon(mallId, selectedLanguage, buttonName, true, true);
+                const fallbackButton = getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, facility.iconFile || facility.id.replace(/_/g, '-') + '.svg');
+                const fallbackHighlight = getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, (facility.iconFile?.replace('.svg', '') || facility.id.replace(/_/g, '-')) + '-highlight.svg');
+                pIcons[facility.id] = {
+                  button: button || fallbackButton,
+                  buttonHighlight: buttonHighlight || fallbackHighlight
+                };
+              }));
+              setPictoIcons(pIcons);
+            }
+          })(),
+        ]);
 
       } catch (error) {
         console.error("Failed to load mall config", error);
