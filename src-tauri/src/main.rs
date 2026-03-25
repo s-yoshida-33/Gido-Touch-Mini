@@ -13,7 +13,7 @@ use chrono::Local;
 use sysinfo::System;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{Manager, RunEvent, WindowEvent};
+use tauri::{Emitter, Manager, RunEvent, WindowEvent};
 
 // ---------------------------------------------------------------------------
 // State management structure
