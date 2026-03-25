@@ -8,7 +8,8 @@ export interface ImageSettingsTabProps {
   onChangeFloor: (floor: FloorId) => void;
   imageSettings: ImageSettings;
   onChangeImageSettings: (settings: ImageSettings) => void;
-  onMapsFetchedFromS3?: () => void;
+  diskFloorMaps?: Partial<Record<FloorId, string>>;
+  onDiskMapsUpdated?: (maps: Partial<Record<FloorId, string>>) => void;
   hostname?: string;
 }
 
@@ -19,7 +20,8 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
   onChangeFloor,
   imageSettings,
   onChangeImageSettings,
-  onMapsFetchedFromS3,
+  diskFloorMaps,
+  onDiskMapsUpdated,
   hostname,
 }) => {
   const floorMapInputRef = useRef<HTMLInputElement>(null);
@@ -110,15 +112,7 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
     resetFetch();
     const floorMaps = await fetchMaps(hostname);
     if (!floorMaps) return;
-
-    onChangeImageSettings({
-      ...imageSettings,
-      floorMaps: {
-        ...imageSettings.floorMaps,
-        ...floorMaps,
-      },
-    });
-    if (onMapsFetchedFromS3) onMapsFetchedFromS3();
+    if (onDiskMapsUpdated) onDiskMapsUpdated(floorMaps);
   };
 
   const isFetching = fetchStatus.status === 'fetching';
@@ -280,7 +274,7 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
           >
             画像を選択
           </button>
-          {imageSettings.floorMaps[floor] && (
+          {(imageSettings.floorMaps[floor] || diskFloorMaps?.[floor]) && (
             <button
               onClick={() => handleRemoveImage("floorMap", floor)}
               style={{
@@ -303,7 +297,7 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
             {errors[`floorMap-${floor}`]}
           </div>
         )}
-        {imageSettings.floorMaps[floor] && (
+        {(imageSettings.floorMaps[floor] || diskFloorMaps?.[floor]) && (
           <div
             style={{
               marginTop: 12,
@@ -314,7 +308,7 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
             }}
           >
             <img
-              src={imageSettings.floorMaps[floor]}
+              src={imageSettings.floorMaps[floor] || diskFloorMaps?.[floor]}
               alt={`${floor} map preview`}
               style={{
                 maxWidth: "100%",

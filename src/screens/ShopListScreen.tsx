@@ -291,6 +291,7 @@ interface ShopListScreenProps {
   genres: Genre[]; // Added prop
   mallId?: MallId; // Added prop
   floorMaps?: Record<string, string>; // Added prop
+  diskFloorMaps?: Partial<Record<string, string>>; // S3-downloaded maps (startup sync)
   openTimeImage?: string; // Add prop
   mallSettings?: MallSettings; // Added prop
 }
@@ -378,6 +379,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   genres = [],
   mallId = "suzaka",
   floorMaps = {},
+  diskFloorMaps = {},
   openTimeImage: propOpenTimeImage, // Add prop
   mallSettings,
 }) => {
@@ -1803,7 +1805,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                     >
                       {/* Map Image */}
                       <img
-                        src={floorMaps[floor] || undefined}
+                        src={floorMaps[floor] || diskFloorMaps[floor] || undefined}
                         alt={`${floor} Map`}
                         decoding="async"
                         style={{

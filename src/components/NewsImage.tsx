@@ -62,8 +62,9 @@ interface NewsImageProps {
  * Handles Windows paths, relative paths, file:// URLs, http(s) URLs, and data: URLs.
  */
 export const NewsImage: React.FC<NewsImageProps> = ({ imageUrl, alt = "", style }) => {
-  const cached = imageUrl ? resolvedUrlCache.get(imageUrl) : undefined;
-  const [resolvedUrl, setResolvedUrl] = useState<string>(cached ?? "");
+  const [resolvedUrl, setResolvedUrl] = useState<string>(() =>
+    imageUrl ? resolvedUrlCache.get(imageUrl) ?? "" : ""
+  );
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
@@ -73,8 +74,13 @@ export const NewsImage: React.FC<NewsImageProps> = ({ imageUrl, alt = "", style 
       return;
     }
 
-    // Already resolved from cache
-    if (cached) return;
+    // Check cache on every imageUrl change and update state immediately
+    const cached = resolvedUrlCache.get(imageUrl);
+    if (cached) {
+      setResolvedUrl(cached);
+      setHasError(false);
+      return;
+    }
 
     let cancelled = false;
     resolveNewsImageUrl(imageUrl).then((url) => {
@@ -85,7 +91,7 @@ export const NewsImage: React.FC<NewsImageProps> = ({ imageUrl, alt = "", style 
     });
 
     return () => { cancelled = true; };
-  }, [imageUrl, cached]);
+  }, [imageUrl]);
 
   if (!imageUrl || hasError || !resolvedUrl) return null;
 

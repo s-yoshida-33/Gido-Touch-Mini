@@ -511,34 +511,44 @@ fn read_mall_config(mall_id: String, config_type: String) -> Result<serde_json::
 
 /// Read a mall asset file and return it as a data-URL string.
 /// `relative_path` is relative to the malls directory, e.g. "suzaka/pictos/icon/restroom.svg".
+/// Search order: 1) S3-downloaded assets (medias/assets/), 2) bundled assets (resources/assets/malls/).
 #[tauri::command]
 fn read_mall_asset(relative_path: String) -> Result<Option<String>, String> {
-    let base = get_mall_assets_base_path()?;
-    let full_path = base.join(&relative_path);
-
-    if let Some(url) = file_to_data_url(&full_path) {
-        return Ok(Some(url));
-    }
-
-    // Case-insensitive fallback: scan directory for matching filename
-    if let Some(parent) = full_path.parent() {
-        if parent.exists() {
-            if let Some(fname) = full_path.file_name().and_then(|f| f.to_str()) {
-                let lower = fname.to_lowercase();
-                if let Ok(entries) = fs::read_dir(parent) {
-                    for entry in entries.flatten() {
-                        if entry.file_name().to_string_lossy().to_lowercase() == lower {
-                            if let Some(url) = file_to_data_url(&entry.path()) {
-                                return Ok(Some(url));
+    // Helper: try exact path then case-insensitive scan
+    let try_read = |base_path: std::path::PathBuf| -> Option<String> {
+        if let Some(url) = file_to_data_url(&base_path) {
+            return Some(url);
+        }
+        if let Some(parent) = base_path.parent() {
+            if parent.exists() {
+                if let Some(fname) = base_path.file_name().and_then(|f| f.to_str()) {
+                    let lower = fname.to_lowercase();
+                    if let Ok(entries) = fs::read_dir(parent) {
+                        for entry in entries.flatten() {
+                            if entry.file_name().to_string_lossy().to_lowercase() == lower {
+                                if let Some(url) = file_to_data_url(&entry.path()) {
+                                    return Some(url);
+                                }
                             }
                         }
                     }
                 }
             }
         }
+        None
+    };
+
+    // 1. S3-downloaded assets take priority (AppLocalData/medias/assets/{relative_path})
+    if let Ok(media_base) = get_media_base_dir() {
+        let media_path = media_base.join("assets").join(&relative_path);
+        if let Some(url) = try_read(media_path) {
+            return Ok(Some(url));
+        }
     }
 
-    Ok(None)
+    // 2. Bundled assets fallback (<exe>/resources/assets/malls/{relative_path})
+    let base = get_mall_assets_base_path()?;
+    Ok(try_read(base.join(&relative_path)))
 }
 
 // ---------------------------------------------------------------------------

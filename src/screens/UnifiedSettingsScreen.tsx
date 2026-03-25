@@ -41,6 +41,8 @@ export interface UnifiedSettingsScreenProps {
   floor: FloorId;
   locationIconSettings: LocationIconSettingsPerFloor;
   imageSettings: ImageSettings;
+  diskFloorMaps?: Partial<Record<FloorId, string>>;
+  onDiskMapsUpdated?: (maps: Partial<Record<FloorId, string>>) => void;
   shopPositions: ShopPositionSettings;
   shops: Shop[];
   pictoSettings: PictoSettings;
@@ -59,6 +61,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   floor: initialFloor,
   locationIconSettings: initialLocationIconSettings,
   imageSettings: initialImageSettings,
+  diskFloorMaps,
+  onDiskMapsUpdated,
   shopPositions: initialShopPositions,
   shops,
   pictoSettings: initialPictoSettings,
@@ -90,8 +94,6 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   const [hostname, setHostname] = useState<string>('');
   const [initialHostname, setInitialHostname] = useState<string>('');
 
-  // Tracks whether maps were fetched from S3 in this settings session.
-  const [mapsFetchedFromS3, setMapsFetchedFromS3] = useState(false);
 
   // Transform wrapper ref for programmatic control
   const transformRef = useRef<{
@@ -170,7 +172,6 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       setShopPositions(initialShopPositions);
       setPictoSettings(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
       setMallSettings(initialMallSettings || DEFAULT_MALL_SETTINGS);
-      setMapsFetchedFromS3(false);
       setErrors({});
 
       // Load hostname from global settings
@@ -219,17 +220,6 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     try {
       setSaving(true);
 
-      // If maps were fetched from S3, clear floorMaps before saving
-      // so disk files (via list_mall_assets) become the sole map source.
-      let finalImageSettings = imageSettings;
-      if (mapsFetchedFromS3) {
-        const emptyFloorMaps = Object.fromEntries(
-          Object.keys(imageSettings.floorMaps).map((k) => [k, '']),
-        ) as Record<string, string>;
-        finalImageSettings = { ...imageSettings, floorMaps: emptyFloorMaps };
-        setMapsFetchedFromS3(false);
-      }
-
       // Save hostname to global settings (and cleanup stale map dirs if changed)
       try {
         const currentGlobal = await loadGlobalSettings();
@@ -254,7 +244,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
           locationIcons: locationIconSettings,
           shopPositions,
           pictoSettings,
-          imageSettings: finalImageSettings,
+          imageSettings: imageSettings,
           blackScreenSettings,
         },
       );
@@ -583,6 +573,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                   pictoSettings={activeTab === "picto" ? pictoSettings : undefined}
                   selectedPictoId={activeTab === "picto" ? selectedPictoId : undefined}
                   defaultFloorMaps={currentMallConfig.floorMaps}
+                  diskFloorMaps={diskFloorMaps}
                 />
               )}
               </div>
@@ -680,7 +671,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               onChangeFloor={setEditingFloor}
               imageSettings={imageSettings}
               onChangeImageSettings={setImageSettings}
-              onMapsFetchedFromS3={() => setMapsFetchedFromS3(true)}
+              diskFloorMaps={diskFloorMaps}
+              onDiskMapsUpdated={onDiskMapsUpdated}
               hostname={hostname}
             />
           )}

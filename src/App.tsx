@@ -59,6 +59,7 @@ import {
 } from "./utils/settings";
 import type { MallSettingsFile } from "./utils/settings";
 import { getVersion } from "@tauri-apps/api/app";
+import { invoke } from "@tauri-apps/api/core";
 
 type FloorId = "1F" | "2F" | "3F" | "4F";
 
@@ -210,6 +211,10 @@ const App: React.FC = () => {
   const [shopNews, setShopNews] = useState<ShopNews[]>([]);
   const [eventNews, setEventNews] = useState<ShopNews[]>([]);
 
+  // Disk-based floor maps: S3-downloaded maps loaded from AppLocalData/medias/maps/
+  // Priority: imageSettings.floorMaps (custom upload) > diskFloorMaps (S3 sync) > bundled default
+  const [diskFloorMaps, setDiskFloorMaps] = useState<Partial<Record<FloorId, string>>>({});
+
   // App startup phase
   // "loading" → reading settings | "mall_select" → first launch | "settings" → initial config | "running" → main screen
   type AppPhase = "loading" | "mall_select" | "settings" | "running";
@@ -223,6 +228,25 @@ const App: React.FC = () => {
   // Settings screen open state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isVersionInfoOpen, setIsVersionInfoOpen] = useState(false);
+
+  // Load S3-downloaded floor maps from disk into diskFloorMaps state.
+  const loadDiskFloorMaps = async (currentMallId: string, currentHostname: string) => {
+    if (!currentMallId || !currentHostname || currentHostname === 'unknown') return;
+    try {
+      const assetMap = await invoke<Record<string, string>>('list_mall_assets', {
+        mallId: currentMallId,
+        hostname: currentHostname,
+      });
+      const maps: Partial<Record<FloorId, string>> = {};
+      for (const floorId of ['1F', '2F', '3F', '4F'] as FloorId[]) {
+        const key = `maps/${floorId}-map.svg`;
+        if (assetMap[key]) maps[floorId] = assetMap[key];
+      }
+      setDiskFloorMaps(maps);
+    } catch {
+      // non-critical: disk maps unavailable, bundled defaults will be used
+    }
+  };
 
   // Load data function
   const loadData = async (useCacheFirst = false) => {
@@ -471,6 +495,9 @@ const App: React.FC = () => {
           mallId: currentMallId,
           shopPositions: Object.keys(mallData.shopPositions.positions).length,
         });
+
+        // Load S3-downloaded maps from disk (async, non-blocking)
+        loadDiskFloorMaps(currentMallId, global.hostname ?? '');
 
         setAppPhase("running");
         logInfo("SYSTEM", "Application initialized successfully");
@@ -811,6 +838,7 @@ const App: React.FC = () => {
       pictoSettings={pictoSettings}
       genres={currentMallConfig.genres}
       floorMaps={imageSettings.floorMaps}
+      diskFloorMaps={diskFloorMaps}
       openTimeImage={imageSettings.openTimeImage}
       mallSettings={mallSettings}
     />
@@ -826,6 +854,8 @@ const App: React.FC = () => {
         floor={floor}
         locationIconSettings={locationSettings}
         imageSettings={imageSettings}
+        diskFloorMaps={diskFloorMaps}
+        onDiskMapsUpdated={setDiskFloorMaps}
         shopPositions={shopPositions}
         shops={mergedShops}
         pictoSettings={pictoSettings}

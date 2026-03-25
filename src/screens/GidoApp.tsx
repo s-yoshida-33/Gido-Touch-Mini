@@ -41,6 +41,7 @@ interface GidoAppProps {
   selectedPictoId?: string | null;
   mallId?: MallId; // Add
   defaultFloorMaps?: Record<string, string>; // Add
+  diskFloorMaps?: Partial<Record<string, string>>; // S3-downloaded maps
 }
 
 const GidoApp: React.FC<GidoAppProps> = ({
@@ -55,6 +56,7 @@ const GidoApp: React.FC<GidoAppProps> = ({
   selectedPictoId,
   mallId = "suzaka", // Default
   defaultFloorMaps,
+  diskFloorMaps,
 }) => {
   const shops = useMemo(() => previewShops || [], [previewShops]);
 
@@ -70,9 +72,12 @@ const GidoApp: React.FC<GidoAppProps> = ({
   }, [previewFloor]);
 
   const floorId = floor as FloorId;
-  // Get floor map from imageSettings or use default path
+  // Get floor map: custom upload > S3-downloaded disk map > bundled default
   const customFloorMap = floorId ? imageSettings?.floorMaps?.[floorId] : undefined;
-  const floorMap = customFloorMap || (defaultFloorMaps ? defaultFloorMaps[floor] : undefined) || "";
+  const floorMap = customFloorMap
+    || diskFloorMaps?.[floorId]
+    || (defaultFloorMaps ? defaultFloorMaps[floor] : undefined)
+    || "";
 
   // Memoize locationIconSettings resolution
   const resolvedLocationIconSettings = useMemo(() => {
