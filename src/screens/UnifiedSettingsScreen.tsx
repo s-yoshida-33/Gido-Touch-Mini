@@ -21,6 +21,7 @@ import type { MallSettings, MallId } from "../types/mall";
 import { DEFAULT_MALL_SETTINGS } from "../types/mall";
 import { getMallConfig } from "../config/malls";
 import { getAssetUrl } from "../utils/assets"; // Import
+import { loadGlobalSettings, saveGlobalSettings, cleanupOldHostnameMaps } from "../utils/settings";
 import type { MallSettingsFile } from "../utils/settings";
 import type { BlackScreenSettings } from '../types/blackScreenSettings';
 import { DEFAULT_BLACK_SCREEN_SETTINGS } from '../types/blackScreenSettings';
@@ -46,7 +47,7 @@ export interface UnifiedSettingsScreenProps {
   mallSettings: MallSettings;
   blackScreenSettings?: BlackScreenSettings;
   onSave: (
-    global: { mallId: string; floor: string },
+    global: { mallId: string; floor: string; hostname?: string },
     mallData: MallSettingsFile,
   ) => Promise<void>;
 }
@@ -82,8 +83,15 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   const [mallSettings, setMallSettings] = useState<MallSettings>(initialMallSettings || DEFAULT_MALL_SETTINGS);
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [selectedPictoId, setSelectedPictoId] = useState<string | null>(null);
-    // Black screen settings
+  // Black screen settings
   const [blackScreenSettings, setBlackScreenSettings] = useState<BlackScreenSettings>(initialBlackScreenSettings);
+
+  // Hostname for S3 maps path
+  const [hostname, setHostname] = useState<string>('');
+  const [initialHostname, setInitialHostname] = useState<string>('');
+
+  // Tracks whether maps were fetched from S3 in this settings session.
+  const [mapsFetchedFromS3, setMapsFetchedFromS3] = useState(false);
 
   // Transform wrapper ref for programmatic control
   const transformRef = useRef<{
@@ -162,7 +170,15 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
       setShopPositions(initialShopPositions);
       setPictoSettings(initialPictoSettings || DEFAULT_PICTO_SETTINGS);
       setMallSettings(initialMallSettings || DEFAULT_MALL_SETTINGS);
+      setMapsFetchedFromS3(false);
       setErrors({});
+
+      // Load hostname from global settings
+      loadGlobalSettings().then((gs) => {
+        const saved = gs.hostname ?? '';
+        setHostname(saved);
+        setInitialHostname(saved);
+      }).catch(() => {});
 
       // Reset transform when opening settings
       if (transformRef.current && previewContainerRef.current) {
@@ -203,17 +219,42 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
     try {
       setSaving(true);
 
+      // If maps were fetched from S3, clear floorMaps before saving
+      // so disk files (via list_mall_assets) become the sole map source.
+      let finalImageSettings = imageSettings;
+      if (mapsFetchedFromS3) {
+        const emptyFloorMaps = Object.fromEntries(
+          Object.keys(imageSettings.floorMaps).map((k) => [k, '']),
+        ) as Record<string, string>;
+        finalImageSettings = { ...imageSettings, floorMaps: emptyFloorMaps };
+        setMapsFetchedFromS3(false);
+      }
+
+      // Save hostname to global settings (and cleanup stale map dirs if changed)
+      try {
+        const currentGlobal = await loadGlobalSettings();
+        await saveGlobalSettings({ ...currentGlobal, hostname });
+        if (mallId && hostname && hostname !== initialHostname) {
+          await cleanupOldHostnameMaps(mallId, hostname).catch((e) =>
+            console.warn('cleanup_old_hostname_maps failed:', e)
+          );
+        }
+        setInitialHostname(hostname);
+      } catch (e) {
+        console.warn('Failed to save hostname:', e);
+      }
+
       // Single save: global settings + per-mall settings
       // currentFloor is the persisted floor (only changed by FloorSettingsTab)
       await onSave(
-        { mallId, floor: currentFloor },
+        { mallId, floor: currentFloor, hostname },
         {
           mallSettings,
           floor: currentFloor,
           locationIcons: locationIconSettings,
           shopPositions,
           pictoSettings,
-          imageSettings,
+          imageSettings: finalImageSettings,
           blackScreenSettings,
         },
       );
@@ -298,6 +339,25 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
           <span style={{ color: "#ffffff", fontSize: 16, fontWeight: 600 }}>
             Gido Touch Mini - Settings
           </span>
+
+          <div style={{ marginLeft: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: '#aaa', fontSize: 13 }}>ホスト名:</span>
+            <input
+              type="text"
+              value={hostname}
+              onChange={(e) => setHostname(e.target.value)}
+              placeholder="例: KIOSK-01"
+              style={{
+                backgroundColor: '#333',
+                color: '#fff',
+                border: '1px solid #555',
+                borderRadius: 4,
+                padding: '4px 8px',
+                fontSize: 13,
+                width: 140,
+              }}
+            />
+          </div>
         </div>
 
         {/* Error Message */}
@@ -620,6 +680,8 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               onChangeFloor={setEditingFloor}
               imageSettings={imageSettings}
               onChangeImageSettings={setImageSettings}
+              onMapsFetchedFromS3={() => setMapsFetchedFromS3(true)}
+              hostname={hostname}
             />
           )}
           {activeTab === "shopPosition" && (

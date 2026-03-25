@@ -24,6 +24,7 @@ import { DEFAULT_BLACK_SCREEN_SETTINGS } from '../types/blackScreenSettings';
 export interface GlobalSettings {
   mallId: MallId;
   setupCompleted?: boolean;
+  hostname?: string;
 }
 
 /**
@@ -100,13 +101,18 @@ export async function loadGlobalSettings(): Promise<GlobalSettings> {
     return {
       mallId: (raw.mallId ?? 'suzaka') as MallId,
       setupCompleted: raw.setupCompleted ?? false,
+      hostname: raw.hostname ?? '',
     };
   } catch (error) {
     logError('CONFIG', 'Failed to load global settings', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { mallId: 'suzaka', setupCompleted: false };
+    return { mallId: 'suzaka', setupCompleted: false, hostname: '' };
   }
+}
+
+export async function cleanupOldHostnameMaps(mallId: string, currentHostname: string): Promise<void> {
+  await invoke('cleanup_old_hostname_maps', { mallId, currentHostname });
 }
 
 export async function saveGlobalSettings(settings: GlobalSettings): Promise<void> {

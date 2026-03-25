@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::OpenOptions;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
@@ -539,6 +539,290 @@ fn read_mall_asset(relative_path: String) -> Result<Option<String>, String> {
     }
 
     Ok(None)
+}
+
+// ---------------------------------------------------------------------------
+// Media download commands (S3 ZIP)
+// ---------------------------------------------------------------------------
+
+fn get_media_dir() -> Result<PathBuf, String> {
+    let dir = get_app_data_dir()?.join("medias");
+    fs::create_dir_all(&dir)
+        .map_err(|e| format!("Failed to create media directory: {}", e))?;
+    Ok(dir)
+}
+
+/// Resolve the base media directory.
+/// In dev mode: <cwd>/medias  (project-local media directory)
+/// In production: %LOCALAPPDATA%/com.tti.gido-touch-mini/medias
+fn get_media_base_dir() -> Result<PathBuf, String> {
+    let dev_path = std::env::current_dir()
+        .unwrap_or_default()
+        .join("medias");
+    if dev_path.exists() {
+        return Ok(dev_path);
+    }
+    get_media_dir()
+}
+
+#[derive(Serialize)]
+struct MediaDownloadResult {
+    success: bool,
+    message: String,
+    skipped: bool,
+}
+
+#[derive(Clone, Serialize)]
+struct MediaProgressPayload {
+    phase: String,
+    percent: f64,
+    downloaded_bytes: u64,
+    total_bytes: u64,
+    message: String,
+}
+
+/// Internal helper: download a ZIP from S3 and extract to dest_dir (purging it first).
+fn sync_zip_to_dir(
+    app: &tauri::AppHandle,
+    zip_url: &str,
+    zip_path: &PathBuf,
+    dest_dir: &PathBuf,
+    label: &str,
+) -> Result<MediaDownloadResult, String> {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(300))
+        .build()
+        .map_err(|e| format!("Client build error: {}", e))?;
+
+    let mut response = client
+        .get(zip_url)
+        .header("User-Agent", "GidoTouchMini-MediaUpdater")
+        .header("Cache-Control", "no-cache")
+        .send()
+        .map_err(|e| format!("Download error: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        return Ok(MediaDownloadResult {
+            success: false,
+            message: format!("Download failed: HTTP {}", status),
+            skipped: false,
+        });
+    }
+
+    let total_size = response.content_length().unwrap_or(0);
+    let mut downloaded: u64 = 0;
+    let mut file = fs::File::create(zip_path)
+        .map_err(|e| format!("Failed to create zip file: {}", e))?;
+    let mut buffer = [0u8; 65536];
+    let mut last_emit = std::time::Instant::now();
+
+    let _ = app.emit("media-download-progress", MediaProgressPayload {
+        phase: "download".to_string(),
+        percent: 0.0,
+        downloaded_bytes: 0,
+        total_bytes: total_size,
+        message: format!("ダウンロード開始 ({})", label),
+    });
+
+    loop {
+        let bytes_read = response.read(&mut buffer)
+            .map_err(|e| format!("Failed to read response data: {}", e))?;
+        if bytes_read == 0 { break; }
+        file.write_all(&buffer[..bytes_read])
+            .map_err(|e| format!("Failed to write zip data: {}", e))?;
+        downloaded += bytes_read as u64;
+
+        let now = std::time::Instant::now();
+        if now.duration_since(last_emit).as_millis() >= 250 {
+            let percent = if total_size > 0 {
+                (downloaded as f64 / total_size as f64) * 100.0
+            } else { 0.0 };
+            let _ = app.emit("media-download-progress", MediaProgressPayload {
+                phase: "download".to_string(),
+                percent,
+                downloaded_bytes: downloaded,
+                total_bytes: total_size,
+                message: format!(
+                    "ダウンロード中… {:.1}MB / {:.1}MB",
+                    downloaded as f64 / 1_048_576.0,
+                    total_size as f64 / 1_048_576.0
+                ),
+            });
+            last_emit = now;
+        }
+    }
+    drop(file);
+
+    let _ = app.emit("media-download-progress", MediaProgressPayload {
+        phase: "download".to_string(),
+        percent: 100.0,
+        downloaded_bytes: downloaded,
+        total_bytes: total_size,
+        message: "ダウンロード完了。展開中…".to_string(),
+    });
+
+    if dest_dir.exists() {
+        fs::remove_dir_all(dest_dir)
+            .map_err(|e| format!("Failed to clean existing directory: {}", e))?;
+    }
+    fs::create_dir_all(dest_dir)
+        .map_err(|e| format!("Failed to create directory: {}", e))?;
+
+    let zip_file = fs::File::open(zip_path)
+        .map_err(|e| format!("Failed to open zip file: {}", e))?;
+    let mut archive = zip::ZipArchive::new(zip_file)
+        .map_err(|e| format!("Failed to read zip archive: {}", e))?;
+
+    let total_entries = archive.len();
+    for i in 0..total_entries {
+        let mut entry = archive.by_index(i)
+            .map_err(|e| format!("Failed to read zip entry: {}", e))?;
+
+        let out_path = match entry.enclosed_name() {
+            Some(path) => dest_dir.join(path),
+            None => continue,
+        };
+
+        if entry.is_dir() {
+            fs::create_dir_all(&out_path)
+                .map_err(|e| format!("Failed to create directory: {}", e))?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create parent directory: {}", e))?;
+            }
+            let mut outfile = fs::File::create(&out_path)
+                .map_err(|e| format!("Failed to create file: {}", e))?;
+            let mut buf = Vec::new();
+            entry.read_to_end(&mut buf)
+                .map_err(|e| format!("Failed to read zip entry data: {}", e))?;
+            outfile.write_all(&buf)
+                .map_err(|e| format!("Failed to write extracted file: {}", e))?;
+        }
+
+        if total_entries > 0 && (i % 10 == 0 || i == total_entries - 1) {
+            let extract_percent = ((i + 1) as f64 / total_entries as f64) * 100.0;
+            let _ = app.emit("media-download-progress", MediaProgressPayload {
+                phase: "extract".to_string(),
+                percent: extract_percent,
+                downloaded_bytes: downloaded,
+                total_bytes: total_size,
+                message: format!("展開中… {}/{} ファイル", i + 1, total_entries),
+            });
+        }
+    }
+
+    let _ = fs::remove_file(zip_path);
+
+    Ok(MediaDownloadResult {
+        success: true,
+        message: format!("Extracted to {} (zip_url={})", dest_dir.display(), zip_url),
+        skipped: false,
+    })
+}
+
+/// Download assets ZIP from S3 and extract to media/assets/{mallId}/.
+#[tauri::command]
+fn sync_assets_from_s3(app: tauri::AppHandle, mall_id: String, zip_url: String) -> Result<MediaDownloadResult, String> {
+    let media_root = get_media_dir()?;
+    let zip_path = media_root.join(format!("assets-{}.zip", &mall_id));
+    let dest_dir = media_root.join("assets").join(&mall_id);
+    sync_zip_to_dir(&app, &zip_url, &zip_path, &dest_dir, &format!("assets/{}", mall_id))
+}
+
+/// Download maps ZIP from S3 and extract to media/maps/{mallId}/{hostname}/.
+#[tauri::command]
+fn sync_maps_from_s3(app: tauri::AppHandle, mall_id: String, hostname: String, zip_url: String) -> Result<MediaDownloadResult, String> {
+    let media_root = get_media_dir()?;
+    let zip_path = media_root.join(format!("maps-{}-{}.zip", &mall_id, &hostname));
+    let dest_dir = media_root.join("maps").join(&mall_id).join(&hostname);
+    sync_zip_to_dir(&app, &zip_url, &zip_path, &dest_dir, &format!("maps/{}/{}", mall_id, hostname))
+}
+
+/// List all mall-specific asset files (downloaded assets and maps).
+/// Looks in:
+///   <media_base>/assets/<mall_id>/       → relative keys as-is
+///   <media_base>/maps/<mall_id>/<hostname>/ → prefixed with "maps/"
+#[tauri::command]
+fn list_mall_assets(mall_id: String, hostname: String) -> Result<HashMap<String, String>, String> {
+    let media_base = get_media_base_dir()?;
+    let mut result = HashMap::new();
+
+    let assets_dir = media_base.join("assets").join(&mall_id);
+    if assets_dir.exists() {
+        scan_assets_to_data_urls(&assets_dir, &assets_dir, &mut result)?;
+    }
+
+    if !hostname.is_empty() && hostname != "unknown" {
+        let maps_dir = media_base.join("maps").join(&mall_id).join(&hostname);
+        if maps_dir.exists() {
+            let mut maps_raw = HashMap::new();
+            scan_assets_to_data_urls(&maps_dir, &maps_dir, &mut maps_raw)?;
+            for (k, v) in maps_raw {
+                result.insert(format!("maps/{}", k), v);
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+fn scan_assets_to_data_urls(
+    base: &std::path::Path,
+    dir: &std::path::Path,
+    result: &mut HashMap<String, String>,
+) -> Result<(), String> {
+    let entries = fs::read_dir(dir)
+        .map_err(|e| format!("Failed to read directory {}: {}", dir.display(), e))?;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            scan_assets_to_data_urls(base, &path, result)?;
+        } else {
+            if let Some(fname) = path.file_name().and_then(|f| f.to_str()) {
+                if fname.starts_with('.') {
+                    continue;
+                }
+            }
+            if let Ok(rel) = path.strip_prefix(base) {
+                let rel_str = rel.to_string_lossy().replace('\\', "/");
+                if let Some(data_url) = file_to_data_url(&path) {
+                    result.insert(rel_str, data_url);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Delete all subdirectories under maps/{mall_id}/ that do not match current_hostname.
+#[tauri::command]
+fn cleanup_old_hostname_maps(mall_id: String, current_hostname: String) -> Result<(), String> {
+    if mall_id.is_empty() {
+        return Ok(());
+    }
+    let media_base = get_media_base_dir()?;
+    let maps_mall_dir = media_base.join("maps").join(&mall_id);
+    if !maps_mall_dir.exists() {
+        return Ok(());
+    }
+    let entries = fs::read_dir(&maps_mall_dir)
+        .map_err(|e| format!("Failed to read maps directory: {}", e))?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
+            if dir_name != current_hostname {
+                fs::remove_dir_all(&path)
+                    .map_err(|e| format!("Failed to remove old hostname dir {}: {}", path.display(), e))?;
+            }
+        }
+    }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -1148,6 +1432,10 @@ fn main() {
             webview_ping,
             pause_watchdog,
             resume_watchdog,
+            sync_assets_from_s3,
+            sync_maps_from_s3,
+            list_mall_assets,
+            cleanup_old_hostname_maps,
         ]);
 
     let app = builder

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import appIcon from '../../build/icon.ico';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
+import { useAssetSync } from '../hooks/useAssetSync';
+import { useMapSync } from '../hooks/useMapSync';
 import { getVersion } from '@tauri-apps/api/app';
 
 interface PatchScreenProps {
@@ -9,6 +11,8 @@ interface PatchScreenProps {
 
 export function PatchScreen({ onComplete }: PatchScreenProps) {
   const { updateStatus, installUpdate } = useAutoUpdate();
+  const { assetStatus } = useAssetSync();
+  const { mapStatus } = useMapSync();
   const [appVersion, setAppVersion] = useState<string>('');
 
   // Load app version from Tauri
@@ -28,35 +32,80 @@ export function PatchScreen({ onComplete }: PatchScreenProps) {
     }
   }, [updateStatus.status, installUpdate]);
 
-  // When no update available or error, proceed immediately
+  // When app update and all media syncs are done, proceed
   useEffect(() => {
-    if (updateStatus.status === 'uptodate' || updateStatus.status === 'error') {
+    const appDone = updateStatus.status === 'uptodate' || updateStatus.status === 'error';
+    const assetDone = assetStatus.status === 'done' || assetStatus.status === 'error';
+    const mapDone = mapStatus.status === 'done' || mapStatus.status === 'error';
+
+    if (appDone && assetDone && mapDone) {
       onComplete();
     }
-  }, [updateStatus.status, onComplete]);
+  }, [updateStatus.status, assetStatus.status, mapStatus.status, onComplete]);
 
-  // Map Tauri update status to display title
+  // Pick the most active media status for display
+  const activeMediaStatus = (() => {
+    for (const s of [assetStatus, mapStatus]) {
+      if (s.status === 'downloading') return s;
+    }
+    for (const s of [assetStatus, mapStatus]) {
+      if (s.status === 'checking') return s;
+    }
+    for (const s of [assetStatus, mapStatus]) {
+      if (s.status === 'error') return s;
+    }
+    return assetStatus;
+  })();
+
+  const appDone = updateStatus.status === 'uptodate' || updateStatus.status === 'error';
+  const mediaActive = activeMediaStatus.status === 'downloading';
+  type Phase = 'app_update' | 'media_download';
+  const currentPhase: Phase = (mediaActive || appDone) ? 'media_download' : 'app_update';
+
   const titleLabel = (() => {
-    switch (updateStatus.status) {
-      case 'idle':
-      case 'checking':
-        return 'アップデートを確認中…';
-      case 'available':
-      case 'downloading':
-        return 'アップデートをダウンロードしています';
-      case 'ready':
-        return 'アップデートが完了しました';
-      case 'uptodate':
-        return '最新バージョンです';
-      case 'error':
-        return 'アップデートエラー';
+    if (updateStatus.status === 'ready') return 'アップデートが完了しました';
+    switch (currentPhase) {
+      case 'app_update':
+        switch (updateStatus.status) {
+          case 'idle':
+          case 'checking':
+            return 'アップデートを確認中…';
+          case 'available':
+          case 'downloading':
+            return 'アップデートをダウンロードしています';
+          case 'error':
+            return 'アップデートエラー';
+          default:
+            return 'アップデート状態';
+        }
+      case 'media_download':
+        switch (activeMediaStatus.status) {
+          case 'idle':
+          case 'checking':
+            return 'メディアデータを確認中…';
+          case 'downloading':
+            return 'メディアデータをダウンロード中…';
+          case 'error':
+            return 'メディアダウンロードエラー';
+          default:
+            return 'メディアデータの確認';
+        }
       default:
         return 'アップデート状態';
     }
   })();
 
-  const statusMessage = updateStatus.message || '起動しています…';
-  const displayPercent = updateStatus.progress;
+  const statusMessage = (() => {
+    if (updateStatus.status === 'ready') return updateStatus.message;
+    if (currentPhase === 'app_update') return updateStatus.message || '起動しています…';
+    return activeMediaStatus.message || 'メディアデータを確認中…';
+  })();
+
+  const displayPercent = (() => {
+    if (updateStatus.status === 'ready') return 100;
+    if (currentPhase === 'app_update') return updateStatus.progress;
+    return activeMediaStatus.progress;
+  })();
 
   return (
     <div

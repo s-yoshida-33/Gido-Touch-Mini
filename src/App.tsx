@@ -515,7 +515,7 @@ const App: React.FC = () => {
   // Unified save handler: writes global settings + per-mall settings in one operation.
   // Called by UnifiedSettingsScreen when user clicks "Save".
   const handleSaveAllSettings = async (
-    global: { mallId: string; floor: string },
+    global: { mallId: string; floor: string; hostname?: string },
     mallData: MallSettingsFile,
   ) => {
     try {
@@ -561,9 +561,12 @@ const App: React.FC = () => {
       };
 
       // 2. Save global settings (settings.json) — floor is no longer stored here
+      // Preserve existing hostname unless explicitly provided by the caller
+      const existingGlobal = await loadGlobalSettings();
       await saveGlobalSettings({
         mallId: global.mallId as MallId,
         setupCompleted: true,
+        hostname: global.hostname ?? existingGlobal.hostname,
       });
 
       // 3. Save per-mall settings ([mallId]-settings.json)
@@ -622,7 +625,7 @@ const App: React.FC = () => {
 
   // Handle save during initial setup (phase 2 → phase 3)
   const handleInitialSetupSave = async (
-    global: { mallId: string; floor: string },
+    global: { mallId: string; floor: string; hostname?: string },
     mallData: MallSettingsFile,
   ) => {
     // Delegate to normal save handler first

@@ -1,12 +1,15 @@
 import React, { useRef, useState } from "react";
 import type { FloorId } from "../types/floorLayout";
 import type { ImageSettings } from "../types/imageSettings";
+import { useMapForceFetch } from "../hooks/useMapForceFetch";
 
 export interface ImageSettingsTabProps {
   floor: FloorId;
   onChangeFloor: (floor: FloorId) => void;
   imageSettings: ImageSettings;
   onChangeImageSettings: (settings: ImageSettings) => void;
+  onMapsFetchedFromS3?: () => void;
+  hostname?: string;
 }
 
 const FLOORS: FloorId[] = ["1F", "2F", "3F", "4F"];
@@ -16,10 +19,14 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
   onChangeFloor,
   imageSettings,
   onChangeImageSettings,
+  onMapsFetchedFromS3,
+  hostname,
 }) => {
   const floorMapInputRef = useRef<HTMLInputElement>(null);
   const openTimeInputRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const { status: fetchStatus, fetchMaps, reset: resetFetch } = useMapForceFetch();
 
   const validateSvgFile = (file: File): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -99,6 +106,23 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
     event.target.value = "";
   };
 
+  const handleFetchMapsFromS3 = async () => {
+    resetFetch();
+    const floorMaps = await fetchMaps(hostname);
+    if (!floorMaps) return;
+
+    onChangeImageSettings({
+      ...imageSettings,
+      floorMaps: {
+        ...imageSettings.floorMaps,
+        ...floorMaps,
+      },
+    });
+    if (onMapsFetchedFromS3) onMapsFetchedFromS3();
+  };
+
+  const isFetching = fetchStatus.status === 'fetching';
+
   const handleRemoveImage = (type: "floorMap" | "openTime", floorId?: FloorId) => {
     if (type === "floorMap" && floorId) {
       onChangeImageSettings({
@@ -121,6 +145,66 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
       <h2 style={{ marginTop: 0, marginBottom: 24, fontSize: 20, fontWeight: 600 }}>
         画像設定
       </h2>
+
+      {/* S3 Map Fetch */}
+      <div style={{ marginBottom: 32 }}>
+        <button
+          onClick={handleFetchMapsFromS3}
+          disabled={isFetching}
+          style={{
+            width: "100%",
+            padding: "10px 16px",
+            backgroundColor: isFetching ? "#2E7D32" : "#388E3C",
+            border: "none",
+            borderRadius: 4,
+            color: isFetching ? "#9E9E9E" : "#ffffff",
+            cursor: isFetching ? "not-allowed" : "pointer",
+            fontSize: 14,
+            fontWeight: 500,
+          }}
+        >
+          {isFetching ? "取得中..." : "最新のマップ画像を取得"}
+        </button>
+
+        {fetchStatus.status !== 'idle' && (
+          <div style={{ marginTop: 8 }}>
+            {isFetching && (
+              <div
+                style={{
+                  height: 4,
+                  backgroundColor: "#2A3F55",
+                  borderRadius: 2,
+                  marginBottom: 6,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${fetchStatus.progress}%`,
+                    backgroundColor: "#4A9EFF",
+                    borderRadius: 2,
+                    transition: "width 0.3s ease",
+                  }}
+                />
+              </div>
+            )}
+            <div
+              style={{
+                fontSize: 12,
+                color:
+                  fetchStatus.status === 'error'
+                    ? "#EF9A9A"
+                    : fetchStatus.status === 'done'
+                    ? "#A5D6A7"
+                    : "#9E9E9E",
+              }}
+            >
+              {fetchStatus.message}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Floor Selection */}
       <div style={{ marginBottom: 32 }}>
