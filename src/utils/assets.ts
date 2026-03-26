@@ -1,6 +1,23 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logWarn } from "../logs/logging";
 
+/**
+ * ユーザーが手動で設定したカスタム画像パスかどうかを判定する。
+ * Viteバンドル URL（"/assets/..."）はカスタムパスではないため false を返す。
+ * data URL・絶対ファイルパス・UNCパスの場合のみ true を返す。
+ */
+export function isCustomImagePath(path: string): boolean {
+  if (!path) return false;
+  if (path.startsWith("data:")) return true;
+  // Windows絶対パス (例: C:\Users\...\floormap-1F.svg)
+  if (/^[A-Za-z]:[/\\]/.test(path)) return true;
+  // UNCパス
+  if (path.startsWith("\\\\")) return true;
+  // Unixの絶対パス（Windowsでは通常発生しないが念のため）
+  if (path.startsWith("/") && !path.startsWith("/assets/")) return true;
+  return false;
+}
+
 // すべてのアセットを一括読み込み
 // キーはファイルパス、値はModule（defaultにURLが入っている）
 // アイコン系SVG（picto/genre/common等）は ?inline でデータURIとしてJSバンドルに埋め込む。

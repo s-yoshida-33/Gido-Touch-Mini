@@ -27,7 +27,7 @@ import { DEFAULT_MALL_SETTINGS } from "./types/mall";
 import type { BlackScreenSettings } from "./types/blackScreenSettings";
 import { DEFAULT_BLACK_SCREEN_SETTINGS } from "./types/blackScreenSettings";
 import { getMallConfig } from "./config/malls";
-// import { getMallAssetUrl } from "./utils/assets";
+import { isCustomImagePath } from "./utils/assets";
 import type { Shop } from "./types/shop";
 import { fetchShops, loadShopsFromCache, saveShopsToCache } from "./repositories/shopRepository";
 import {
@@ -113,22 +113,6 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-/**
- * Check if an image path is a user-saved custom path (absolute file path or data URL).
- * Vite-bundled asset URLs (relative paths like "/assets/...") are NOT considered custom
- * because they can become stale after reinstall/update when content hashes change.
- */
-const isCustomImagePath = (path: string): boolean => {
-  if (!path) return false;
-  if (path.startsWith("data:")) return true;
-  // Windows absolute path (e.g. C:\Users\...\images\floormap-1F.svg)
-  if (/^[A-Za-z]:[/\\]/.test(path)) return true;
-  // UNC path
-  if (path.startsWith("\\\\")) return true;
-  // Unix absolute path (unlikely on Windows but defensive)
-  if (path.startsWith("/") && !path.startsWith("/assets/")) return true;
-  return false;
-};
 
 const mergeWithDefaultImages = (settings: ImageSettings, mallId: string): ImageSettings => {
   const config = getMallConfig(mallId as any);

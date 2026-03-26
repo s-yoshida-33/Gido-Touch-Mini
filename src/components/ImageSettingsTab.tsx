@@ -1,7 +1,8 @@
 import React, { useRef, useState } from "react";
 import type { FloorId } from "../types/floorLayout";
 import type { ImageSettings } from "../types/imageSettings";
-import { useMapForceFetch } from "../hooks/useMapForceFetch";
+import { useMapForceFetch, } from "../hooks/useMapForceFetch";
+import { isCustomImagePath } from "../utils/assets";
 
 export interface ImageSettingsTabProps {
   floor: FloorId;
@@ -274,7 +275,8 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
           >
             画像を選択
           </button>
-          {(imageSettings.floorMaps[floor] || diskFloorMaps?.[floor]) && (
+          {/* 削除ボタンはユーザーがアップロードしたカスタム画像がある場合のみ表示する */}
+          {isCustomImagePath(imageSettings.floorMaps[floor]) && (
             <button
               onClick={() => handleRemoveImage("floorMap", floor)}
               style={{
@@ -297,7 +299,8 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
             {errors[`floorMap-${floor}`]}
           </div>
         )}
-        {(imageSettings.floorMaps[floor] || diskFloorMaps?.[floor]) && (
+        {/* プレビューはカスタム画像またはS3ダウンロード済みマップがある場合に表示する */}
+        {(isCustomImagePath(imageSettings.floorMaps[floor]) || diskFloorMaps?.[floor]) && (
           <div
             style={{
               marginTop: 12,
@@ -308,7 +311,9 @@ export const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
             }}
           >
             <img
-              src={imageSettings.floorMaps[floor] || diskFloorMaps?.[floor]}
+              src={isCustomImagePath(imageSettings.floorMaps[floor])
+                ? imageSettings.floorMaps[floor]
+                : diskFloorMaps?.[floor]}
               alt={`${floor} map preview`}
               style={{
                 maxWidth: "100%",

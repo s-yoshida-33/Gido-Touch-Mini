@@ -11,7 +11,7 @@ import type { ShopPositionSettings } from "../types/shopPosition";
 import type { PictoSettings } from "../types/picto";
 import type { MallId } from "../types/mall";
 import type { FloorId } from "../types/floorLayout";
-import { getMallAssetUrl, loadPictoIcon } from "../utils/assets";
+import { getMallAssetUrl, loadPictoIcon, isCustomImagePath } from "../utils/assets";
 import { logInfo, logError } from "../logs/logging";
 import { LocationIconsOverlay } from "../components/LocationIconsOverlay";
 import { ShopPin } from "../components/ShopPin";
@@ -73,7 +73,10 @@ const GidoApp: React.FC<GidoAppProps> = ({
 
   const floorId = floor as FloorId;
   // Get floor map: custom upload > S3-downloaded disk map > bundled default
-  const customFloorMap = floorId ? imageSettings?.floorMaps?.[floorId] : undefined;
+  // imageSettings.floorMaps にはバンドルURL（常にtruthy）が入っている場合があるため、
+  // isCustomImagePath でユーザー保存の実パスか判定してから使用する。
+  const rawFloorMap = floorId ? imageSettings?.floorMaps?.[floorId] : undefined;
+  const customFloorMap = rawFloorMap && isCustomImagePath(rawFloorMap) ? rawFloorMap : undefined;
   const floorMap = customFloorMap
     || diskFloorMaps?.[floorId]
     || (defaultFloorMaps ? defaultFloorMaps[floor] : undefined)
