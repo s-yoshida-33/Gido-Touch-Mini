@@ -143,7 +143,7 @@ export function useMapForceFetch() {
       logInfo('MAP_FORCE_FETCH', 'Map files updated from S3', { mallId, hostname, zipName });
 
       setStatus({ status: 'fetching', progress: 99, message: '画像を読み込み中...' });
-      const assetMap = await invoke<Record<string, string>>('list_mall_assets', { mallId, hostname });
+      const assetMap = await invoke<Record<string, string>>('list_mall_maps', { mallId, hostname });
       const floorMaps = parseFloorMapsFromAssets(assetMap);
 
       if (Object.keys(floorMaps).length === 0) {

@@ -234,7 +234,7 @@ const App: React.FC = () => {
   const loadDiskFloorMaps = async (currentMallId: string, currentHostname: string): Promise<Partial<Record<FloorId, string>>> => {
     if (!currentMallId || !currentHostname || currentHostname === 'unknown') return {};
     try {
-      const assetMap = await invoke<Record<string, string>>('list_mall_assets', {
+      const assetMap = await invoke<Record<string, string>>('list_mall_maps', {
         mallId: currentMallId,
         hostname: currentHostname,
       });

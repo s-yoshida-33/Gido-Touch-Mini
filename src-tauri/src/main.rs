@@ -753,6 +753,30 @@ fn sync_maps_from_s3(app: tauri::AppHandle, mall_id: String, hostname: String, z
 /// List all mall-specific asset files (downloaded assets and maps).
 /// Looks in:
 ///   <media_base>/assets/<mall_id>/       → relative keys as-is
+/// Fast command that returns only floor-map SVGs for the given mall+hostname.
+/// Keys are prefixed with "maps/" (e.g. "maps/1F-map.svg").
+/// Unlike list_mall_assets, this does NOT scan the (potentially large) assets directory,
+/// so it completes in milliseconds regardless of how many shop photos are downloaded.
+#[tauri::command]
+fn list_mall_maps(mall_id: String, hostname: String) -> Result<HashMap<String, String>, String> {
+    let media_base = get_media_base_dir()?;
+    let mut result = HashMap::new();
+
+    if !hostname.is_empty() && hostname != "unknown" {
+        let maps_dir = media_base.join("maps").join(&mall_id).join(&hostname);
+        if maps_dir.exists() {
+            let mut maps_raw = HashMap::new();
+            scan_assets_to_data_urls(&maps_dir, &maps_dir, &mut maps_raw)?;
+            for (k, v) in maps_raw {
+                result.insert(format!("maps/{}", k), v);
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+///   <media_base>/assets/<mall_id>/ → keys are relative paths under that directory
 ///   <media_base>/maps/<mall_id>/<hostname>/ → prefixed with "maps/"
 #[tauri::command]
 fn list_mall_assets(mall_id: String, hostname: String) -> Result<HashMap<String, String>, String> {
@@ -1445,6 +1469,7 @@ fn main() {
             sync_assets_from_s3,
             sync_maps_from_s3,
             list_mall_assets,
+            list_mall_maps,
             cleanup_old_hostname_maps,
         ]);
 
