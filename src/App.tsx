@@ -505,12 +505,15 @@ const App: React.FC = () => {
         // Preload the initial floor map into browser cache before showing the main screen.
         // This ensures the SVG is decoded/rasterized and displays on the first paint,
         // instead of appearing blank for 1-3 seconds after the screen is shown.
+        // Priority: custom upload > S3 download > bundled default (same as effectiveFloorMaps).
         const initialFloor = (mallData.floor ?? "1F") as FloorId;
         const mergedImages = mergeWithDefaultImages(mallData.imageSettings, currentMallId);
-        const initialMapUrl = mergedImages.floorMaps[initialFloor]
+        const rawCustom = mallData.imageSettings.floorMaps[initialFloor] ?? '';
+        const initialMapUrl = (rawCustom && isCustomImagePath(rawCustom) ? rawCustom : null)
           || diskMaps[initialFloor]
-          || mergedImages.floorMaps["1F"]
-          || diskMaps["1F"];
+          || diskMaps["1F"]
+          || mergedImages.floorMaps[initialFloor]
+          || mergedImages.floorMaps["1F"];
         if (initialMapUrl) {
           await new Promise<void>((resolve) => {
             const img = new Image();
@@ -722,6 +725,27 @@ const App: React.FC = () => {
 
   const currentMallConfig = getMallConfig(mallSettings.mallId);
 
+  // Compute effective floor maps with the correct priority:
+  //   1. Custom uploaded path (absolute file path / data URL saved by user)
+  //   2. S3-downloaded map (diskFloorMaps, synced by useMapSync on startup)
+  //   3. Bundled default SVG (from Vite build)
+  //
+  // Previously `imageSettings.floorMaps` merged custom + bundled BEFORE passing to
+  // ShopListScreen, so the bundled URL was always truthy and S3 maps were never shown.
+  const effectiveFloorMaps = useMemo((): Record<FloorId, string> => {
+    return (['1F', '2F', '3F', '4F'] as FloorId[]).reduce((acc, floorId) => {
+      const custom = imageSettings.floorMaps[floorId];
+      if (custom && isCustomImagePath(custom)) {
+        acc[floorId] = custom;
+      } else if (diskFloorMaps[floorId]) {
+        acc[floorId] = diskFloorMaps[floorId]!;
+      } else {
+        acc[floorId] = currentMallConfig.floorMaps[floorId] || '';
+      }
+      return acc;
+    }, {} as Record<FloorId, string>);
+  }, [imageSettings.floorMaps, diskFloorMaps, currentMallConfig]);
+
   // --- Phase: Loading ---
   if (appPhase === "loading") {
     return (
@@ -861,7 +885,7 @@ const App: React.FC = () => {
       eventNews={eventNews}
       pictoSettings={pictoSettings}
       genres={currentMallConfig.genres}
-      floorMaps={imageSettings.floorMaps}
+      floorMaps={effectiveFloorMaps}
       diskFloorMaps={diskFloorMaps}
       openTimeImage={imageSettings.openTimeImage}
       mallSettings={mallSettings}
