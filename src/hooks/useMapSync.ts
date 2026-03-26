@@ -128,8 +128,11 @@ export const useMapSync = () => {
         const zipNameChanged = remoteVersion.zip != null && (
           localZipName == null || remoteVersion.zip !== localZipName
         );
+        const dateChanged = remoteVersion.updated_at != null && (
+          localMeta?.lastUpdatedAt == null || remoteVersion.updated_at !== localMeta.lastUpdatedAt
+        );
 
-        if (!zipNameChanged) {
+        if (!zipNameChanged && !dateChanged) {
           logInfo('MAP_SYNC', 'Maps are up to date', { mallId, hostname });
           setMapStatus({ status: 'done', progress: 100, message: 'マップは最新です' });
           return;

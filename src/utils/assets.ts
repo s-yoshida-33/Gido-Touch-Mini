@@ -3,8 +3,18 @@ import { logWarn } from "../logs/logging";
 
 // すべてのアセットを一括読み込み
 // キーはファイルパス、値はModule（defaultにURLが入っている）
-// ../assets/malls/**/*.svg と ../assets/common/**/*.svg を両方カバーするために ../assets/**/*.svg とする
-const assetModules = import.meta.glob('../assets/**/*.svg', { eager: true, query: '?url' });
+// アイコン系SVG（picto/genre/common等）は ?inline でデータURIとしてJSバンドルに埋め込む。
+// これにより起動時にWebViewがHTTPリクエストを発行せず、初回レンダリングで即座に表示される。
+// マップSVGは大きいため ?url で別ファイル参照のままにする。
+const assetModulesInline = import.meta.glob(
+  ['../assets/**/*.svg', '!../assets/**/maps/**/*.svg'],
+  { eager: true, query: '?inline' }
+);
+const assetModulesUrl = import.meta.glob(
+  '../assets/**/maps/**/*.svg',
+  { eager: true, query: '?url' }
+);
+const assetModules: Record<string, unknown> = { ...assetModulesInline, ...assetModulesUrl };
 
 export function getAssetUrl(path: string): string {
   // pathは assets/ 以下からの相対パスなどを想定

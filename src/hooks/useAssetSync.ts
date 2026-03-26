@@ -119,8 +119,11 @@ export const useAssetSync = () => {
         const zipNameChanged = remoteVersion.zip != null && (
           localZipName == null || remoteVersion.zip !== localZipName
         );
+        const dateChanged = remoteVersion.updated_at != null && (
+          localMeta?.lastUpdatedAt == null || remoteVersion.updated_at !== localMeta.lastUpdatedAt
+        );
 
-        if (!zipNameChanged) {
+        if (!zipNameChanged && !dateChanged) {
           logInfo('ASSET_SYNC', 'Assets are up to date', { mallId });
           setAssetStatus({ status: 'done', progress: 100, message: 'アセットは最新です' });
           return;
