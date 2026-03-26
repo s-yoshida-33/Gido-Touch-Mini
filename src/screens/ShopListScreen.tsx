@@ -910,30 +910,75 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   }, [mallId, selectedLanguage, propOpenTimeImage]);
 
   // モール設定の状態
-  const [mallGenreConfig, setMallGenreConfig] = useState<GenreItem[] | null>(null);
-  const [mallPictoConfig, setMallPictoConfig] = useState<PictoItem[] | null>(null);
-  const [genreIcons, setGenreIcons] = useState<Record<string, { normal: string; highlight: string }>>({});
-  const [pictoIcons, setPictoIcons] = useState<Record<string, { button: string; buttonHighlight: string }>>({});
+  // 初期値は静的コンフィグ（Vite URL）で即時設定し、初回レンダリングからアイコンを表示。
+  // loadMallConfig で S3 ダウンロード済みアイコンがあれば上書き更新する。
+  const [mallGenreConfig, setMallGenreConfig] = useState<GenreItem[] | null>(() => {
+    const config = getMallConfig(mallId as MallId);
+    return config.genres.map((g, index) => ({
+      id: g.id,
+      order: index,
+      name: { ja: g.name, en: g.name_en },
+      iconFile: g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0],
+    }));
+  });
+  const [mallPictoConfig, setMallPictoConfig] = useState<PictoItem[] | null>(() => {
+    const config = getMallConfig(mallId as MallId);
+    return config.facilities.map((f, index) => ({
+      id: f.id,
+      order: index,
+      name: { ja: f.name, en: f.name_en || f.name },
+      iconFile: f.iconFile || f.id.replace(/_/g, '-') + '.svg',
+      buttonFile: f.id.replace(/_/g, '-') + '.svg',
+    }));
+  });
+  const [genreIcons, setGenreIcons] = useState<Record<string, { normal: string; highlight: string }>>(() => {
+    const config = getMallConfig(mallId as MallId);
+    const iconMap: Record<string, { normal: string; highlight: string }> = {};
+    config.genres.forEach(g => {
+      const iconFilename = g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0];
+      const highlightFilename = g.iconFile
+        ? g.iconFile.replace('.svg', '-highlight.svg')
+        : (g.highlightIcon.split('/').pop() || `${g.id}-highlight.svg`).split('?')[0];
+      iconMap[g.id] = {
+        normal: getMallAssetUrl(mallId, 'genres/ja', iconFilename) || g.icon,
+        highlight: getMallAssetUrl(mallId, 'genres/ja', highlightFilename) || g.highlightIcon,
+      };
+    });
+    return iconMap;
+  });
+  const [pictoIcons, setPictoIcons] = useState<Record<string, { button: string; buttonHighlight: string }>>(() => {
+    const config = getMallConfig(mallId as MallId);
+    const iconMap: Record<string, { button: string; buttonHighlight: string }> = {};
+    config.facilities.forEach(f => {
+      const btnName = f.id.replace(/_/g, '-');
+      iconMap[f.id] = {
+        button: getMallAssetUrl(mallId, 'pictos/ja', `${btnName}.svg`) || f.icon,
+        buttonHighlight: getMallAssetUrl(mallId, 'pictos/ja', `${btnName}-highlight.svg`) || f.highlightIcon,
+      };
+    });
+    return iconMap;
+  });
 
   // モール設定を読み込む
+  // S3ダウンロード済みアイコン（data URL）があれば上書き更新する。
+  // バンドル済みアイコンは useState の初期値で既に設定済み。
   useEffect(() => {
     const loadMallConfig = async () => {
       try {
-        // ジャンルとピクトの設定を並列取得（逐次取得より遅延を短縮）
-        // NOTE: 先にリセットしないことで、バンドル済みアイコン（f.icon）が
-        //       非同期ロード完了まで表示され続け、起動時の一瞬消えを防ぐ
+        // S3設定JSONとS3アイコンを並列取得
+        // read_mall_config はバンドルリソースのみを参照するため、
+        // プロダクション環境（リソースなし）では常に null が返る。
         const [genreConfig, pictoConfig] = await Promise.all([
           loadMallGenreConfig(mallId) as Promise<GenreConfig | null>,
           loadMallPictoConfig(mallId) as Promise<PictoConfig | null>,
         ]);
 
-        // ジャンルアイコンとピクトアイコンを並列読み込み
         await Promise.all([
-          // ジャンル設定・アイコンの処理
+          // ジャンルアイコン処理
           (async () => {
             if (genreConfig && genreConfig.genres) {
+              // S3設定JSONあり: S3アイコン（data URL）を取得して更新
               setMallGenreConfig(genreConfig.genres);
-
               const loadedIcons = await Promise.all(genreConfig.genres.map(async (genre) => {
                 const normal = await loadGenreIcon(mallId, selectedLanguage, genre.iconFile, false);
                 const highlight = await loadGenreIcon(mallId, selectedLanguage, genre.iconFile, true);
@@ -947,38 +992,28 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               });
               setGenreIcons(iconMap);
             } else {
-              // フォールバック: Config (malls.ts) から生成
+              // S3設定JSONなし: IPC不要。言語に対応した Vite URL で即時更新。
               const config = getMallConfig(mallId);
-              const fallbackGenreConfig: GenreItem[] = config.genres.map((g, index) => ({
-                id: g.id,
-                order: index,
-                name: { ja: g.name, en: g.name_en },
-                iconFile: g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0]
-              }));
-              setMallGenreConfig(fallbackGenreConfig);
-
               const iconMap: Record<string, { normal: string; highlight: string }> = {};
               config.genres.forEach(g => {
                 const iconFilename = g.iconFile || (g.icon.split('/').pop() || `${g.id}.svg`).split('?')[0];
                 const highlightFilename = g.iconFile
                   ? g.iconFile.replace('.svg', '-highlight.svg')
                   : (g.highlightIcon.split('/').pop() || `${g.id}-highlight.svg`).split('?')[0];
-                const langIcon = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, iconFilename);
-                const langHighlight = getMallAssetUrl(mallId, `genres/${selectedLanguage}`, highlightFilename);
                 iconMap[g.id] = {
-                  normal: langIcon || g.icon,
-                  highlight: langHighlight || g.highlightIcon
+                  normal: getMallAssetUrl(mallId, `genres/${selectedLanguage}`, iconFilename) || g.icon,
+                  highlight: getMallAssetUrl(mallId, `genres/${selectedLanguage}`, highlightFilename) || g.highlightIcon,
                 };
               });
               setGenreIcons(iconMap);
             }
           })(),
 
-          // ピクト設定・アイコンの処理
+          // ピクトアイコン処理
           (async () => {
             if (pictoConfig && pictoConfig.pictos) {
+              // S3設定JSONあり: S3アイコン（data URL）を取得して更新
               setMallPictoConfig(pictoConfig.pictos);
-
               const loadedButtonIcons = await Promise.all(pictoConfig.pictos.map(async (picto) => {
                 const name = picto.buttonFile.replace("button-", "").replace(".svg", "");
                 const button = await loadPictoIcon(mallId, selectedLanguage, name, false, true);
@@ -993,30 +1028,16 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               });
               setPictoIcons(buttonIconMap);
             } else {
-              // フォールバック: Config (malls.ts) から生成
+              // S3設定JSONなし: IPC不要。言語に対応した Vite URL で即時更新。
               const config = getMallConfig(mallId);
-              const facilities = config.facilities;
-              const mallPictoList = facilities.map((f, index) => ({
-                id: f.id,
-                order: index,
-                name: { ja: f.name, en: f.name_en || f.name },
-                iconFile: f.iconFile || `${f.id.replace(/_/g, '-')}.svg`,
-                buttonFile: `${f.id.replace(/_/g, '-')}.svg`
-              }));
-              setMallPictoConfig(mallPictoList);
-
               const pIcons: Record<string, { button: string; buttonHighlight: string }> = {};
-              await Promise.all(facilities.map(async (facility) => {
-                const buttonName = facility.id.replace(/_/g, '-');
-                const button = await loadPictoIcon(mallId, selectedLanguage, buttonName, false, true);
-                const buttonHighlight = await loadPictoIcon(mallId, selectedLanguage, buttonName, true, true);
-                const fallbackButton = getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, facility.iconFile || facility.id.replace(/_/g, '-') + '.svg');
-                const fallbackHighlight = getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, (facility.iconFile?.replace('.svg', '') || facility.id.replace(/_/g, '-')) + '-highlight.svg');
-                pIcons[facility.id] = {
-                  button: button || fallbackButton,
-                  buttonHighlight: buttonHighlight || fallbackHighlight
+              config.facilities.forEach(f => {
+                const btnName = f.id.replace(/_/g, '-');
+                pIcons[f.id] = {
+                  button: getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, f.iconFile || `${btnName}.svg`) || f.icon,
+                  buttonHighlight: getMallAssetUrl(mallId, `pictos/${selectedLanguage}`, (f.iconFile?.replace('.svg', '') || btnName) + '-highlight.svg') || f.highlightIcon,
                 };
-              }));
+              });
               setPictoIcons(pIcons);
             }
           })(),
@@ -1790,7 +1811,6 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                       <img
                         src={floorMaps[floor] || diskFloorMaps[floor] || undefined}
                         alt={`${floor} Map`}
-                        decoding="async"
                         style={{
                           width: "100%",
                           height: "100%",
