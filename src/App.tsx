@@ -502,6 +502,27 @@ const App: React.FC = () => {
         const diskMaps = await loadDiskFloorMaps(currentMallId, global.hostname ?? '');
         setDiskFloorMaps(diskMaps);
 
+        // Preload the initial floor map into browser cache before showing the main screen.
+        // This ensures the SVG is decoded/rasterized and displays on the first paint,
+        // instead of appearing blank for 1-3 seconds after the screen is shown.
+        const initialFloor = (mallData.floor ?? "1F") as FloorId;
+        const mergedImages = mergeWithDefaultImages(mallData.imageSettings, currentMallId);
+        const initialMapUrl = mergedImages.floorMaps[initialFloor]
+          || diskMaps[initialFloor]
+          || mergedImages.floorMaps["1F"]
+          || diskMaps["1F"];
+        if (initialMapUrl) {
+          await new Promise<void>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            // Timeout: 3 秒以上かかる場合はスキップして先に進む
+            const timer = setTimeout(resolve, 3000);
+            img.onload = img.onerror = () => { clearTimeout(timer); resolve(); };
+            img.src = initialMapUrl;
+          });
+        }
+
         setAppPhase("running");
         logInfo("SYSTEM", "Application initialized successfully");
       } catch (e) {
