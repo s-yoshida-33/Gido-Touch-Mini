@@ -1,5 +1,5 @@
 // src/screens/UnifiedSettingsScreen.tsx
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import GidoApp from "./GidoApp";
 import type { LocationIconSettingsPerFloor } from "../types/locationIcon";
@@ -89,6 +89,14 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   const [selectedPictoId, setSelectedPictoId] = useState<string | null>(null);
   // Black screen settings
   const [blackScreenSettings, setBlackScreenSettings] = useState<BlackScreenSettings>(initialBlackScreenSettings);
+
+  const unsetShopCount = useMemo(() => {
+    if (!shops) return 0;
+    return shops.filter(shop => {
+      const id = shop.shopId || shop.number;
+      return id && !shopPositions.positions[id];
+    }).length;
+  }, [shops, shopPositions]);
 
   // Hostname for S3 maps path
   const [hostname, setHostname] = useState<string>('');
@@ -470,14 +478,14 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
 
           {/* Tabs */}
           <div style={{ flex: 1, padding: "16px 0" }}>
-            {[
-              { id: "floor" as TabType, label: "フロア設定" },
-              { id: "image" as TabType, label: "画像" },
-              { id: "shopPosition" as TabType, label: "座標設定" },
-              { id: "picto" as TabType, label: "ピクトグラム設定" },
-              { id: "mall" as TabType, label: "ジャンル設定" },
-              { id: "blackScreen" as TabType, label: "ブラックスクリーン" },
-            ].map((tab) => (
+            {([
+              { id: "floor" as TabType, label: "フロア設定", badge: 0 },
+              { id: "image" as TabType, label: "画像", badge: 0 },
+              { id: "shopPosition" as TabType, label: "座標設定", badge: unsetShopCount },
+              { id: "picto" as TabType, label: "ピクトグラム設定", badge: 0 },
+              { id: "mall" as TabType, label: "ジャンル設定", badge: 0 },
+              { id: "blackScreen" as TabType, label: "ブラックスクリーン", badge: 0 },
+            ] as const).map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -492,9 +500,17 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                   textAlign: "left",
                   cursor: "pointer",
                   transition: "background-color 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
-                {tab.label}
+                <span>{tab.label}</span>
+                {tab.badge > 0 && (
+                  <span style={{ backgroundColor: "#ff3b30", color: "#ffffff", borderRadius: 10, minWidth: 20, height: 20, padding: "0 5px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                    {tab.badge > 99 ? "99+" : tab.badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>

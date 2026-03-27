@@ -4,6 +4,7 @@ import "./styles/global-image.css"; // Global image styles
 import ShopListScreen from "./screens/ShopListScreen";
 import { useHeartbeat } from "./hooks/useHeartbeat";
 import { useWebViewPing } from "./hooks/useWebViewPing";
+import { useShopChangeDetection } from "./hooks/useShopChangeDetection";
 import { ContextMenu } from "./components/ContextMenu";
 
 // floor maps imports removed - managed by mall config and assets
@@ -192,6 +193,14 @@ const App: React.FC = () => {
   const [shopPositions, setShopPositions] = useState<ShopPositionSettings>({ positions: {} });
   const [pictoSettings, setPictoSettings] = useState<PictoSettings>(DEFAULT_PICTO_SETTINGS);
   const [shops, setShops] = useState<Shop[]>([]);
+
+  // ショップリストの変化（追加・削除）を検出して Slack 通知
+  const shopChangeItems = useMemo(
+    () => shops.map(s => ({ id: s.shopId || s.number || '', name: s.name })).filter(s => s.id),
+    [shops],
+  );
+  useShopChangeDetection(shopChangeItems, mallId);
+
   const [shopNews, setShopNews] = useState<ShopNews[]>([]);
   const [eventNews, setEventNews] = useState<ShopNews[]>([]);
 
