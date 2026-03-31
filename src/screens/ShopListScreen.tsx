@@ -145,7 +145,12 @@ const ShopImage: React.FC<{ photo: string | undefined; shopId: string | undefine
   const [isLoading, setIsLoading] = useState(!cached);
 
   useEffect(() => {
-    if (cached) return;
+    // Already resolved from cache — still need to update state when props change
+    if (cached) {
+      setImageUrl(cached);
+      setIsLoading(false);
+      return;
+    }
     if (!photo) {
       setIsLoading(false);
       return;

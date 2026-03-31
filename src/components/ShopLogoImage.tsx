@@ -56,8 +56,13 @@ export const ShopLogoImage: React.FC<ShopLogoImageProps> = ({ photo, shopId }) =
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    // Already resolved from cache
-    if (cached) return;
+    // Already resolved from cache — still need to update state when props change
+    if (cached) {
+      setImageUrl(cached);
+      setIsLoading(false);
+      setHasError(false);
+      return;
+    }
 
     if (!photo) { setIsLoading(false); setHasError(true); return; }
     let cancelled = false;
