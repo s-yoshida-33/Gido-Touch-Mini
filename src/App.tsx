@@ -40,9 +40,6 @@ import {
 import {
   fetchShopNewsFromBridge,
   fetchShopNewsListFromBridge,
-  parseShopsData,
-  parseShopNewsData,
-  parseEventNewsData
 } from "./api/bridgeClient";
 import type { ShopNews } from "./types/shopNews";
 import { sseService } from "./services/SSEService";
