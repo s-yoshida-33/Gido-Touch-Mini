@@ -359,48 +359,11 @@ const App: React.FC = () => {
     // Initial fetch with cache
     loadData(true);
 
-    // Subscribe to SSE updates
+    // 分離パターン: SSEは更新通知のみ。データはREST経由で取得する。
     const unsubscribe = sseService.on("update", (payload: any) => {
-      logInfo("APP", "Received update event from SSE", { type: payload.type });
-
-      switch (payload.type) {
-        case "shops":
-          if (payload.data) {
-             const newShops = parseShopsData(payload.data, "1F"); // Default floor fallback
-             // Clean shop names logic
-             const cleaned = newShops.map((s) => ({
-                ...s,
-                name: s.name.replace(/【.*?】/g, "").trim(),
-             }));
-             setShops(cleaned);
-             saveShopsToCache(newShops);
-             logInfo("APP", "Updated shops from SSE", { count: cleaned.length });
-          }
-          break;
-
-        case "shop_news":
-          if (payload.data) {
-             const news = parseShopNewsData(payload.data);
-             setShopNews(news);
-             saveShopNewsToCache(news);
-             logInfo("NEWS", "Updated shop news from SSE", { count: news.length, endpoint: "/api/shop-news" });
-          }
-          break;
-
-        case "event_news":
-           if (payload.data) {
-             const news = parseEventNewsData(payload.data);
-             setEventNews(news);
-             saveEventNewsToCache(news);
-             logInfo("NEWS", "Updated event news from SSE", { count: news.length, endpoint: "/api/event-news" });
-          }
-          break;
-
-        default:
-          logInfo("APP", "Unknown or unhandled SSE event type", { type: payload.type });
-          // If unsure, reload all data (fallback behavior, optional)
-          // loadData(false);
-      }
+      const eventType: string = payload?.type ?? "unknown";
+      logInfo("APP", "Received update signal from SSE, fetching from REST", { type: eventType });
+      loadData(false);
     });
 
     return () => {
