@@ -424,10 +424,14 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   const shopListScrollContainerRef = useRef<HTMLDivElement>(null);
 
   // rAF-based smooth scroll — consistent across all WebView versions
-  const smoothScrollTo = useCallback((el: HTMLElement, targetLeft: number, duration = 300) => {
+  // rAF-based smooth scroll — consistent across all WebView versions.
+  // Duration is derived from distance at a fixed speed so left/right feel identical.
+  const smoothScrollTo = useCallback((el: HTMLElement, targetLeft: number) => {
     const startLeft = el.scrollLeft;
     const delta = targetLeft - startLeft;
     if (delta === 0) return;
+    const SPEED_PX_PER_MS = 1.5;
+    const duration = Math.min(Math.max(Math.abs(delta) / SPEED_PX_PER_MS, 150), 600);
     const startTime = performance.now();
     const step = (now: number) => {
       const elapsed = now - startTime;
@@ -2521,8 +2525,8 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 }}
                 onClick={() => {
                   if (genreScrollContainerRef.current) {
-                    const { scrollWidth } = genreScrollContainerRef.current;
-                    smoothScrollTo(genreScrollContainerRef.current, scrollWidth);
+                    const { scrollWidth, clientWidth } = genreScrollContainerRef.current;
+                    smoothScrollTo(genreScrollContainerRef.current, scrollWidth - clientWidth);
                   }
                 }}
                 onMouseDown={() => setPressedGenreNavButton("next")}
