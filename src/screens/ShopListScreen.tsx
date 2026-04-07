@@ -419,9 +419,26 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   
   // Genre scroll container ref
   const genreScrollContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // Shop list scroll container ref
   const shopListScrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // rAF-based smooth scroll — consistent across all WebView versions
+  const smoothScrollTo = useCallback((el: HTMLElement, targetLeft: number, duration = 300) => {
+    const startLeft = el.scrollLeft;
+    const delta = targetLeft - startLeft;
+    if (delta === 0) return;
+    const startTime = performance.now();
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.scrollLeft = startLeft + delta * eased;
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, []);
 
   // Genre drag scroll state
   const isGenreDraggingRef = useRef(false);
@@ -2384,7 +2401,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 }}
                 onClick={() => {
                   if (genreScrollContainerRef.current) {
-                    genreScrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
+                    smoothScrollTo(genreScrollContainerRef.current, 0);
                   }
                 }}
                 onMouseDown={() => setPressedGenreNavButton("prev")}
@@ -2505,7 +2522,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
                 onClick={() => {
                   if (genreScrollContainerRef.current) {
                     const { scrollWidth } = genreScrollContainerRef.current;
-                    genreScrollContainerRef.current.scrollTo({ left: scrollWidth, behavior: "smooth" });
+                    smoothScrollTo(genreScrollContainerRef.current, scrollWidth);
                   }
                 }}
                 onMouseDown={() => setPressedGenreNavButton("next")}
