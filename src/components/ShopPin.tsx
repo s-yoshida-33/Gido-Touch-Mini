@@ -302,14 +302,48 @@ export const ShopPin: React.FC<ShopPinProps> = ({
 
     if (animation?.enabled && animation.type !== "none") {
       const animClass = getAnimationClass(animation.type);
+      const isSpinAnim = animation.type === "spin-float" || animation.type === "spin-loop";
       const style = {
-        ...innerContainerStyle,
         "--anim-duration": `${animation.duration}s`,
         "--anim-amplitude": `-${fixedAmplitude}px`,
         ...(animation.type === "spin-float" && {
           "--anim-iteration": animation.spinRepeat === false ? "1" : "infinite",
         }),
+        ...(isSpinAnim ? {
+          position: "relative" as const,
+          transformStyle: "preserve-3d" as const,
+        } : {
+          ...innerContainerStyle,
+        }),
       } as React.CSSProperties;
+
+      if (isSpinAnim) {
+        return (
+          // Two-face 3D flip: front face visible at 0°, back face (pre-rotated 180°) visible at 180°.
+          // Both use backface-visibility: hidden so only the correct face shows at each angle.
+          <div style={{ perspective: "600px" }}>
+            <div className={animClass} style={style}>
+              <div style={{ backfaceVisibility: "hidden" }}>
+                {renderContent()}
+              </div>
+              <div style={{
+                backfaceVisibility: "hidden",
+                transform: "rotateY(180deg)",
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}>
+                {renderContent()}
+              </div>
+            </div>
+          </div>
+        );
+      }
 
       return (
         <div className={animClass} style={style}>
