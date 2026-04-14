@@ -32,11 +32,13 @@ function buildShadowStyle(shadow?: ShopPosition['shadow']): React.CSSProperties 
 
 function getAnimationClass(type: string): string {
   switch (type) {
-    case "floating": return "anim-floating";
-    case "pulse": return "anim-pulse";
-    case "bounce": return "anim-bounce";
-    case "blink": return ""; // handled by ripple overlay
-    default: return "";
+    case "floating":   return "anim-floating";
+    case "pulse":      return "anim-pulse";
+    case "bounce":     return "anim-bounce";
+    case "blink":      return ""; // handled by ripple overlay
+    case "spin-float": return "anim-spin-float";
+    case "spin-loop":  return "anim-spin-loop";
+    default:           return "";
   }
 }
 
@@ -304,6 +306,9 @@ export const ShopPin: React.FC<ShopPinProps> = ({
         ...innerContainerStyle,
         "--anim-duration": `${animation.duration}s`,
         "--anim-amplitude": `-${fixedAmplitude}px`,
+        ...(animation.type === "spin-float" && {
+          "--anim-iteration": animation.spinRepeat === false ? "1" : "infinite",
+        }),
       } as React.CSSProperties;
 
       return (
