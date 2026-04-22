@@ -137,8 +137,15 @@ class SSEService {
       if (eventType === "connected") {
         this.emit("connected", data);
       } else {
+        // If the payload lacks a type field, inject the SSE event name so
+        // App.tsx can switch on it even when Bridge-Ground is an older build
+        // that omits "type" from the JSON body.
+        const enriched =
+          data && typeof data === "object" && !data.type
+            ? { ...data, type: eventType }
+            : data;
         // update, shops, shop_news, event_news, specials → all go through "update"
-        this.emit("update", data);
+        this.emit("update", enriched);
       }
     } catch {
       // Non-JSON data — ignore
