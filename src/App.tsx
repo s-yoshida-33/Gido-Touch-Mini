@@ -356,11 +356,46 @@ const App: React.FC = () => {
     // Initial fetch with cache
     loadData(true);
 
-    // 分離パターン: SSEは更新通知のみ。データはREST経由で取得する。
+    // エンドポイントごとの差分更新: 変更があったエンドポイントのみ REST を実行する
     const unsubscribe = sseService.on("update", (payload: any) => {
       const eventType: string = payload?.type ?? "unknown";
-      logInfo("APP", "Received update signal from SSE, fetching from REST", { type: eventType });
-      loadData(false);
+      logInfo("APP", "Received update signal from SSE", { type: eventType });
+
+      switch (eventType) {
+        case "shops":
+          fetchShops()
+            .then((shopData) => {
+              const cleaned = shopData.map((s) => ({
+                ...s,
+                name: s.name.replace(/【.*?】/g, "").trim(),
+              }));
+              setShops(cleaned);
+              saveShopsToCache(shopData);
+              logInfo("SHOP", "Shops updated from SSE", { count: cleaned.length });
+            })
+            .catch((e) => logError("SHOP", "Failed to update shops from SSE", { error: e }));
+          break;
+        case "shop_news":
+          fetchShopNewsListFromBridge()
+            .then((news) => {
+              setShopNews(news);
+              saveShopNewsToCache(news);
+              logInfo("NEWS", "Shop news updated from SSE", { count: news.length });
+            })
+            .catch((e) => logError("NEWS", "Failed to update shop news from SSE", { error: e }));
+          break;
+        case "event_news":
+          fetchShopNewsFromBridge()
+            .then((news) => {
+              setEventNews(news);
+              saveEventNewsToCache(news);
+              logInfo("NEWS", "Event news updated from SSE", { count: news.length });
+            })
+            .catch((e) => logError("NEWS", "Failed to update event news from SSE", { error: e }));
+          break;
+        default:
+          logInfo("APP", "Unknown SSE event type, skipping REST fetch", { type: eventType });
+      }
     });
 
     return () => {
