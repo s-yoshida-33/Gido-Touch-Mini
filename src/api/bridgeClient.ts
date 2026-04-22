@@ -60,13 +60,13 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
   const url = `${baseUrl}/api/shops`;
   const startTime = Date.now();
 
-  logDebug("DATA_SYNC", "Start fetching shops", { url });
+  logDebug("SHOP", "Start fetching shops", { url });
 
   try {
     const res = await fetch(url, { method: "GET" });
 
     if (!res.ok) {
-      logWarn("DATA_SYNC", "Bridge API returned non-200 response", {
+      logWarn("SHOP", "Bridge API returned non-200 response", {
         status: res.status,
         statusText: res.statusText,
         endpoint: "/api/shops"
@@ -77,7 +77,7 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
     const json = await res.json();
     const shops = parseShopsData(json, APP_CONFIG.floor);
 
-    logInfo("DATA_SYNC", "Shops loaded successfully", {
+    logInfo("SHOP", "Shops loaded successfully", {
       count: shops.length,
       durationMs: Date.now() - startTime,
       source: "BridgeAPI"
@@ -86,7 +86,7 @@ export async function fetchShopsFromBridge(): Promise<Shop[]> {
     return shops;
 
   } catch (error: any) {
-    logError("DATA_SYNC", "Failed to fetch shops", {
+    logError("SHOP", "Failed to fetch shops", {
       error: error?.message,
       url,
       durationMs: Date.now() - startTime
@@ -174,7 +174,7 @@ export async function fetchShopNewsFromBridge(): Promise<ShopNews[]> {
   const url = `${baseUrl}/api/event-news`; // Changed from /api/shop-news
   const startTime = Date.now();
 
-  logDebug("DATA_SYNC", "Requesting shop news from Bridge API", { url });
+  logDebug("NEWS", "Requesting shop news from Bridge API", { url });
 
   try {
     const res = await fetch(url, { method: "GET" });
@@ -286,7 +286,7 @@ export async function fetchShopNewsListFromBridge(): Promise<ShopNews[]> {
   const url = `${baseUrl}/api/shop-news`;
   const startTime = Date.now();
 
-  logDebug("DATA_SYNC", "Requesting shop news list from Bridge API", { url });
+  logDebug("NEWS", "Requesting shop news list from Bridge API", { url });
 
   try {
     const res = await fetch(url, { method: "GET" });
