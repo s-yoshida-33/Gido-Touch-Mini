@@ -31,7 +31,7 @@ const iconSvg = getAssetUrl("icon.svg"); // Assuming icon.svg moved to common or
 // Remove unused import if any
 // Helper function removed
 
-type TabType = "image" | "shopPosition" | "floor" | "picto" | "mall" | "blackScreen";
+type TabType = "image" | "shopPosition" | "floor" | "picto" | "mall" | "blackScreen" | "audio";
 
 // Export props interface to ensure visibility
 export interface UnifiedSettingsScreenProps {
@@ -485,6 +485,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
               { id: "picto" as TabType, label: "ピクトグラム設定", badge: 0 },
               { id: "mall" as TabType, label: "ジャンル設定", badge: 0 },
               { id: "blackScreen" as TabType, label: "ブラックスクリーン", badge: 0 },
+              { id: "audio" as TabType, label: "オーディオ設定", badge: 0 },
             ] as const).map((tab) => (
               <button
                 key={tab.id}
@@ -716,15 +717,17 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
             />
           )}
           {activeTab === "mall" && (
-            <>
-              <MallSettingsTab
-                mallSettings={mallSettings}
-                onChangeMallSettings={setMallSettings}
-              />
-              <div style={{ marginTop: 24 }}>
-                <h3 style={{ color: "#fff", fontSize: 14, fontWeight: 600, marginBottom: 12, borderBottom: "1px solid #444", paddingBottom: 8 }}>
-                  サウンド設定
-                </h3>
+            <MallSettingsTab
+              mallSettings={mallSettings}
+              onChangeMallSettings={setMallSettings}
+            />
+          )}
+          {activeTab === "audio" && (
+            <div style={{ color: "#ffffff" }}>
+              <h2 style={{ marginTop: 0, marginBottom: 24, fontSize: 16, fontWeight: 600 }}>
+                オーディオ設定
+              </h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div
                   style={{
                     display: "flex",
@@ -736,7 +739,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                     border: "1px solid #555",
                   }}
                 >
-                  <span style={{ color: "#fff", fontSize: 13, fontWeight: 500 }}>タッチ音を有効にする</span>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>タッチ音を有効にする</span>
                   <div
                     onClick={() => setMallSettings({ ...mallSettings, touchSoundEnabled: !(mallSettings.touchSoundEnabled ?? false) })}
                     style={{
@@ -765,7 +768,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
           {activeTab === "blackScreen" && (
             <BlackScreenSettingsTab
