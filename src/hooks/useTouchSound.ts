@@ -4,7 +4,8 @@ import { invoke } from '@tauri-apps/api/core';
 const INTERACTIVE_SELECTOR =
   'button, a, input, select, textarea, label, ' +
   '[role="button"], [role="link"], [role="menuitem"], [role="option"], [role="tab"], ' +
-  '[tabindex]:not([tabindex="-1"])';
+  '[tabindex]:not([tabindex="-1"]), ' +
+  '[data-touchsound]';
 
 function isTouchOnInteractiveElement(target: EventTarget | null): boolean {
   if (!target || !(target instanceof Element)) return false;

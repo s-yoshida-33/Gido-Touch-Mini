@@ -151,6 +151,7 @@ const ShopRow = React.memo(({ shop, genre, index }: { shop: Shop; genre: string;
   return (
     <div
       className={rowClassNames}
+      data-touchsound="true"
       style={{
         display: "flex",
         justifyContent: "space-between",
