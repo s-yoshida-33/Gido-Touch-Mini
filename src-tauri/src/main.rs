@@ -491,15 +491,20 @@ fn get_sounds_dir() -> Result<PathBuf, String> {
         .unwrap_or_default()
         .join("medias")
         .join("sounds");
+    write_to_log_file_direct("SOUND", &format!("Checking dev sounds path: {}", dev_path.display()));
     if dev_path.exists() {
+        write_to_log_file_direct("SOUND", &format!("Using dev sounds path: {}", dev_path.display()));
         return Ok(dev_path);
     }
     if let Ok(exe) = std::env::current_exe() {
         if let Some(exe_dir) = exe.parent() {
             let prod_path = exe_dir.join("resources").join("sounds");
+            write_to_log_file_direct("SOUND", &format!("Checking prod sounds path: {}", prod_path.display()));
             if prod_path.exists() {
+                write_to_log_file_direct("SOUND", &format!("Using prod sounds path: {}", prod_path.display()));
                 return Ok(prod_path);
             }
+            write_to_log_file_direct("SOUND", &format!("Prod sounds path not found: {}", prod_path.display()));
         }
     }
     Err("Sounds directory not found".to_string())

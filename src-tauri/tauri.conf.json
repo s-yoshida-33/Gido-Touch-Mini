@@ -63,7 +63,7 @@
   "bundle": {
     "active": true,
     "resources": {
-      "../medias/sounds": "sounds"
+      "../medias/sounds/*.wav": "sounds/"
     },
     "icon": [
       "icons/icon.ico"
