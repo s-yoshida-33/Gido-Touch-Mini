@@ -5,6 +5,7 @@ import ShopListScreen from "./screens/ShopListScreen";
 import { useHeartbeat } from "./hooks/useHeartbeat";
 import { useWebViewPing } from "./hooks/useWebViewPing";
 import { useShopChangeDetection } from "./hooks/useShopChangeDetection";
+import { useTouchSound } from "./hooks/useTouchSound";
 import { ContextMenu } from "./components/ContextMenu";
 
 // floor maps imports removed - managed by mall config and assets
@@ -157,6 +158,10 @@ const App: React.FC = () => {
 
   // WebView watchdog ping
   useWebViewPing();
+
+  // Touch sound — enabled state is driven by mallSettings loaded below
+  const [touchSoundEnabled, setTouchSoundEnabled] = useState(false);
+  useTouchSound(touchSoundEnabled);
 
   // DEBUG STATE
   const [debugLog, setDebugLog] = useState<string[]>([]);
@@ -474,6 +479,7 @@ const App: React.FC = () => {
         addDebug(`Global settings loaded: mallId=${currentMallId}, floor=${mallData.floor}`);
 
         setMallSettings(mallData.mallSettings);
+        setTouchSoundEnabled(mallData.mallSettings.touchSoundEnabled ?? false);
         setLocationSettings(mallData.locationIcons);
         setImageSettings(mergeWithDefaultImages(mallData.imageSettings, currentMallId));
         setShopPositions(mallData.shopPositions);
@@ -618,6 +624,7 @@ const App: React.FC = () => {
       setMallId(global.mallId);
       setFloor(global.floor as FloorId);
       setMallSettings(processedMallData.mallSettings);
+      setTouchSoundEnabled(processedMallData.mallSettings.touchSoundEnabled ?? false);
       setLocationSettings(processedMallData.locationIcons);
       setImageSettings(mergeWithDefaultImages(processedMallData.imageSettings, global.mallId));
       setShopPositions(processedMallData.shopPositions);

@@ -5,6 +5,7 @@ export interface MallSettings {
   genreMemoIgnoreKeywords?: string[];
   maxDisplayCount?: number;
   keywordsInitialized?: boolean;
+  touchSoundEnabled?: boolean;
 }
 
 export const DEFAULT_MALL_SETTINGS: MallSettings = {
@@ -23,7 +24,8 @@ export const DEFAULT_MALL_SETTINGS: MallSettings = {
     "レストラン・グルメ"
   ],
   maxDisplayCount: 3,
-  keywordsInitialized: true
+  keywordsInitialized: true,
+  touchSoundEnabled: false,
 };
 
 export interface Genre {

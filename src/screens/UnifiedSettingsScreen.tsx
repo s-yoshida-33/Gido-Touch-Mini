@@ -716,10 +716,56 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
             />
           )}
           {activeTab === "mall" && (
-            <MallSettingsTab
-              mallSettings={mallSettings}
-              onChangeMallSettings={setMallSettings}
-            />
+            <>
+              <MallSettingsTab
+                mallSettings={mallSettings}
+                onChangeMallSettings={setMallSettings}
+              />
+              <div style={{ marginTop: 24 }}>
+                <h3 style={{ color: "#fff", fontSize: 14, fontWeight: 600, marginBottom: 12, borderBottom: "1px solid #444", paddingBottom: 8 }}>
+                  サウンド設定
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    backgroundColor: "#333",
+                    borderRadius: 8,
+                    border: "1px solid #555",
+                  }}
+                >
+                  <span style={{ color: "#fff", fontSize: 13, fontWeight: 500 }}>タッチ音を有効にする</span>
+                  <div
+                    onClick={() => setMallSettings({ ...mallSettings, touchSoundEnabled: !(mallSettings.touchSoundEnabled ?? false) })}
+                    style={{
+                      width: 50,
+                      height: 30,
+                      backgroundColor: (mallSettings.touchSoundEnabled ?? false) ? "#34C759" : "#e9e9ea",
+                      borderRadius: 15,
+                      position: "relative",
+                      cursor: "pointer",
+                      transition: "background-color 0.2s",
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 2,
+                        left: (mallSettings.touchSoundEnabled ?? false) ? 22 : 2,
+                        width: 26,
+                        height: 26,
+                        backgroundColor: "white",
+                        borderRadius: "50%",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                        transition: "left 0.2s",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
           )}
           {activeTab === "blackScreen" && (
             <BlackScreenSettingsTab
