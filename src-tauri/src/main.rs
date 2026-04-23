@@ -467,6 +467,18 @@ fn read_image_file(file_path: String) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("Failed to read image file: {}", e))
 }
 
+/// Read a binary file from the media base directory (medias/<relative_path>).
+/// Resolution order matches get_media_base_dir():
+///   dev  → <cwd>/medias/<relative_path>
+///   prod → <AppLocalData>/medias/<relative_path>
+#[tauri::command]
+fn read_media_binary(relative_path: String) -> Result<Vec<u8>, String> {
+    let base = get_media_base_dir()?;
+    let full_path = base.join(&relative_path);
+    fs::read(&full_path)
+        .map_err(|e| format!("Failed to read media file '{}': {}", full_path.display(), e))
+}
+
 // ---------------------------------------------------------------------------
 // Mall asset helpers
 // ---------------------------------------------------------------------------
@@ -1520,6 +1532,7 @@ fn main() {
             get_image_path,
             delete_image_file,
             read_image_file,
+            read_media_binary,
             read_mall_config,
             read_mall_asset,
             get_shop_image,
