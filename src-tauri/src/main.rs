@@ -485,7 +485,7 @@ fn read_media_binary(relative_path: String) -> Result<Vec<u8>, String> {
 
 /// Resolve the sounds directory.
 /// Dev:  <cwd>/medias/sounds/
-/// Prod: <exe_dir>/resources/sounds/  (bundled via tauri.conf.json resources)
+/// Prod: <exe_dir>/sounds/  (tauri.conf.json resources dest "sounds/")
 fn get_sounds_dir() -> Result<PathBuf, String> {
     let dev_path = std::env::current_dir()
         .unwrap_or_default()
@@ -498,7 +498,7 @@ fn get_sounds_dir() -> Result<PathBuf, String> {
     }
     if let Ok(exe) = std::env::current_exe() {
         if let Some(exe_dir) = exe.parent() {
-            let prod_path = exe_dir.join("resources").join("sounds");
+            let prod_path = exe_dir.join("sounds");
             write_to_log_file_direct("SOUND", &format!("Checking prod sounds path: {}", prod_path.display()));
             if prod_path.exists() {
                 write_to_log_file_direct("SOUND", &format!("Using prod sounds path: {}", prod_path.display()));
