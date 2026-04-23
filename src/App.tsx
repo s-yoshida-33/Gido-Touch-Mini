@@ -162,7 +162,7 @@ const App: React.FC = () => {
   // Touch sound — driven by mallSettings loaded below
   const [touchSoundEnabled, setTouchSoundEnabled] = useState(false);
   const [touchSoundFile, setTouchSoundFile] = useState('touch-sound-1.wav');
-  useTouchSound(touchSoundEnabled, touchSoundFile);
+  const { playSound } = useTouchSound(touchSoundEnabled, touchSoundFile);
 
   // DEBUG STATE
   const [debugLog, setDebugLog] = useState<string[]>([]);
@@ -887,6 +887,7 @@ const App: React.FC = () => {
       diskFloorMaps={diskFloorMaps}
       openTimeImage={imageSettings.openTimeImage}
       mallSettings={mallSettings}
+      onTouchSound={playSound}
     />
     <BlackScreenOverlay
       settings={blackScreenSettings}

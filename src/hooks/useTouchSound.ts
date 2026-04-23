@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 const INTERACTIVE_SELECTOR =
@@ -26,6 +26,8 @@ function isTouchOnInteractiveElement(target: EventTarget | null): boolean {
 export function useTouchSound(enabled: boolean, soundFile: string = 'touch-sound-1.wav') {
   const ctxRef = useRef<AudioContext | null>(null);
   const bufferRef = useRef<AudioBuffer | null>(null);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
 
   // Reload AudioBuffer whenever the selected sound file changes
   useEffect(() => {
@@ -54,29 +56,35 @@ export function useTouchSound(enabled: boolean, soundFile: string = 'touch-sound
     return () => { cancelled = true; };
   }, [soundFile]);
 
+  const playSound = useCallback(() => {
+    if (!enabledRef.current) return;
+    const ctx = ctxRef.current;
+    const buffer = bufferRef.current;
+    if (!ctx || !buffer) return;
+
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(ctx.destination);
+    src.start();
+  }, []);
+
   useEffect(() => {
     if (!enabled) return;
 
     const play = (e: TouchEvent) => {
       if (!isTouchOnInteractiveElement(e.target)) return;
-
-      const ctx = ctxRef.current;
-      const buffer = bufferRef.current;
-      if (!ctx || !buffer) return;
-
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
-
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-      src.connect(ctx.destination);
-      src.start();
+      playSound();
     };
 
     document.addEventListener('touchstart', play, { passive: true });
     return () => {
       document.removeEventListener('touchstart', play);
     };
-  }, [enabled]);
+  }, [enabled, playSound]);
+
+  return { playSound };
 }

@@ -299,6 +299,7 @@ interface ShopListScreenProps {
   diskFloorMaps?: Partial<Record<string, string>>; // S3-downloaded maps (startup sync)
   openTimeImage?: string; // Add prop
   mallSettings?: MallSettings; // Added prop
+  onTouchSound?: () => void;
 }
 
 // 五十音行マッピング
@@ -387,6 +388,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
   diskFloorMaps = {},
   openTimeImage: propOpenTimeImage, // Add prop
   mallSettings,
+  onTouchSound,
 }) => {
 
   // Preload all floor map images on mount so switching is instant
@@ -1593,6 +1595,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
 
     // 3. Select nearest shop if found
     if (nearestShop) {
+      onTouchSound?.();
       setSelectedShopDetail(nearestShop);
       setPinDelay(0);
     }
@@ -2653,6 +2656,7 @@ const ShopListScreen: React.FC<ShopListScreenProps> = ({
               {filteredShops.map((shop, index) => (
                 <div
                   key={shop.shopId || `${shop.name}-${index}`}
+                  data-touchsound="true"
                   onClick={() => {
                     setSelectedShopDetail(shop);
                     // Switch to the shop's floor if different
