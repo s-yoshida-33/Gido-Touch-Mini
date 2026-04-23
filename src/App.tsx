@@ -159,9 +159,10 @@ const App: React.FC = () => {
   // WebView watchdog ping
   useWebViewPing();
 
-  // Touch sound — enabled state is driven by mallSettings loaded below
+  // Touch sound — driven by mallSettings loaded below
   const [touchSoundEnabled, setTouchSoundEnabled] = useState(false);
-  useTouchSound(touchSoundEnabled);
+  const [touchSoundFile, setTouchSoundFile] = useState('touch-sound-1.wav');
+  useTouchSound(touchSoundEnabled, touchSoundFile);
 
   // DEBUG STATE
   const [debugLog, setDebugLog] = useState<string[]>([]);
@@ -480,6 +481,7 @@ const App: React.FC = () => {
 
         setMallSettings(mallData.mallSettings);
         setTouchSoundEnabled(mallData.mallSettings.touchSoundEnabled ?? false);
+        setTouchSoundFile(mallData.mallSettings.touchSoundFile ?? 'touch-sound-1.wav');
         setLocationSettings(mallData.locationIcons);
         setImageSettings(mergeWithDefaultImages(mallData.imageSettings, currentMallId));
         setShopPositions(mallData.shopPositions);
@@ -625,6 +627,7 @@ const App: React.FC = () => {
       setFloor(global.floor as FloorId);
       setMallSettings(processedMallData.mallSettings);
       setTouchSoundEnabled(processedMallData.mallSettings.touchSoundEnabled ?? false);
+      setTouchSoundFile(processedMallData.mallSettings.touchSoundFile ?? 'touch-sound-1.wav');
       setLocationSettings(processedMallData.locationIcons);
       setImageSettings(mergeWithDefaultImages(processedMallData.imageSettings, global.mallId));
       setShopPositions(processedMallData.shopPositions);

@@ -6,6 +6,7 @@ export interface MallSettings {
   maxDisplayCount?: number;
   keywordsInitialized?: boolean;
   touchSoundEnabled?: boolean;
+  touchSoundFile?: string;
 }
 
 export const DEFAULT_MALL_SETTINGS: MallSettings = {
@@ -26,6 +27,7 @@ export const DEFAULT_MALL_SETTINGS: MallSettings = {
   maxDisplayCount: 3,
   keywordsInitialized: true,
   touchSoundEnabled: false,
+  touchSoundFile: 'touch-sound-1.wav',
 };
 
 export interface Genre {

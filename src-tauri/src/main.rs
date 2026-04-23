@@ -480,6 +480,57 @@ fn read_media_binary(relative_path: String) -> Result<Vec<u8>, String> {
 }
 
 // ---------------------------------------------------------------------------
+// Sound file helpers
+// ---------------------------------------------------------------------------
+
+/// Resolve the sounds directory.
+/// Dev:  <cwd>/medias/sounds/
+/// Prod: <exe_dir>/resources/sounds/  (bundled via tauri.conf.json resources)
+fn get_sounds_dir() -> Result<PathBuf, String> {
+    let dev_path = std::env::current_dir()
+        .unwrap_or_default()
+        .join("medias")
+        .join("sounds");
+    if dev_path.exists() {
+        return Ok(dev_path);
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            let prod_path = exe_dir.join("resources").join("sounds");
+            if prod_path.exists() {
+                return Ok(prod_path);
+            }
+        }
+    }
+    Err("Sounds directory not found".to_string())
+}
+
+/// List all .wav files in the sounds directory, sorted alphabetically.
+#[tauri::command]
+fn list_sound_files() -> Result<Vec<String>, String> {
+    let dir = get_sounds_dir()?;
+    let mut files: Vec<String> = fs::read_dir(&dir)
+        .map_err(|e| format!("Failed to read sounds dir: {}", e))?
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.to_lowercase().ends_with(".wav") { Some(name) } else { None }
+        })
+        .collect();
+    files.sort();
+    Ok(files)
+}
+
+/// Read a sound file by filename from the sounds directory and return its bytes.
+#[tauri::command]
+fn read_sound_file(filename: String) -> Result<Vec<u8>, String> {
+    let dir = get_sounds_dir()?;
+    let path = dir.join(&filename);
+    fs::read(&path)
+        .map_err(|e| format!("Failed to read sound file '{}': {}", path.display(), e))
+}
+
+// ---------------------------------------------------------------------------
 // Mall asset helpers
 // ---------------------------------------------------------------------------
 
@@ -1533,6 +1584,8 @@ fn main() {
             delete_image_file,
             read_image_file,
             read_media_binary,
+            list_sound_files,
+            read_sound_file,
             read_mall_config,
             read_mall_asset,
             get_shop_image,

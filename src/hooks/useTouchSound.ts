@@ -1,22 +1,22 @@
 import { useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
-const SOUND_RELATIVE_PATH = 'sounds/touch-sound-1.wav';
-
-export function useTouchSound(enabled: boolean) {
+export function useTouchSound(enabled: boolean, soundFile: string = 'touch-sound-1.wav') {
   const ctxRef = useRef<AudioContext | null>(null);
   const bufferRef = useRef<AudioBuffer | null>(null);
 
-  // Load the WAV file once on mount via Rust (resolves medias/ from exe dir or cwd)
+  // Reload AudioBuffer whenever the selected sound file changes
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
       try {
-        const ctx = new AudioContext();
-        ctxRef.current = ctx;
+        if (!ctxRef.current || ctxRef.current.state === 'closed') {
+          ctxRef.current = new AudioContext();
+        }
+        const ctx = ctxRef.current;
 
-        const bytes = await invoke<number[]>('read_media_binary', { relativePath: SOUND_RELATIVE_PATH });
+        const bytes = await invoke<number[]>('read_sound_file', { filename: soundFile });
         const arrayBuffer = new Uint8Array(bytes).buffer;
         const decoded = await ctx.decodeAudioData(arrayBuffer);
 
@@ -25,12 +25,13 @@ export function useTouchSound(enabled: boolean) {
         }
       } catch {
         // File missing or decode failed — touch sound disabled silently
+        bufferRef.current = null;
       }
     };
 
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [soundFile]);
 
   useEffect(() => {
     if (!enabled) return;

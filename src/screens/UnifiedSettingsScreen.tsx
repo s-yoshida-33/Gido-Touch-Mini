@@ -1,5 +1,6 @@
 // src/screens/UnifiedSettingsScreen.tsx
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import GidoApp from "./GidoApp";
 import type { LocationIconSettingsPerFloor } from "../types/locationIcon";
@@ -53,6 +54,112 @@ export interface UnifiedSettingsScreenProps {
     mallData: MallSettingsFile,
   ) => Promise<void>;
 }
+
+// ---------------------------------------------------------------------------
+// Audio settings panel (inline component)
+// ---------------------------------------------------------------------------
+
+const AudioSettingsPanel: React.FC<{
+  mallSettings: MallSettings;
+  onChangeMallSettings: (s: MallSettings) => void;
+}> = ({ mallSettings, onChangeMallSettings }) => {
+  const [soundFiles, setSoundFiles] = useState<string[]>([]);
+
+  useEffect(() => {
+    invoke<string[]>('list_sound_files')
+      .then(setSoundFiles)
+      .catch(() => setSoundFiles([]));
+  }, []);
+
+  const enabled = mallSettings.touchSoundEnabled ?? false;
+  const selectedFile = mallSettings.touchSoundFile ?? 'touch-sound-1.wav';
+
+  const toggleStyle = (on: boolean): React.CSSProperties => ({
+    width: 50,
+    height: 30,
+    backgroundColor: on ? "#34C759" : "#e9e9ea",
+    borderRadius: 15,
+    position: "relative",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+    flexShrink: 0,
+  });
+
+  const knobStyle = (on: boolean): React.CSSProperties => ({
+    position: "absolute",
+    top: 2,
+    left: on ? 22 : 2,
+    width: 26,
+    height: 26,
+    backgroundColor: "white",
+    borderRadius: "50%",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+    transition: "left 0.2s",
+  });
+
+  const rowStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "12px 16px",
+    backgroundColor: "#333",
+    borderRadius: 8,
+    border: "1px solid #555",
+  };
+
+  return (
+    <div style={{ color: "#ffffff" }}>
+      <h2 style={{ marginTop: 0, marginBottom: 24, fontSize: 16, fontWeight: 600 }}>
+        オーディオ設定
+      </h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+        {/* Enable toggle */}
+        <div style={rowStyle}>
+          <span style={{ fontSize: 13, fontWeight: 500 }}>タッチ音を有効にする</span>
+          <div
+            onClick={() => onChangeMallSettings({ ...mallSettings, touchSoundEnabled: !enabled })}
+            style={toggleStyle(enabled)}
+          >
+            <div style={knobStyle(enabled)} />
+          </div>
+        </div>
+
+        {/* Sound file selector — shown only when enabled */}
+        {enabled && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span style={{ fontSize: 12, color: "#aaa" }}>音声ファイルを選択</span>
+            {soundFiles.length === 0 ? (
+              <p style={{ fontSize: 12, color: "#888", margin: 0 }}>
+                音声ファイルが見つかりません（medias/sounds/ を確認してください）
+              </p>
+            ) : (
+              soundFiles.map((file) => (
+                <div
+                  key={file}
+                  onClick={() => onChangeMallSettings({ ...mallSettings, touchSoundFile: file })}
+                  style={{
+                    ...rowStyle,
+                    cursor: "pointer",
+                    backgroundColor: file === selectedFile ? "#1a3a5c" : "#333",
+                    border: `1px solid ${file === selectedFile ? "#007aff" : "#555"}`,
+                  }}
+                >
+                  <span style={{ fontSize: 13 }}>{file}</span>
+                  {file === selectedFile && (
+                    <span style={{ color: "#007aff", fontSize: 13, fontWeight: 600 }}>✓</span>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
 
 const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
   isOpen,
@@ -723,52 +830,10 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
             />
           )}
           {activeTab === "audio" && (
-            <div style={{ color: "#ffffff" }}>
-              <h2 style={{ marginTop: 0, marginBottom: 24, fontSize: 16, fontWeight: 600 }}>
-                オーディオ設定
-              </h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "12px 16px",
-                    backgroundColor: "#333",
-                    borderRadius: 8,
-                    border: "1px solid #555",
-                  }}
-                >
-                  <span style={{ fontSize: 13, fontWeight: 500 }}>タッチ音を有効にする</span>
-                  <div
-                    onClick={() => setMallSettings({ ...mallSettings, touchSoundEnabled: !(mallSettings.touchSoundEnabled ?? false) })}
-                    style={{
-                      width: 50,
-                      height: 30,
-                      backgroundColor: (mallSettings.touchSoundEnabled ?? false) ? "#34C759" : "#e9e9ea",
-                      borderRadius: 15,
-                      position: "relative",
-                      cursor: "pointer",
-                      transition: "background-color 0.2s",
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: 2,
-                        left: (mallSettings.touchSoundEnabled ?? false) ? 22 : 2,
-                        width: 26,
-                        height: 26,
-                        backgroundColor: "white",
-                        borderRadius: "50%",
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                        transition: "left 0.2s",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AudioSettingsPanel
+              mallSettings={mallSettings}
+              onChangeMallSettings={setMallSettings}
+            />
           )}
           {activeTab === "blackScreen" && (
             <BlackScreenSettingsTab
