@@ -7,6 +7,7 @@ export interface MallSettings {
   keywordsInitialized?: boolean;
   touchSoundEnabled?: boolean;
   touchSoundFile?: string;
+  touchSoundVolume?: number;
 }
 
 export const DEFAULT_MALL_SETTINGS: MallSettings = {
@@ -28,6 +29,7 @@ export const DEFAULT_MALL_SETTINGS: MallSettings = {
   keywordsInitialized: true,
   touchSoundEnabled: false,
   touchSoundFile: 'touch-sound-1.wav',
+  touchSoundVolume: 100,
 };
 
 export interface Genre {

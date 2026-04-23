@@ -73,6 +73,7 @@ const AudioSettingsPanel: React.FC<{
 
   const enabled = mallSettings.touchSoundEnabled ?? false;
   const selectedFile = mallSettings.touchSoundFile ?? 'touch-sound-1.wav';
+  const volume = mallSettings.touchSoundVolume ?? 100;
 
   const toggleStyle = (on: boolean): React.CSSProperties => ({
     width: 50,
@@ -124,6 +125,27 @@ const AudioSettingsPanel: React.FC<{
             <div style={knobStyle(enabled)} />
           </div>
         </div>
+
+        {/* Volume slider — shown only when enabled */}
+        {enabled && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 12, color: "#aaa" }}>音量</span>
+              <span style={{ fontSize: 12, color: "#aaa" }}>{volume}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={volume}
+              onChange={(e) =>
+                onChangeMallSettings({ ...mallSettings, touchSoundVolume: Number(e.target.value) })
+              }
+              style={{ width: "100%", accentColor: "#007aff" }}
+            />
+          </div>
+        )}
 
         {/* Sound file selector — shown only when enabled */}
         {enabled && (

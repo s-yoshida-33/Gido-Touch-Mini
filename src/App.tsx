@@ -162,7 +162,8 @@ const App: React.FC = () => {
   // Touch sound — driven by mallSettings loaded below
   const [touchSoundEnabled, setTouchSoundEnabled] = useState(false);
   const [touchSoundFile, setTouchSoundFile] = useState('touch-sound-1.wav');
-  const { playSound } = useTouchSound(touchSoundEnabled, touchSoundFile);
+  const [touchSoundVolume, setTouchSoundVolume] = useState(100);
+  const { playSound } = useTouchSound(touchSoundEnabled, touchSoundFile, touchSoundVolume);
 
   // DEBUG STATE
   const [debugLog, setDebugLog] = useState<string[]>([]);
@@ -482,6 +483,7 @@ const App: React.FC = () => {
         setMallSettings(mallData.mallSettings);
         setTouchSoundEnabled(mallData.mallSettings.touchSoundEnabled ?? false);
         setTouchSoundFile(mallData.mallSettings.touchSoundFile ?? 'touch-sound-1.wav');
+        setTouchSoundVolume(mallData.mallSettings.touchSoundVolume ?? 100);
         setLocationSettings(mallData.locationIcons);
         setImageSettings(mergeWithDefaultImages(mallData.imageSettings, currentMallId));
         setShopPositions(mallData.shopPositions);
@@ -628,6 +630,7 @@ const App: React.FC = () => {
       setMallSettings(processedMallData.mallSettings);
       setTouchSoundEnabled(processedMallData.mallSettings.touchSoundEnabled ?? false);
       setTouchSoundFile(processedMallData.mallSettings.touchSoundFile ?? 'touch-sound-1.wav');
+      setTouchSoundVolume(processedMallData.mallSettings.touchSoundVolume ?? 100);
       setLocationSettings(processedMallData.locationIcons);
       setImageSettings(mergeWithDefaultImages(processedMallData.imageSettings, global.mallId));
       setShopPositions(processedMallData.shopPositions);
