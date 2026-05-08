@@ -4,6 +4,7 @@ import "./styles/global-image.css"; // Global image styles
 import ShopListScreen from "./screens/ShopListScreen";
 import { useHeartbeat } from "./hooks/useHeartbeat";
 import { useWebViewPing } from "./hooks/useWebViewPing";
+import { useBridgeRegistration } from "./hooks/useBridgeRegistration";
 import { useShopChangeDetection } from "./hooks/useShopChangeDetection";
 import { useTouchSound } from "./hooks/useTouchSound";
 import { ContextMenu } from "./components/ContextMenu";
@@ -187,6 +188,7 @@ const App: React.FC = () => {
 
   // Mall ID state
   const [mallId, setMallId] = useState<string>("suzaka");
+  const [hostname, setHostname] = useState<string>("");
 
   // Floor and floor layout state for unified settings
   const [floor, setFloor] = useState<FloorId>("1F");
@@ -216,6 +218,9 @@ const App: React.FC = () => {
   // "loading" → reading settings | "mall_select" → first launch | "settings" → initial config | "running" → main screen
   type AppPhase = "loading" | "mall_select" | "settings" | "running";
   const [appPhase, setAppPhase] = useState<AppPhase>("loading");
+
+  // Bridge-Ground app registration & heartbeat
+  useBridgeRegistration(mallId, hostname, appPhase === 'running');
 
   // Black screen settings state
   const [blackScreenSettings, setBlackScreenSettings] = useState<BlackScreenSettings>(
@@ -472,6 +477,7 @@ const App: React.FC = () => {
 
         const currentMallId = global.mallId ?? "suzaka";
         setMallId(currentMallId);
+        setHostname(global.hostname ?? '');
 
         // 4. Ensure per-mall settings file exists, then load it
         await ensureMallSettingsFile(currentMallId);
