@@ -532,6 +532,15 @@ const App: React.FC = () => {
 
         setAppPhase("running");
         logInfo("SYSTEM", "Application initialized successfully");
+        // Background-preload remaining floor maps to prevent lag on first switch.
+        const allFloors: FloorId[] = ['1F', '2F', '3F', '4F'];
+        for (const f of allFloors) {
+          if (f === initialFloor) continue;
+          const fUrl = diskMaps[f] || mergedImages.floorMaps[f];
+          if (!fUrl) continue;
+          const preloadImg = new Image();
+          preloadImg.src = fUrl;
+        }
       } catch (e) {
         addDebug(`Failed to load settings: ${e}`);
         logError("APP", "Failed to load settings from Tauri", { error: e });
