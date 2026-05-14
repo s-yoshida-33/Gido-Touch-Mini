@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import type { ShopPosition } from "../types/shop";
 import { ShopLocationIcon } from "./ShopLocationIcon";
-import { getShopImageDataUrl } from "../utils/imageUtils";
+import { resolveShopLogoUrl } from "./ShopLogoImage";
 import "../styles/location-icons.css"; // Ensure CSS is imported
 
 interface ShopPinProps {
@@ -42,70 +42,6 @@ function getAnimationClass(type: string): string {
   }
 }
 
-function buildImagePath(photo: string | undefined, shopId: string | undefined): string {
-  if (!photo) return "";
-  
-  if (photo.match(/^[A-Za-z]:[\\/]/)) {
-    return photo.replace(/\\/g, "/");
-  }
-  
-  if (photo.startsWith("file://") || 
-      photo.startsWith("http://") || 
-      photo.startsWith("https://") ||
-      photo.startsWith("data:")) {
-    return photo;
-  }
-  
-  if (photo.startsWith("/") || photo.startsWith("\\")) {
-    if (photo.startsWith("\\\\")) return photo;
-    if (photo.startsWith("/")) return photo;
-  }
-  
-  if (shopId) {
-    if (photo.includes(`shop/${shopId}/`) || photo.includes(`shop\\${shopId}\\`) ||
-        photo.includes(`files/shop/${shopId}/`) || photo.includes(`files\\shop\\${shopId}\\`)) {
-      return photo;
-    }
-    
-    const normalizedPhoto = photo.replace(/\\/g, "/");
-    const cleanPhoto = normalizedPhoto.startsWith("/") ? normalizedPhoto.slice(1) : normalizedPhoto;
-    
-    if (!cleanPhoto.includes("/")) {
-      return `files/shop/${shopId}/${cleanPhoto}`;
-    }
-    
-    if (cleanPhoto.startsWith("files/shop/")) {
-      return cleanPhoto;
-    }
-    return `files/shop/${shopId}/${cleanPhoto}`;
-  }
-  
-  return photo;
-}
-
-function toFileUrl(filePath: string): string {
-  if (!filePath) return "";
-  
-  if (filePath.startsWith("file://") || 
-      filePath.startsWith("http://") || 
-      filePath.startsWith("https://") ||
-      filePath.startsWith("data:")) {
-    return filePath;
-  }
-  
-  const normalized = filePath.replace(/\\/g, "/");
-  
-  if (normalized.match(/^[A-Za-z]:\//)) {
-    return `file:///${normalized}`;
-  }
-  
-  if (normalized.startsWith("/")) {
-    return `file://${normalized}`;
-  }
-  
-  return `file:///${normalized}`;
-}
-
 export const ShopPin: React.FC<ShopPinProps> = ({ 
   position, 
   shopName, 
@@ -134,37 +70,18 @@ export const ShopPin: React.FC<ShopPinProps> = ({
   
   useEffect(() => {
     const logoPath = shopLogo || (shopId ? `files/shop/${shopId}/shop_logo.png` : undefined);
-    
     if (!logoPath) {
       setLogoLoading(false);
       return;
     }
-
-    const loadLogo = async () => {
-      const imagePath = buildImagePath(logoPath, shopId);
-      if (!imagePath) {
+    let cancelled = false;
+    resolveShopLogoUrl(logoPath, shopId).then(url => {
+      if (!cancelled) {
+        if (url) setLogoUrl(url);
         setLogoLoading(false);
-        return;
       }
-
-      try {
-        const normalizedPath = imagePath.replace(/\\/g, "/");
-        const dataUrl = await getShopImageDataUrl(normalizedPath);
-        if (dataUrl) {
-          setLogoUrl(dataUrl);
-          setLogoLoading(false);
-          return;
-        }
-      } catch (error) {
-        console.error("Failed to load logo via IPC:", error);
-      }
-
-      const fileUrl = toFileUrl(imagePath);
-      setLogoUrl(fileUrl);
-      setLogoLoading(false);
-    };
-
-    loadLogo();
+    });
+    return () => { cancelled = true; };
   }, [shopLogo, shopId]);
 
   // Determine coordinates: prioritize pixel props if enabled
