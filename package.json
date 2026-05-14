@@ -23,6 +23,7 @@
     "desktop:build": "tauri build",
     "tauri:build:signed": "node ./build/runner.js sign-and-build.ps1",
     "tauri:release": "npm run tauri:build:signed && node ./build/runner.js manage-release.ps1",
+    "media:optimize": "node ./build/runner.js optimize-maps.ps1",
     "media:compress": "node ./build/runner.js compress-media.ps1",
     "bump:version": "powershell -ExecutionPolicy Bypass -File ./build/bump-version.ps1"
   },
