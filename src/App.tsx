@@ -405,6 +405,9 @@ const App: React.FC = () => {
             })
             .catch((e) => logError("NEWS", "Failed to update event news from SSE", { error: e }));
           break;
+        case "sync_progress":
+          // Bridge-Ground の同期進捗通知。データ更新ではないため何もしない。
+          break;
         default:
           logInfo("APP", "Unknown SSE event type, skipping REST fetch", { type: eventType });
       }
