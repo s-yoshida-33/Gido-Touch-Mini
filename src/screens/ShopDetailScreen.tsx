@@ -1,6 +1,7 @@
 // src/screens/ShopDetailScreen.tsx
 import React, { useRef, useState, useEffect, useCallback } from "react";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { TransformComponent } from "react-zoom-pan-pinch";
+import { PinchSafeTransformWrapper } from "../components/PinchSafeTransformWrapper";
 import { CloseButton } from "../components/CloseButton";
 import floor1FMap from "../assets/floor-1F-map.svg";
 import floor2FMap from "../assets/floor-2F-map.svg";
@@ -350,7 +351,7 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
             <div style={{ position: "absolute", top: "15px", left: "15px", zIndex: 10, pointerEvents: "none", width: "50%" }}>
               <FloorLabel floor={normalizedFloor as "1F" | "2F" | "3F" | "4F"} style={{ width: "100%", aspectRatio: "3/2" }} />
             </div>
-            <TransformWrapper
+            <PinchSafeTransformWrapper
               initialScale={1}
               minScale={1}
               maxScale={4}
@@ -373,7 +374,7 @@ const ShopDetailScreen: React.FC<ShopDetailScreenProps> = ({ shop, onClose, lang
                   currentScale={currentScale}
                 />
               </TransformComponent>
-            </TransformWrapper>
+            </PinchSafeTransformWrapper>
             <div style={{ position: "absolute", bottom: "15px", left: "15px", zIndex: 10, display: "flex", flexDirection: "column", gap: "0px", borderRadius: "25px", overflow: "hidden", boxShadow: "0 0px 6px rgba(0, 0, 0, 0.3)" }}>
               {/* Zoom In Button */}
               <div
