@@ -371,6 +371,10 @@ const App: React.FC = () => {
     // エンドポイントごとの差分更新: 変更があったエンドポイントのみ REST を実行する
     const unsubscribe = sseService.on("update", (payload: any) => {
       const eventType: string = payload?.type ?? "unknown";
+
+      // BG の同期進捗通知はデータ更新ではないため無視する
+      if (eventType === "sync_progress") return;
+
       logInfo("APP", "Received update signal from SSE", { type: eventType });
 
       switch (eventType) {
@@ -404,9 +408,6 @@ const App: React.FC = () => {
               logInfo("NEWS", "Event news updated from SSE", { count: news.length });
             })
             .catch((e) => logError("NEWS", "Failed to update event news from SSE", { error: e }));
-          break;
-        case "sync_progress":
-          // Bridge-Ground の同期進捗通知。データ更新ではないため何もしない。
           break;
         default:
           logInfo("APP", "Unknown SSE event type, skipping REST fetch", { type: eventType });
