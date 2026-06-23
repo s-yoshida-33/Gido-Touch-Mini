@@ -187,7 +187,7 @@ const App: React.FC = () => {
   );
 
   // Mall ID state
-  const [mallId, setMallId] = useState<string>("suzaka");
+  const [mallId, setMallId] = useState<string>("");
   const [hostname, setHostname] = useState<string>("");
 
   // Floor and floor layout state for unified settings
