@@ -1,6 +1,6 @@
 // src/hooks/useAssetSync.ts
 // Asset sync via S3 – checks S3 latest.json for assets ZIP updates.
-// Downloads and extracts to media/assets/{mallId}/ via sync_assets_from_s3.
+// Downloads and extracts to media/{mallId}/assets/ via sync_assets_from_s3.
 import { useEffect, useState, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
@@ -27,12 +27,12 @@ interface AssetMeta {
   lastUpdatedAt: string | null;
 }
 
-const S3_ASSETS_BASE = 'https://dl.tti.ninja/gido-touch-mini/medias/assets';
+const S3_MEDIAS_BASE = 'https://dl.tti.ninja/gido-touch-mini/medias';
 
 async function fetchAssetVersionFromS3(mallId: string): Promise<{ zip: string | null; updated_at: string | null }> {
   try {
     const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-    const url = `${S3_ASSETS_BASE}/${mallId}/latest.json?t=${Date.now()}`;
+    const url = `${S3_MEDIAS_BASE}/${mallId}/assets/latest.json?t=${Date.now()}`;
     const response = await tauriFetch(url, {
       headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
     });
@@ -48,7 +48,7 @@ async function fetchAssetVersionFromS3(mallId: string): Promise<{ zip: string | 
   }
 }
 
-const assetMetaPath = (mallId: string) => `medias/assets/${mallId}/.asset-meta.json`;
+const assetMetaPath = (mallId: string) => `medias/${mallId}/assets/.asset-meta.json`;
 
 async function readAssetMeta(mallId: string): Promise<AssetMeta | null> {
   try {
@@ -64,7 +64,7 @@ async function readAssetMeta(mallId: string): Promise<AssetMeta | null> {
 
 async function writeAssetMeta(mallId: string, meta: AssetMeta): Promise<void> {
   try {
-    await mkdir(`medias/assets/${mallId}`, { baseDir: BaseDirectory.AppLocalData, recursive: true });
+    await mkdir(`medias/${mallId}/assets`, { baseDir: BaseDirectory.AppLocalData, recursive: true });
     await writeTextFile(assetMetaPath(mallId), JSON.stringify(meta), { baseDir: BaseDirectory.AppLocalData });
   } catch {
     // non-critical
@@ -131,7 +131,7 @@ export const useAssetSync = () => {
 
         logInfo('ASSET_SYNC', `Asset ZIP changed: ${localZipName} → ${remoteVersion.zip}`, { mallId });
 
-        const zipUrl = `${S3_ASSETS_BASE}/${mallId}/${remoteVersion.zip}`;
+        const zipUrl = `${S3_MEDIAS_BASE}/${mallId}/assets/${remoteVersion.zip}`;
         setAssetStatus({ status: 'downloading', progress: 0, message: `アセットをダウンロード中... (${mallId})` });
 
         let unlisten: UnlistenFn | null = null;

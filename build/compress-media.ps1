@@ -2,17 +2,17 @@
 # Usage: powershell -ExecutionPolicy Bypass -File .\build\compress-media.ps1 -MallId "sendaikamisugi" -MediaType "all"
 #
 # MediaType options:
-#   assets  - Compress medias/assets/{MallId}/
-#   maps    - Compress medias/maps/{MallId}/{hostname}/ for each hostname dir
+#   assets  - Compress medias/{MallId}/assets/
+#   maps    - Compress medias/{MallId}/maps/{hostname}/ for each hostname dir
 #   all     - Both of the above
 #
 # S3 upload paths:
-#   s3://tti-distribution/public/gido-touch-mini/medias/assets/{MallId}/
-#   s3://tti-distribution/public/gido-touch-mini/medias/maps/{MallId}/{hostname}/
+#   s3://tti-distribution/public/gido-touch-mini/medias/{MallId}/assets/
+#   s3://tti-distribution/public/gido-touch-mini/medias/{MallId}/maps/{hostname}/
 #
 # Local source layout:
-#   medias/assets/{MallId}/                   <- asset files (genres, open-times, pictos, ...)
-#   medias/maps/{MallId}/{hostname}/          <- map files per hostname (auto-scanned)
+#   medias/{MallId}/assets/                   <- asset files (genres, open-times, pictos, ...)
+#   medias/{MallId}/maps/{hostname}/          <- map files per hostname (auto-scanned)
 #
 # Release output:
 #   release/{MallId}/assets/assets-{timestamp}.zip + latest.json
@@ -182,9 +182,9 @@ function Compress-And-Upload {
 function Process-Assets {
     Write-Host "`n[ASSETS]" -ForegroundColor Magenta
 
-    $sourceDir = Join-Path $mediasRoot "assets\$MallId"
+    $sourceDir = Join-Path $mediasRoot "$MallId\assets"
     $outputDir = Join-Path $rootDir "release\$MallId\assets"
-    $s3Base    = "s3://tti-distribution/public/gido-touch-mini/medias/assets/$MallId"
+    $s3Base    = "s3://tti-distribution/public/gido-touch-mini/medias/$MallId/assets"
 
     Compress-And-Upload -SourceDir $sourceDir -OutputDir $outputDir -ZipPrefix "assets" -S3Base $s3Base
 }
@@ -195,7 +195,7 @@ function Process-Assets {
 function Process-Maps {
     Write-Host "`n[MAPS]" -ForegroundColor Magenta
 
-    $mapsBaseDir = Join-Path $mediasRoot "maps\$MallId"
+    $mapsBaseDir = Join-Path $mediasRoot "$MallId\maps"
 
     if (-not (Test-Path $mapsBaseDir)) {
         Write-Host "  Maps directory not found: $mapsBaseDir" -ForegroundColor Yellow
@@ -215,7 +215,7 @@ function Process-Maps {
         $hn        = $hostnameDir.Name
         $sourceDir = $hostnameDir.FullName
         $outputDir = Join-Path $rootDir "release\$MallId\maps\$hn"
-        $s3Base    = "s3://tti-distribution/public/gido-touch-mini/medias/maps/$MallId/$hn"
+        $s3Base    = "s3://tti-distribution/public/gido-touch-mini/medias/$MallId/maps/$hn"
 
         Write-Host "  Processing hostname: $hn" -ForegroundColor Cyan
         Compress-And-Upload -SourceDir $sourceDir -OutputDir $outputDir -ZipPrefix "maps" -S3Base $s3Base

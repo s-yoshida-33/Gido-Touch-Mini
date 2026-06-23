@@ -677,11 +677,17 @@ fn read_mall_asset(relative_path: String) -> Result<Option<String>, String> {
         None
     };
 
-    // 1. S3-downloaded assets take priority (AppLocalData/medias/assets/{relative_path})
+    // 1. S3-downloaded assets take priority (AppLocalData/medias/{mallId}/assets/{rest})
+    // relative_path = "{mallId}/{rest}", so split the first component to build the mall-first path.
     if let Ok(media_base) = get_media_base_dir() {
-        let media_path = media_base.join("assets").join(&relative_path);
-        if let Some(url) = try_read(media_path) {
-            return Ok(Some(url));
+        let path = std::path::Path::new(&relative_path);
+        let mut components = path.components();
+        if let Some(mall_comp) = components.next() {
+            let rest: std::path::PathBuf = components.collect();
+            let media_path = media_base.join(mall_comp).join("assets").join(&rest);
+            if let Some(url) = try_read(media_path) {
+                return Ok(Some(url));
+            }
         }
     }
 
@@ -871,22 +877,22 @@ fn sync_zip_to_dir(
     })
 }
 
-/// Download assets ZIP from S3 and extract to media/assets/{mallId}/.
+/// Download assets ZIP from S3 and extract to media/{mallId}/assets/.
 #[tauri::command]
 fn sync_assets_from_s3(app: tauri::AppHandle, mall_id: String, zip_url: String) -> Result<MediaDownloadResult, String> {
     let media_root = get_media_dir()?;
-    let zip_path = media_root.join(format!("assets-{}.zip", &mall_id));
-    let dest_dir = media_root.join("assets").join(&mall_id);
-    sync_zip_to_dir(&app, &zip_url, &zip_path, &dest_dir, &format!("assets/{}", mall_id))
+    let zip_path = media_root.join(format!("{}-assets.zip", &mall_id));
+    let dest_dir = media_root.join(&mall_id).join("assets");
+    sync_zip_to_dir(&app, &zip_url, &zip_path, &dest_dir, &format!("{}/assets", mall_id))
 }
 
-/// Download maps ZIP from S3 and extract to media/maps/{mallId}/{hostname}/.
+/// Download maps ZIP from S3 and extract to media/{mallId}/maps/{hostname}/.
 #[tauri::command]
 fn sync_maps_from_s3(app: tauri::AppHandle, mall_id: String, hostname: String, zip_url: String) -> Result<MediaDownloadResult, String> {
     let media_root = get_media_dir()?;
-    let zip_path = media_root.join(format!("maps-{}-{}.zip", &mall_id, &hostname));
-    let dest_dir = media_root.join("maps").join(&mall_id).join(&hostname);
-    sync_zip_to_dir(&app, &zip_url, &zip_path, &dest_dir, &format!("maps/{}/{}", mall_id, hostname))
+    let zip_path = media_root.join(format!("{}-maps-{}.zip", &mall_id, &hostname));
+    let dest_dir = media_root.join(&mall_id).join("maps").join(&hostname);
+    sync_zip_to_dir(&app, &zip_url, &zip_path, &dest_dir, &format!("{}/maps/{}", mall_id, hostname))
 }
 
 /// List all mall-specific asset files (downloaded assets and maps).
@@ -902,7 +908,7 @@ fn list_mall_maps(mall_id: String, hostname: String) -> Result<HashMap<String, S
     let mut result = HashMap::new();
 
     if !hostname.is_empty() && hostname != "unknown" {
-        let maps_dir = media_base.join("maps").join(&mall_id).join(&hostname);
+        let maps_dir = media_base.join(&mall_id).join("maps").join(&hostname);
         if maps_dir.exists() {
             let mut maps_raw = HashMap::new();
             scan_assets_to_data_urls(&maps_dir, &maps_dir, &mut maps_raw)?;
@@ -922,13 +928,13 @@ fn list_mall_assets(mall_id: String, hostname: String) -> Result<HashMap<String,
     let media_base = get_media_base_dir()?;
     let mut result = HashMap::new();
 
-    let assets_dir = media_base.join("assets").join(&mall_id);
+    let assets_dir = media_base.join(&mall_id).join("assets");
     if assets_dir.exists() {
         scan_assets_to_data_urls(&assets_dir, &assets_dir, &mut result)?;
     }
 
     if !hostname.is_empty() && hostname != "unknown" {
-        let maps_dir = media_base.join("maps").join(&mall_id).join(&hostname);
+        let maps_dir = media_base.join(&mall_id).join("maps").join(&hostname);
         if maps_dir.exists() {
             let mut maps_raw = HashMap::new();
             scan_assets_to_data_urls(&maps_dir, &maps_dir, &mut maps_raw)?;
@@ -977,7 +983,7 @@ fn cleanup_old_hostname_maps(mall_id: String, current_hostname: String) -> Resul
         return Ok(());
     }
     let media_base = get_media_base_dir()?;
-    let maps_mall_dir = media_base.join("maps").join(&mall_id);
+    let maps_mall_dir = media_base.join(&mall_id).join("maps");
     if !maps_mall_dir.exists() {
         return Ok(());
     }

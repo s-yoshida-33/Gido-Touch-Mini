@@ -6,7 +6,7 @@
 # Usage: powershell -ExecutionPolicy Bypass -File .\build\optimize-maps.ps1 -MallId "sendaikamisugi"
 #
 # Source layout:
-#   medias/maps/{MallId}/{hostname}/*.svg
+#   medias/{MallId}/maps/{hostname}/*.svg
 #
 # After optimization, run: npm run media:compress
 # to re-package and upload to S3.
@@ -33,7 +33,7 @@ if ([string]::IsNullOrWhiteSpace($MallId)) {
 }
 
 $rootDir     = Split-Path -Parent $PSScriptRoot
-$mapsBaseDir = Join-Path $rootDir "medias\maps\$MallId"
+$mapsBaseDir = Join-Path $rootDir "medias\$MallId\maps"
 
 if (-not (Test-Path $mapsBaseDir)) {
     Write-Host "Error: Directory not found: $mapsBaseDir" -ForegroundColor Red

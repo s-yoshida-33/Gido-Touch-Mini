@@ -1,6 +1,6 @@
 // src/hooks/useMapSync.ts
 // Map sync via S3 – checks S3 latest.json for maps ZIP updates per hostname.
-// Downloads and extracts to media/maps/{mallId}/{hostname}/ via sync_maps_from_s3.
+// Downloads and extracts to media/{mallId}/maps/{hostname}/ via sync_maps_from_s3.
 // Skipped entirely when hostname is not configured.
 import { useEffect, useState, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
@@ -28,12 +28,12 @@ interface MapMeta {
   lastUpdatedAt: string | null;
 }
 
-const S3_MAPS_BASE = 'https://dl.tti.ninja/gido-touch-mini/medias/maps';
+const S3_MEDIAS_BASE = 'https://dl.tti.ninja/gido-touch-mini/medias';
 
 async function fetchMapVersionFromS3(mallId: string, hostname: string): Promise<{ zip: string | null; updated_at: string | null }> {
   try {
     const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-    const url = `${S3_MAPS_BASE}/${mallId}/${hostname}/latest.json?t=${Date.now()}`;
+    const url = `${S3_MEDIAS_BASE}/${mallId}/maps/${hostname}/latest.json?t=${Date.now()}`;
     const response = await tauriFetch(url, {
       headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
     });
@@ -50,7 +50,7 @@ async function fetchMapVersionFromS3(mallId: string, hostname: string): Promise<
 }
 
 const mapMetaPath = (mallId: string, hostname: string) =>
-  `medias/maps/${mallId}/${hostname}/.map-meta.json`;
+  `medias/${mallId}/maps/${hostname}/.map-meta.json`;
 
 async function readMapMeta(mallId: string, hostname: string): Promise<MapMeta | null> {
   try {
@@ -66,7 +66,7 @@ async function readMapMeta(mallId: string, hostname: string): Promise<MapMeta | 
 
 async function writeMapMeta(mallId: string, hostname: string, meta: MapMeta): Promise<void> {
   try {
-    await mkdir(`medias/maps/${mallId}/${hostname}`, { baseDir: BaseDirectory.AppLocalData, recursive: true });
+    await mkdir(`medias/${mallId}/maps/${hostname}`, { baseDir: BaseDirectory.AppLocalData, recursive: true });
     await writeTextFile(mapMetaPath(mallId, hostname), JSON.stringify(meta), { baseDir: BaseDirectory.AppLocalData });
   } catch {
     // non-critical
@@ -140,7 +140,7 @@ export const useMapSync = () => {
 
         logInfo('MAP_SYNC', `Map ZIP changed: ${localZipName} → ${remoteVersion.zip}`, { mallId, hostname });
 
-        const zipUrl = `${S3_MAPS_BASE}/${mallId}/${hostname}/${remoteVersion.zip}`;
+        const zipUrl = `${S3_MEDIAS_BASE}/${mallId}/maps/${hostname}/${remoteVersion.zip}`;
         setMapStatus({ status: 'downloading', progress: 0, message: `マップをダウンロード中... (${hostname})` });
 
         let unlisten: UnlistenFn | null = null;
