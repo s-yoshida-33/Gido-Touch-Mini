@@ -107,10 +107,15 @@ export const ShopNewsModal: React.FC<ShopNewsModalProps> = ({
     return `${year}/${month}/${day}(${weekday})`;
   };
 
-  // Helper to find shop by ID
+  // Helper to find shop by ID.
+  // Must match shopId only: shopId (a stable unique identifier) and number
+  // (a human-facing unit number that can be reused across tenants) are
+  // different namespaces. Matching against number as a fallback previously
+  // caused a shop whose number happened to equal another shop's shopId to
+  // be shown in place of the news' real shop.
   const getShopInfo = (shopId: string) => {
     if (!shopId || !shops) return null;
-    return shops.find(s => s.shopId === shopId || s.number === shopId);
+    return shops.find(s => s.shopId === shopId);
   };
 
   const selectedShop = selectedNews ? getShopInfo(selectedNews.shopId) : null;
