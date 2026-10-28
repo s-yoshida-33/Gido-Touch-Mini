@@ -850,6 +850,7 @@ const UnifiedSettingsScreen: React.FC<UnifiedSettingsScreenProps> = ({
             <MallSettingsTab
               mallSettings={mallSettings}
               onChangeMallSettings={setMallSettings}
+              shops={shops}
             />
           )}
           {activeTab === "audio" && (

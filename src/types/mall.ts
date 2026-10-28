@@ -8,6 +8,8 @@ export interface MallSettings {
   touchSoundEnabled?: boolean;
   touchSoundFile?: string;
   touchSoundVolume?: number;
+  // 非表示にするショップID（API上に残っていてもアプリ側で表示しない）
+  hiddenShopIds?: string[];
 }
 
 export const DEFAULT_MALL_SETTINGS: MallSettings = {
