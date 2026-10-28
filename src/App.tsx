@@ -743,6 +743,14 @@ const App: React.FC = () => {
     });
   }, [shops, shopPositions]);
 
+  // 設定で非表示指定されたショップIDを除外した表示用リスト
+  // （設定画面には除外前のmergedShopsを渡し、非表示中の店舗も選択・解除できるようにする）
+  const visibleShops = useMemo(() => {
+    const hiddenIds = mallSettings.hiddenShopIds || [];
+    if (hiddenIds.length === 0) return mergedShops;
+    return mergedShops.filter((shop) => !shop.shopId || !hiddenIds.includes(shop.shopId));
+  }, [mergedShops, mallSettings.hiddenShopIds]);
+
   const currentMallConfig = getMallConfig(mallSettings.mallId);
 
   // Compute effective floor maps with the correct priority:
@@ -899,7 +907,7 @@ const App: React.FC = () => {
       locationIconSettings={locationSettings}
       currentFloor={floor}
       mallId={mallId as MallId}
-      shops={mergedShops}
+      shops={visibleShops}
       shopPositions={shopPositions}
       shopNews={shopNews}
       eventNews={eventNews}
